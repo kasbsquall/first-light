@@ -118,3 +118,12 @@ build/
 # DO NOT REMOVE ABOVE PATTERNS
 # Add project-specific patterns below
 # ============================================
+# Repositorio objetivo que analizamos: no es nuestro y no se versiona
+target/
+
+# Artefactos de medicion
+.coverage
+.coverage.*
+htmlcov/
+*.vdbak
+salida.tsv
