@@ -8,28 +8,11 @@
       "package": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata",
       "command": [
         "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\.venv\\Scripts\\python.exe",
-        "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\first_light.py",
-        "--package",
-        ".\\target\\visidata\\visidata",
-        "--runner",
-        ".\\runners\\visidata_runner.py",
-        "--runner-id",
-        "cli",
-        "--runner",
-        ".\\runners\\visidata_pytest_runner.py",
-        "--runner-id",
-        "test_suite",
-        "--python",
-        ".\\target\\visidata\\.venv\\Scripts\\python.exe",
-        "--evidence",
-        ".\\evidence.json",
-        "--report",
-        ".\\report.html",
-        "--exclude",
-        "tests",
-        "vendor",
-        "apps",
-        "experimental"
+        "-m",
+        "coverage",
+        "run",
+        "--source=C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata",
+        "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\runners\\visidata_runner.py"
       ],
       "exit_code": 0,
       "excluded_dirs": [
@@ -45,28 +28,11 @@
       "package": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata",
       "command": [
         "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\.venv\\Scripts\\python.exe",
-        "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\first_light.py",
-        "--package",
-        ".\\target\\visidata\\visidata",
-        "--runner",
-        ".\\runners\\visidata_runner.py",
-        "--runner-id",
-        "cli",
-        "--runner",
-        ".\\runners\\visidata_pytest_runner.py",
-        "--runner-id",
-        "test_suite",
-        "--python",
-        ".\\target\\visidata\\.venv\\Scripts\\python.exe",
-        "--evidence",
-        ".\\evidence.json",
-        "--report",
-        ".\\report.html",
-        "--exclude",
-        "tests",
-        "vendor",
-        "apps",
-        "experimental"
+        "-m",
+        "coverage",
+        "run",
+        "--source=C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata",
+        "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\runners\\visidata_pytest_runner.py"
       ],
       "exit_code": 1,
       "excluded_dirs": [
@@ -18365,13 +18331,13 @@
       "def_line": 84,
       "body_start": 85,
       "body_end": 86,
-      "provenance": "superseded",
+      "provenance": "observed_in_situ",
       "observed_in_baseline": [
         "test_suite"
       ],
       "driver": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.path.modtime.py",
       "call_site": "target/visidata/visidata/_urlcache.py:18 -- modtime(p) where p is a visidata Path",
-      "superseded_by": "test_suite"
+      "driver_redundant_baseline": "test_suite"
     },
     "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\path.py::visidata.path.BytesIOWrapper.__init__#93": {
       "file": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\path.py",
@@ -24207,13 +24173,13 @@
       "def_line": 63,
       "body_start": 64,
       "body_end": 69,
-      "provenance": "superseded",
+      "provenance": "observed_in_situ",
       "observed_in_baseline": [
         "test_suite"
       ],
       "driver": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.utils.moveListItem.py",
       "call_site": "target/visidata/visidata/features/slide.py:22 -- moveListItem(sheet.rows, rowidx, newcolidx)",
-      "superseded_by": "test_suite"
+      "driver_redundant_baseline": "test_suite"
     },
     "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\utils.py::visidata.utils.setitem#72": {
       "file": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\utils.py",
@@ -24250,26 +24216,26 @@
       "def_line": 86,
       "body_start": 87,
       "body_end": 107,
-      "provenance": "superseded",
+      "provenance": "observed_in_situ",
       "observed_in_baseline": [
         "test_suite"
       ],
       "driver": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.utils.getattrdeep.py",
       "call_site": "target/visidata/visidata/column.py:546 -- getattrdeep(row, col.expr, None)",
-      "superseded_by": "test_suite"
+      "driver_redundant_baseline": "test_suite"
     },
     "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\utils.py::visidata.utils.setattrdeep#110": {
       "file": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\utils.py",
       "def_line": 110,
       "body_start": 111,
       "body_end": 128,
-      "provenance": "superseded",
+      "provenance": "observed_in_situ",
       "observed_in_baseline": [
         "test_suite"
       ],
       "driver": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.utils.setattrdeep.py",
       "call_site": "target/visidata/visidata/column.py:551 -- setattrdeep(row, self.expr, val)",
-      "superseded_by": "test_suite"
+      "driver_redundant_baseline": "test_suite"
     },
     "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\utils.py::visidata.utils.getitemdeep#131": {
       "file": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\utils.py",
@@ -24408,13 +24374,13 @@
       "def_line": 219,
       "body_start": 220,
       "body_end": 231,
-      "provenance": "superseded",
+      "provenance": "observed_in_situ",
       "observed_in_baseline": [
         "test_suite"
       ],
       "driver": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.utils.colname_letters.py",
       "call_site": "",
-      "superseded_by": "test_suite"
+      "driver_redundant_baseline": "test_suite"
     },
     "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\utils.py::visidata.utils.colname_letters.divmod_excel#222": {
       "file": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\utils.py",

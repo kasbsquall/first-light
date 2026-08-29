@@ -34,17 +34,19 @@ from typing import NamedTuple
 
 FIRST_LIGHT_VERSION = "0.3.0"
 
-# Valid provenance values — the only four that may appear in evidence.json.
+# Valid provenance values — the only three that may appear in evidence.json.
 # never_observed      : nothing we ran ever entered this function body.
 # observed_in_situ    : the system executed it on its own, under normal operation.
+#                       When a driver was also written for this unit but a baseline
+#                       now reaches it too, the driver is recorded in the unit's
+#                       ``driver_redundant_baseline`` attribute; the provenance stays
+#                       observed_in_situ because the *observation* is genuine — only
+#                       the driver became redundant.
 # observed_under_driver: it only ran because we built something to reach it.
-# superseded          : a driver existed for this unit, but a later baseline also
-#                       reached it in situ, making the driver redundant.  The driver
-#                       is kept; this provenance records that it is no longer the only
-#                       evidence.
 PROVENANCE_NEVER           = "never_observed"
 PROVENANCE_IN_SITU         = "observed_in_situ"
 PROVENANCE_UNDER_DRIVER    = "observed_under_driver"
+# PROVENANCE_SUPERSEDED is kept as a read-time alias for backward-compat migration only.
 PROVENANCE_SUPERSEDED      = "superseded"
 
 
@@ -368,10 +370,12 @@ class BaselineInfo:
         pytest_collected: int | None = None,
         pytest_passed: int | None = None,
         pytest_failed: int | None = None,
+        runner_cmd: list[str] | None = None,
     ) -> None:
         self.id = baseline_id
         self.runner_script = runner_script
-        self.cmd = cmd
+        self.cmd = cmd          # full first_light.py invocation (kept for back-compat)
+        self.runner_cmd = runner_cmd or cmd  # the actual command this specific runner executed
         self.exit_code = exit_code
         self.executed = executed  # {abs_path: {executed_line_numbers}}
         # Optional pytest counts (None when the runner is not pytest)
@@ -397,7 +401,8 @@ def write_evidence(
       id                : short identifier string ("cli", "test_suite", …).
       runner            : absolute path to the runner script.
       package           : absolute path to the analysed package.
-      command           : full argv list used to produce the data.
+      command           : argv list actually executed by THIS baseline's runner
+                          (i.e. the coverage-run command for this specific runner).
       exit_code         : raw exit code of the runner subprocess.
       excluded_dirs     : directory names excluded from the product-code figure.
       pytest_collected  : (optional) number of tests collected, when runner is pytest.
@@ -412,14 +417,19 @@ def write_evidence(
       def_line          : line number of the ``def`` keyword.
       body_start        : first line of the body (node.body[0].lineno).
       body_end          : last line of the body (node.end_lineno).
-      provenance        : one of PROVENANCE_* constants.
+      provenance        : one of PROVENANCE_NEVER | PROVENANCE_IN_SITU |
+                          PROVENANCE_UNDER_DRIVER.
                           A unit is observed_in_situ when ANY baseline observed
                           it (unless promoted to observed_under_driver).
-                          A unit is superseded when it was previously
-                          observed_under_driver but a baseline now also
-                          reaches it in situ.
+                          When a driver was written for a unit that a baseline
+                          now also reaches in situ, the driver is recorded in
+                          ``driver_redundant_baseline`` rather than changing
+                          provenance — the observation is genuine.
       observed_in_baseline : list of baseline ids that observed this unit.
                           An empty list means never_observed.
+      driver_redundant_baseline : (optional) baseline id that made a previously
+                          attempted driver redundant. Present only on
+                          observed_in_situ units for which a driver file exists.
     """
     now = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
@@ -470,7 +480,7 @@ def write_evidence(
             "id": bl.id,
             "runner": str(Path(bl.runner_script).resolve()),
             "package": pkg_abs,
-            "command": bl.cmd,
+            "command": bl.runner_cmd,  # per-runner actual command, not the shared parent argv
             "exit_code": bl.exit_code,
             "excluded_dirs": sorted(exclude_dirs),
         }
@@ -784,6 +794,13 @@ body {
   border: 1px solid var(--amber);
 }
 
+.swatch--redundant {
+  background: #2a2a12;
+  border: 1px solid #b8a030;
+  outline: 2px solid #3a3a20;
+  outline-offset: -3px;
+}
+
 /* Map rows */
 .map-row {
   display: flex;
@@ -837,6 +854,11 @@ body {
     rgba(200,118,26,0.55) 4px
   );
   border: 1px solid var(--amber);
+}
+
+.cell--redundant {
+  background: #2a2a12;
+  border: 1px solid #b8a030;
 }
 
 /* ── Drivers section ────────────────────────────────────── */
@@ -896,68 +918,76 @@ def _driver_units_from_evidence(
     units: dict,
     drivers_dir: Path | None = None,
 ) -> tuple[list[dict], list[dict], list[str]]:
-    """Return (confirmed, superseded, attempted_names).
+    """Return (confirmed, redundant, attempted_names).
 
     confirmed      : list of dicts with keys name, call_site, coverage_confirmed_lines
                      for every unit whose provenance is observed_under_driver.
-    superseded     : list of dicts with keys name, superseded_by for every unit
-                     whose provenance is superseded (driver existed; a baseline now
-                     also covers it in situ, making the driver redundant).
+    redundant      : list of dicts for every observed_in_situ unit that has a
+                     ``driver_redundant_baseline`` attribute — the driver existed
+                     but a baseline now also reaches the unit in situ.
+                     Also accepts legacy provenance==superseded entries from
+                     evidence.json files written by older versions.
     attempted_names: list of qualified names whose driver file exists on disk but
-                     whose unit is NOT observed_under_driver or superseded in evidence
+                     whose unit is NOT observed_under_driver or redundant in evidence
                      — i.e. drivers that were attempted but not confirmed.
     """
     confirmed: list[dict] = []
-    superseded: list[dict] = []
-    confirmed_or_superseded_qnames: set[str] = set()
+    redundant: list[dict] = []
+    confirmed_or_redundant_qnames: set[str] = set()
 
     for key, u in units.items():
         prov = u.get("provenance")
-        if prov not in (PROVENANCE_UNDER_DRIVER, PROVENANCE_SUPERSEDED):
-            continue
         qname_part = key.split("::", 1)[1] if "::" in key else key
         qname_part = _strip_def_line_suffix(qname_part)
+
         if prov == PROVENANCE_UNDER_DRIVER:
             confirmed.append({
                 "name": qname_part,
                 "call_site": u.get("call_site", ""),
                 "coverage_confirmed_lines": u.get("coverage_confirmed_lines", []),
             })
-        else:  # PROVENANCE_SUPERSEDED
-            superseded.append({
+            confirmed_or_redundant_qnames.add(qname_part)
+        elif prov == PROVENANCE_IN_SITU and u.get("driver_redundant_baseline"):
+            # New schema: driver became redundant; provenance stays observed_in_situ.
+            redundant.append({
                 "name": qname_part,
-                "superseded_by": u.get("superseded_by", ""),
+                "redundant_baseline": u.get("driver_redundant_baseline", ""),
                 "call_site": u.get("call_site", ""),
                 "coverage_confirmed_lines": u.get("coverage_confirmed_lines", []),
             })
-        confirmed_or_superseded_qnames.add(qname_part)
+            confirmed_or_redundant_qnames.add(qname_part)
+        elif prov == PROVENANCE_SUPERSEDED:
+            # Legacy schema (v0.2 evidence.json): accept superseded as redundant.
+            redundant.append({
+                "name": qname_part,
+                "redundant_baseline": u.get("superseded_by", ""),
+                "call_site": u.get("call_site", ""),
+                "coverage_confirmed_lines": u.get("coverage_confirmed_lines", []),
+            })
+            confirmed_or_redundant_qnames.add(qname_part)
 
-    # Attempted: driver file exists but unit is not observed_under_driver or superseded.
-    # Build a map of qname_suffix -> unit provenance from evidence so we can
-    # cross-reference against files on disk.
+    # Attempted: driver file exists but unit is not observed_under_driver or redundant.
     attempted_names: list[str] = []
     if drivers_dir is not None and drivers_dir.is_dir():
         evidence_qnames: dict[str, str] = {}  # qname_suffix -> provenance
         for key, u in units.items():
             if "::" not in key:
                 continue
-            qname_part = key.split("::", 1)[1]
-            qname_part = _strip_def_line_suffix(qname_part)
-            evidence_qnames[qname_part] = u.get("provenance", PROVENANCE_NEVER)
+            qname_part_ev = key.split("::", 1)[1]
+            qname_part_ev = _strip_def_line_suffix(qname_part_ev)
+            evidence_qnames[qname_part_ev] = u.get("provenance", PROVENANCE_NEVER)
 
+        # A driver is "attempted" when its file exists but its unit has no confirmed
+        # or redundant entry (not in confirmed_or_redundant_qnames).
         for driver_file in sorted(drivers_dir.glob("*.py")):
             stem = driver_file.stem
-            prov = evidence_qnames.get(stem)
-            # "Attempted" = driver file exists but not promoted or superseded.
-            # (None means the driver has no matching unit in evidence at all —
-            # also worth reporting.)
-            if prov not in (PROVENANCE_UNDER_DRIVER, PROVENANCE_SUPERSEDED):
+            if stem not in confirmed_or_redundant_qnames:
                 attempted_names.append(stem)
 
     # Sort lists for stable output
     confirmed.sort(key=lambda d: d["name"])
-    superseded.sort(key=lambda d: d["name"])
-    return confirmed, superseded, attempted_names
+    redundant.sort(key=lambda d: d["name"])
+    return confirmed, redundant, attempted_names
 
 
 def write_html_report(evidence_path: str, out_path: str) -> None:
@@ -994,9 +1024,17 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     total = len(units)
     never_count = sum(1 for u in units.values() if u["provenance"] == PROVENANCE_NEVER)
     observed_count = total - never_count
-    insitu_count = sum(1 for u in units.values() if u["provenance"] == PROVENANCE_IN_SITU)
+    insitu_count = sum(
+        1 for u in units.values()
+        if u["provenance"] == PROVENANCE_IN_SITU and not u.get("driver_redundant_baseline")
+    )
     driver_count = sum(1 for u in units.values() if u["provenance"] == PROVENANCE_UNDER_DRIVER)
-    superseded_count = sum(1 for u in units.values() if u["provenance"] == PROVENANCE_SUPERSEDED)
+    # "redundant" = observed_in_situ units whose driver became redundant, OR legacy superseded
+    redundant_count = sum(
+        1 for u in units.values()
+        if (u["provenance"] == PROVENANCE_IN_SITU and u.get("driver_redundant_baseline"))
+        or u["provenance"] == PROVENANCE_SUPERSEDED
+    )
 
     # Product-code only (exclude the same dirs the baseline recorded)
     if excluded_dirs:
@@ -1009,9 +1047,16 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     prod_total = len(prod_units)
     prod_never = sum(1 for u in prod_units.values() if u["provenance"] == PROVENANCE_NEVER)
     prod_observed = prod_total - prod_never
-    prod_insitu_count = sum(1 for u in prod_units.values() if u["provenance"] == PROVENANCE_IN_SITU)
+    prod_insitu_count = sum(
+        1 for u in prod_units.values()
+        if u["provenance"] == PROVENANCE_IN_SITU and not u.get("driver_redundant_baseline")
+    )
     prod_driver_count = sum(1 for u in prod_units.values() if u["provenance"] == PROVENANCE_UNDER_DRIVER)
-    prod_superseded_count = sum(1 for u in prod_units.values() if u["provenance"] == PROVENANCE_SUPERSEDED)
+    prod_redundant_count = sum(
+        1 for u in prod_units.values()
+        if (u["provenance"] == PROVENANCE_IN_SITU and u.get("driver_redundant_baseline"))
+        or u["provenance"] == PROVENANCE_SUPERSEDED
+    )
 
     # ── Per-baseline observation counts ─────────────────────────────────────
     # For each baseline id, count how many product-code units it observed.
@@ -1065,6 +1110,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         module_map[mod_label].append({
             "qname": _strip_def_line_suffix(raw_qname),
             "provenance": u["provenance"],
+            "driver_redundant_baseline": u.get("driver_redundant_baseline", ""),
         })
 
     # Sort modules: observed-first, then alphabetically
@@ -1077,10 +1123,10 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 
     # ── Driver info ───────────────────────────────────────────────────────────
     # confirmed : units with provenance=observed_under_driver (coverage verified).
-    # superseded: driver existed but a baseline now also covers the unit in situ.
+    # redundant : driver existed but a baseline now also covers the unit in situ.
     # attempted : driver files that exist on disk but are not yet confirmed.
     _drivers_dir = Path(__file__).parent / "drivers"
-    confirmed_drivers, superseded_drivers, attempted_drivers = _driver_units_from_evidence(units, _drivers_dir)
+    confirmed_drivers, redundant_drivers, attempted_drivers = _driver_units_from_evidence(units, _drivers_dir)
 
     # ── Relative-path helper ──────────────────────────────────────────────────
     # evidence.json stores absolute paths (needed for hash resolution).  The
@@ -1168,7 +1214,10 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         cells = []
         for fn in funcs:
             prov = fn["provenance"]
-            if prov == PROVENANCE_IN_SITU:
+            is_redundant = prov == PROVENANCE_IN_SITU and fn.get("driver_redundant_baseline")
+            if is_redundant:
+                cls = "cell cell--redundant"
+            elif prov == PROVENANCE_IN_SITU or prov == PROVENANCE_SUPERSEDED:
                 cls = "cell cell--insitu"
             elif prov == PROVENANCE_UNDER_DRIVER:
                 cls = "cell cell--driver"
@@ -1224,10 +1273,10 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     if not drivers_html:
         drivers_html = '<p style="color:var(--muted);font-size:13px;">No units confirmed under driver.</p>'
 
-    # Superseded driver cards
-    superseded_cards_html = []
-    for d in superseded_drivers:
-        sup_by = d.get("superseded_by", "")
+    # Redundant driver cards (driver existed but baseline now also covers the unit in situ)
+    redundant_cards_html = []
+    for d in redundant_drivers:
+        red_by = d.get("redundant_baseline", "")
         call_raw = d.get("call_site", "")
         if call_raw:
             call_display = _re_html.sub(
@@ -1238,17 +1287,17 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         else:
             call_display = ""
         call_html = e(call_display) if call_display else "<em>call site not recorded</em>"
-        superseded_cards_html.append(
+        redundant_cards_html.append(
             f'<div class="driver-card" style="border-color:#3a3a20;opacity:0.85;">'
             f'<div class="driver-card__name" style="color:#b8a030;">{e(d["name"])}</div>'
             f'<div class="driver-card__call">{call_html}</div>'
             f'<div class="driver-card__lines" style="margin-top:6px;">'
-            f'superseded by baseline: <strong style="color:var(--text);">{e(sup_by)}</strong> — '
-            f'driver is no longer the only evidence for this unit'
+            f'driver made redundant by baseline: <strong style="color:var(--text);">{e(red_by)}</strong> — '
+            f'the unit is observed in situ; the driver is no longer the only evidence'
             f'</div>'
             f'</div>'
         )
-    superseded_html = "\n".join(superseded_cards_html)
+    redundant_html = "\n".join(redundant_cards_html)
 
     # Attempted-but-not-confirmed driver cards
     attempted_cards_html = []
@@ -1261,13 +1310,21 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         )
     attempted_html = "\n".join(attempted_cards_html)
 
-    # Legend: only show driver swatch if driver evidence exists
+    # Legend: show driver swatch when driver evidence exists, redundant swatch when redundant drivers exist
     driver_legend_item = ""
-    if driver_count > 0 or superseded_count > 0:
+    if driver_count > 0 or redundant_count > 0:
         driver_legend_item = (
             '<div class="legend__item">'
             '<span class="swatch swatch--driver"></span>'
             'observed under driver'
+            '</div>'
+        )
+    redundant_legend_item = ""
+    if redundant_count > 0:
+        redundant_legend_item = (
+            '<div class="legend__item">'
+            '<span class="swatch swatch--redundant"></span>'
+            'driver made redundant by baseline'
             '</div>'
         )
 
@@ -1302,11 +1359,15 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     </div>
     <div class="ctx-item">
       <span class="ctx-item__num">{e(str(prod_insitu_count))}</span>
-      <span class="ctx-item__word">in-situ (product)</span>
+      <span class="ctx-item__word">in-situ</span>
     </div>
     <div class="ctx-item">
       <span class="ctx-item__num">{e(str(prod_driver_count))}</span>
-      <span class="ctx-item__word">under driver (product)</span>
+      <span class="ctx-item__word">under driver</span>
+    </div>
+    <div class="ctx-item">
+      <span class="ctx-item__num">{e(str(prod_redundant_count))}</span>
+      <span class="ctx-item__word">driver redundant</span>
     </div>
   </div>
 
@@ -1318,8 +1379,16 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         <span class="scope-block__val">{e(str(prod_never))}</span>
       </div>
       <div class="scope-block__row">
-        <span class="scope-block__key">observed</span>
-        <span class="scope-block__val">{e(str(prod_observed))}</span>
+        <span class="scope-block__key">in-situ</span>
+        <span class="scope-block__val">{e(str(prod_insitu_count))}</span>
+      </div>
+      <div class="scope-block__row">
+        <span class="scope-block__key">under driver</span>
+        <span class="scope-block__val">{e(str(prod_driver_count))}</span>
+      </div>
+      <div class="scope-block__row">
+        <span class="scope-block__key">driver redundant</span>
+        <span class="scope-block__val">{e(str(prod_redundant_count))}</span>
       </div>
       <div class="scope-block__row">
         <span class="scope-block__key">total</span>
@@ -1333,8 +1402,16 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         <span class="scope-block__val">{e(str(never_count))}</span>
       </div>
       <div class="scope-block__row">
-        <span class="scope-block__key">observed</span>
-        <span class="scope-block__val">{e(str(observed_count))}</span>
+        <span class="scope-block__key">in-situ</span>
+        <span class="scope-block__val">{e(str(insitu_count))}</span>
+      </div>
+      <div class="scope-block__row">
+        <span class="scope-block__key">under driver</span>
+        <span class="scope-block__val">{e(str(driver_count))}</span>
+      </div>
+      <div class="scope-block__row">
+        <span class="scope-block__key">driver redundant</span>
+        <span class="scope-block__val">{e(str(redundant_count))}</span>
       </div>
       <div class="scope-block__row">
         <span class="scope-block__key">total</span>
@@ -1384,6 +1461,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
       observed in situ
     </div>
     {driver_legend_item}
+    {redundant_legend_item}
     <div class="legend__item">
       <span class="swatch swatch--never"></span>
       never observed
@@ -1400,9 +1478,9 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
      SECTION 4 — DRIVER RESULTS
      ═══════════════════════════════════════════════════════ -->
 <section class="drivers-section">
-  <div class="section-heading">Driver results — {e(str(len(confirmed_drivers)))} confirmed, {e(str(len(superseded_drivers)))} superseded by baseline, {e(str(len(attempted_drivers)))} not confirmed</div>
+  <div class="section-heading">Driver results — {e(str(len(confirmed_drivers)))} confirmed, {e(str(len(redundant_drivers)))} driver redundant, {e(str(len(attempted_drivers)))} not confirmed</div>
 {drivers_html}
-{f'<div style="margin-top:28px"><div class="section-heading" style="color:#b8a030;">Superseded — baseline now reaches these in situ ({e(str(len(superseded_drivers)))})</div><p style="font-size:12px;color:var(--muted);margin-bottom:12px;">The second baseline made these drivers redundant. The driver is not deleted; this group records that it is no longer the only evidence.</p>' + superseded_html + '</div>' if superseded_drivers else ''}
+{f'<div style="margin-top:28px"><div class="section-heading" style="color:#b8a030;">Driver made redundant by baseline ({e(str(len(redundant_drivers)))})</div><p style="font-size:12px;color:var(--muted);margin-bottom:12px;">These functions were genuinely observed by a baseline, making the corresponding driver redundant. The unit&#x2019;s provenance is observed_in_situ. The driver file is kept as a record of the path that was built.</p>' + redundant_html + '</div>' if redundant_drivers else ''}
 {f'<div style="margin-top:20px"><div class="section-heading" style="color:#cc4444;">Attempted — not confirmed ({e(str(len(attempted_drivers)))})</div>' + attempted_html + '</div>' if attempted_drivers else ''}
 </section>
 
@@ -1617,8 +1695,9 @@ def cmd_promote_driver(
 
     Returns 0 if every driver succeeded, 1 if any failed.
     """
-    promoted = 0
-    failed   = 0
+    promoted        = 0
+    redundant_count = 0
+    failed          = 0
 
     # ── read evidence once ─────────────────────────────────────────────────
     with open(evidence_path, encoding="utf-8") as fh:
@@ -1653,27 +1732,34 @@ def cmd_promote_driver(
             failed += 1
             continue
 
-        # ── handle already-promoted or superseded ─────────────────────────
+        # ── handle already-promoted or redundant ──────────────────────────
         current_prov = unit.get("provenance")
-        if current_prov == PROVENANCE_IN_SITU:
+        if current_prov == PROVENANCE_IN_SITU and not unit.get("driver_redundant_baseline"):
             # The unit is now reached by a baseline: the driver is redundant.
-            # Record it as superseded so it's visible in the report.
-            # Determine which baselines observed it.
+            # Keep provenance=observed_in_situ (the observation is genuine).
+            # Record the driver metadata under driver_redundant_baseline.
             bl_ids_that_cover = unit.get("observed_in_baseline", [])
-            superseded_by = bl_ids_that_cover[0] if bl_ids_that_cover else "unknown"
+            redundant_by = bl_ids_that_cover[0] if bl_ids_that_cover else "unknown"
             # Extract call site from driver even though we won't do a full
             # coverage run — we still want to store the driver metadata.
             call_site_text, _ = _driver_call_site(driver_path)
-            doc["units"][unit_key]["provenance"]   = PROVENANCE_SUPERSEDED
-            doc["units"][unit_key]["driver"]        = str(driver_path.resolve())
-            doc["units"][unit_key]["call_site"]     = call_site_text
-            doc["units"][unit_key]["superseded_by"] = superseded_by
+            doc["units"][unit_key]["driver"]                    = str(driver_path.resolve())
+            doc["units"][unit_key]["call_site"]                 = call_site_text
+            doc["units"][unit_key]["driver_redundant_baseline"] = redundant_by
+            # provenance stays PROVENANCE_IN_SITU — do NOT change it.
             print(
-                f"[promote-driver] SUPERSEDED  {driver_path.name} — "
-                f"unit now reached by baseline '{superseded_by}'; driver is redundant",
+                f"[promote-driver] REDUNDANT  {driver_path.name} — "
+                f"unit already reached by baseline '{redundant_by}'; driver is redundant",
                 file=sys.stderr,
             )
-            promoted += 1
+            redundant_count += 1
+            continue
+        if current_prov == PROVENANCE_IN_SITU and unit.get("driver_redundant_baseline"):
+            # Already recorded as redundant; skip silently.
+            print(
+                f"[promote-driver] SKIP  {driver_path.name} — already recorded as redundant",
+                file=sys.stderr,
+            )
             continue
         if current_prov == PROVENANCE_UNDER_DRIVER:
             print(
@@ -1682,10 +1768,21 @@ def cmd_promote_driver(
             )
             continue
         if current_prov == PROVENANCE_SUPERSEDED:
+            # Legacy: migrate on-the-fly to observed_in_situ + driver_redundant_baseline.
+            bl_ids_that_cover = unit.get("observed_in_baseline", [])
+            redundant_by = unit.get("superseded_by") or (bl_ids_that_cover[0] if bl_ids_that_cover else "unknown")
+            call_site_text, _ = _driver_call_site(driver_path)
+            doc["units"][unit_key]["provenance"]                = PROVENANCE_IN_SITU
+            doc["units"][unit_key]["driver"]                    = str(driver_path.resolve())
+            doc["units"][unit_key]["call_site"]                 = call_site_text
+            doc["units"][unit_key]["driver_redundant_baseline"] = redundant_by
+            doc["units"][unit_key].pop("superseded_by", None)
             print(
-                f"[promote-driver] SKIP  {driver_path.name} — already superseded",
+                f"[promote-driver] REDUNDANT(migrated)  {driver_path.name} — "
+                f"legacy superseded entry migrated to observed_in_situ + driver_redundant_baseline",
                 file=sys.stderr,
             )
+            redundant_count += 1
             continue
 
         src_abs    = unit["file"]
@@ -1948,9 +2045,11 @@ def cmd_promote_driver(
             raise
 
     # ── summary ───────────────────────────────────────────────────────────
-    total = promoted + failed
+    total = promoted + redundant_count + failed
     print(
-        f"\n[promote-driver] {promoted}/{total} promoted, {failed} failed",
+        f"\n[promote-driver] {promoted}/{total} promoted, "
+        f"{redundant_count} redundant (driver made obsolete by baseline), "
+        f"{failed} failed",
         file=sys.stderr,
     )
     return 0 if failed == 0 else 1
@@ -2145,8 +2244,8 @@ def main(argv: list[str] | None = None) -> int:
     while len(runner_ids) < len(runner_list):
         runner_ids.append(f"baseline_{len(runner_ids)}")
 
-    # Base invocation command (shared prefix; runner-specific part appended per baseline).
-    base_cmd = [str(Path(args.python).resolve()), str(Path(__file__).resolve())] + (argv or sys.argv[1:])
+    python_abs = str(Path(args.python).resolve())
+    fl_abs     = str(Path(__file__).resolve())
 
     # ── collect one baseline per runner ──────────────────────────────────
     collected_baselines: list[BaselineInfo] = []
@@ -2156,8 +2255,17 @@ def main(argv: list[str] | None = None) -> int:
             print(f"[first_light] ERROR: runner script does not exist: {runner_path}", file=sys.stderr)
             return 1
 
+        # Build the command that coverage.py will actually execute for THIS runner.
+        # Each baseline's command differs in the runner path, so the two cards
+        # in the report will show genuinely different strings.
+        runner_cmd = [
+            python_abs, "-m", "coverage", "run",
+            f"--source={str(pkg_path)}",
+            str(runner_path),
+        ]
+
         print(f"[first_light] [{bl_id}] collecting coverage …", file=sys.stderr)
-        executed, exit_code = collect_coverage(
+        executed, exit_code, runner_stdout = collect_coverage(
             package_path=str(pkg_path),
             runner_script=str(runner_path),
             python=args.python,
@@ -2182,12 +2290,18 @@ def main(argv: list[str] | None = None) -> int:
                 f"Coverage from passing tests is still recorded.",
                 file=sys.stderr,
             )
+        # Parse pytest counts from stdout if available.
+        pytest_collected, pytest_passed, pytest_failed = _parse_pytest_counts(runner_stdout)
         collected_baselines.append(BaselineInfo(
             baseline_id=bl_id,
             runner_script=str(runner_path),
-            cmd=base_cmd,
+            cmd=runner_cmd,
+            runner_cmd=runner_cmd,
             exit_code=exit_code,
             executed=executed,
+            pytest_collected=pytest_collected,
+            pytest_passed=pytest_passed,
+            pytest_failed=pytest_failed,
         ))
 
     # ── enumerate all functions ───────────────────────────────────────────

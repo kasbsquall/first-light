@@ -255,6 +255,13 @@ body {
   border: 1px solid var(--amber);
 }
 
+.swatch--redundant {
+  background: #2a2a12;
+  border: 1px solid #b8a030;
+  outline: 2px solid #3a3a20;
+  outline-offset: -3px;
+}
+
 /* Map rows */
 .map-row {
   display: flex;
@@ -308,6 +315,11 @@ body {
     rgba(200,118,26,0.55) 4px
   );
   border: 1px solid var(--amber);
+}
+
+.cell--redundant {
+  background: #2a2a12;
+  border: 1px solid #b8a030;
 }
 
 /* ── Drivers section ────────────────────────────────────── */
@@ -377,11 +389,15 @@ body {
     </div>
     <div class="ctx-item">
       <span class="ctx-item__num">938</span>
-      <span class="ctx-item__word">in-situ (product)</span>
+      <span class="ctx-item__word">in-situ</span>
     </div>
     <div class="ctx-item">
       <span class="ctx-item__num">4</span>
-      <span class="ctx-item__word">under driver (product)</span>
+      <span class="ctx-item__word">under driver</span>
+    </div>
+    <div class="ctx-item">
+      <span class="ctx-item__num">5</span>
+      <span class="ctx-item__word">driver redundant</span>
     </div>
   </div>
 
@@ -393,8 +409,16 @@ body {
         <span class="scope-block__val">1343</span>
       </div>
       <div class="scope-block__row">
-        <span class="scope-block__key">observed</span>
-        <span class="scope-block__val">947</span>
+        <span class="scope-block__key">in-situ</span>
+        <span class="scope-block__val">938</span>
+      </div>
+      <div class="scope-block__row">
+        <span class="scope-block__key">under driver</span>
+        <span class="scope-block__val">4</span>
+      </div>
+      <div class="scope-block__row">
+        <span class="scope-block__key">driver redundant</span>
+        <span class="scope-block__val">5</span>
       </div>
       <div class="scope-block__row">
         <span class="scope-block__key">total</span>
@@ -408,8 +432,16 @@ body {
         <span class="scope-block__val">1776</span>
       </div>
       <div class="scope-block__row">
-        <span class="scope-block__key">observed</span>
-        <span class="scope-block__val">1015</span>
+        <span class="scope-block__key">in-situ</span>
+        <span class="scope-block__val">1006</span>
+      </div>
+      <div class="scope-block__row">
+        <span class="scope-block__key">under driver</span>
+        <span class="scope-block__val">4</span>
+      </div>
+      <div class="scope-block__row">
+        <span class="scope-block__key">driver redundant</span>
+        <span class="scope-block__val">5</span>
       </div>
       <div class="scope-block__row">
         <span class="scope-block__key">total</span>
@@ -471,7 +503,7 @@ body {
     <span class="baseline__val">target\visidata\visidata</span>
 
     <span class="baseline__key">command</span>
-    <span class="baseline__val baseline__val--cmd">target\visidata\.venv\Scripts\python.exe first_light.py --package visidata --runner visidata_runner.py --runner-id cli --runner visidata_pytest_runner.py --runner-id test_suite --python python.exe --evidence evidence.json --report report.html --exclude tests vendor apps experimental</span>
+    <span class="baseline__val baseline__val--cmd">target\visidata\.venv\Scripts\python.exe -m coverage run visidata runners\visidata_runner.py</span>
 
     <span class="baseline__key">exit code</span>
     <span class="baseline__val" style="color:var(--text);">0</span>
@@ -494,7 +526,7 @@ body {
     <span class="baseline__val">target\visidata\visidata</span>
 
     <span class="baseline__key">command</span>
-    <span class="baseline__val baseline__val--cmd">target\visidata\.venv\Scripts\python.exe first_light.py --package visidata --runner visidata_runner.py --runner-id cli --runner visidata_pytest_runner.py --runner-id test_suite --python python.exe --evidence evidence.json --report report.html --exclude tests vendor apps experimental</span>
+    <span class="baseline__val baseline__val--cmd">target\visidata\.venv\Scripts\python.exe -m coverage run visidata runners\visidata_pytest_runner.py</span>
 
     <span class="baseline__key">exit code</span>
     <span class="baseline__val" style="color:var(--amber);">1</span>
@@ -519,6 +551,7 @@ body {
       observed in situ
     </div>
     <div class="legend__item"><span class="swatch swatch--driver"></span>observed under driver</div>
+    <div class="legend__item"><span class="swatch swatch--redundant"></span>driver made redundant by baseline</div>
     <div class="legend__item">
       <span class="swatch swatch--never"></span>
       never observed
@@ -771,7 +804,7 @@ body {
 <span class="cell cell--insitu" title="visidata.path.pkg_resources_files"></span>
 <span class="cell cell--driver" title="visidata.path.vstat"></span>
 <span class="cell cell--insitu" title="visidata.path.filesize"></span>
-<span class="cell cell--never" title="visidata.path.modtime"></span>
+<span class="cell cell--redundant" title="visidata.path.modtime"></span>
 <span class="cell cell--insitu" title="visidata.path.BytesIOWrapper.__init__"></span>
 <span class="cell cell--insitu" title="visidata.path.BytesIOWrapper._encoding_call"></span>
 <span class="cell cell--insitu" title="visidata.path.BytesIOWrapper.read"></span>
@@ -1062,12 +1095,12 @@ body {
 <span class="cell cell--never" title="visidata.utils.DefaultAttrDict.__setattr__"></span>
 <span class="cell cell--never" title="visidata.utils.DefaultAttrDict.__dir__"></span>
 <span class="cell cell--never" title="visidata.utils.classproperty.__get__"></span>
-<span class="cell cell--never" title="visidata.utils.moveListItem"></span>
+<span class="cell cell--redundant" title="visidata.utils.moveListItem"></span>
 <span class="cell cell--insitu" title="visidata.utils.setitem"></span>
 <span class="cell cell--insitu" title="visidata.utils.getitem"></span>
 <span class="cell cell--insitu" title="visidata.utils.getitemdef"></span>
-<span class="cell cell--never" title="visidata.utils.getattrdeep"></span>
-<span class="cell cell--never" title="visidata.utils.setattrdeep"></span>
+<span class="cell cell--redundant" title="visidata.utils.getattrdeep"></span>
+<span class="cell cell--redundant" title="visidata.utils.setattrdeep"></span>
 <span class="cell cell--insitu" title="visidata.utils.getitemdeep"></span>
 <span class="cell cell--insitu" title="visidata.utils.setitemdeep"></span>
 <span class="cell cell--insitu" title="visidata.utils.namedlist"></span>
@@ -1081,7 +1114,7 @@ body {
 <span class="cell cell--insitu" title="visidata.utils.MissingAttrFormatter.get_field"></span>
 <span class="cell cell--insitu" title="visidata.utils.MissingAttrFormatter.format_field"></span>
 <span class="cell cell--insitu" title="visidata.utils.ScopedSetattr"></span>
-<span class="cell cell--never" title="visidata.utils.colname_letters"></span>
+<span class="cell cell--redundant" title="visidata.utils.colname_letters"></span>
 <span class="cell cell--insitu" title="visidata.utils.colname_letters.divmod_excel"></span></div></div>
 <div class="map-row"><span class="map-row__label" title="visidata\_input.py">visidata\_input.py</span><div class="map-row__cells"><span class="cell cell--never" title="visidata._input.injectInput"></span>
 <span class="cell cell--insitu" title="visidata._input.getCommandInput"></span>
@@ -3325,16 +3358,16 @@ body {
      SECTION 4 — DRIVER RESULTS
      ═══════════════════════════════════════════════════════ -->
 <section class="drivers-section">
-  <div class="section-heading">Driver results — 4 confirmed, 5 superseded by baseline, 1 not confirmed</div>
+  <div class="section-heading">Driver results — 4 confirmed, 5 driver redundant, 1 not confirmed</div>
 <div class="driver-card"><div class="driver-card__name">visidata.aggregators._percentile</div><div class="driver-card__call">target/visidata/visidata/aggregators.py:198 -- _percentile(sorted(col.getValues(rows)), self.pct/100, key=float)</div><div class="driver-card__lines">confirmed lines: 179, 180, 181, 182, 183, 184…</div></div>
 <div class="driver-card"><div class="driver-card__name">visidata.aggregators.mean</div><div class="driver-card__call">target/visidata/visidata/features/ping.py:33 -- mean(r.getValues(col.sheet.source.rows))</div><div class="driver-card__lines">confirmed lines: 148, 149, 150</div></div>
 <div class="driver-card"><div class="driver-card__name">visidata.modify.changestr</div><div class="driver-card__call">target/visidata/visidata/modify.py:345 -- sheet.changestr(adds, mods, deletes)</div><div class="driver-card__lines">confirmed lines: 324, 325, 326, 328, 329, 330…</div></div>
 <div class="driver-card"><div class="driver-card__name">visidata.path.vstat</div><div class="driver-card__call"><em>call site not recorded</em></div><div class="driver-card__lines">confirmed lines: 69, 70, 71, 72</div></div>
-<div style="margin-top:28px"><div class="section-heading" style="color:#b8a030;">Superseded — baseline now reaches these in situ (5)</div><p style="font-size:12px;color:var(--muted);margin-bottom:12px;">The second baseline made these drivers redundant. The driver is not deleted; this group records that it is no longer the only evidence.</p><div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.path.modtime</div><div class="driver-card__call">target/visidata/visidata/_urlcache.py:18 -- modtime(p) where p is a visidata Path</div><div class="driver-card__lines" style="margin-top:6px;">superseded by baseline: <strong style="color:var(--text);">test_suite</strong> — driver is no longer the only evidence for this unit</div></div>
-<div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.utils.colname_letters</div><div class="driver-card__call"><em>call site not recorded</em></div><div class="driver-card__lines" style="margin-top:6px;">superseded by baseline: <strong style="color:var(--text);">test_suite</strong> — driver is no longer the only evidence for this unit</div></div>
-<div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.utils.getattrdeep</div><div class="driver-card__call">target/visidata/visidata/column.py:546 -- getattrdeep(row, col.expr, None)</div><div class="driver-card__lines" style="margin-top:6px;">superseded by baseline: <strong style="color:var(--text);">test_suite</strong> — driver is no longer the only evidence for this unit</div></div>
-<div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.utils.moveListItem</div><div class="driver-card__call">target/visidata/visidata/features/slide.py:22 -- moveListItem(sheet.rows, rowidx, newcolidx)</div><div class="driver-card__lines" style="margin-top:6px;">superseded by baseline: <strong style="color:var(--text);">test_suite</strong> — driver is no longer the only evidence for this unit</div></div>
-<div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.utils.setattrdeep</div><div class="driver-card__call">target/visidata/visidata/column.py:551 -- setattrdeep(row, self.expr, val)</div><div class="driver-card__lines" style="margin-top:6px;">superseded by baseline: <strong style="color:var(--text);">test_suite</strong> — driver is no longer the only evidence for this unit</div></div></div>
+<div style="margin-top:28px"><div class="section-heading" style="color:#b8a030;">Driver made redundant by baseline (5)</div><p style="font-size:12px;color:var(--muted);margin-bottom:12px;">These functions were genuinely observed by a baseline, making the corresponding driver redundant. The unit&#x2019;s provenance is observed_in_situ. The driver file is kept as a record of the path that was built.</p><div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.path.modtime</div><div class="driver-card__call">target/visidata/visidata/_urlcache.py:18 -- modtime(p) where p is a visidata Path</div><div class="driver-card__lines" style="margin-top:6px;">driver made redundant by baseline: <strong style="color:var(--text);">test_suite</strong> — the unit is observed in situ; the driver is no longer the only evidence</div></div>
+<div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.utils.colname_letters</div><div class="driver-card__call"><em>call site not recorded</em></div><div class="driver-card__lines" style="margin-top:6px;">driver made redundant by baseline: <strong style="color:var(--text);">test_suite</strong> — the unit is observed in situ; the driver is no longer the only evidence</div></div>
+<div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.utils.getattrdeep</div><div class="driver-card__call">target/visidata/visidata/column.py:546 -- getattrdeep(row, col.expr, None)</div><div class="driver-card__lines" style="margin-top:6px;">driver made redundant by baseline: <strong style="color:var(--text);">test_suite</strong> — the unit is observed in situ; the driver is no longer the only evidence</div></div>
+<div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.utils.moveListItem</div><div class="driver-card__call">target/visidata/visidata/features/slide.py:22 -- moveListItem(sheet.rows, rowidx, newcolidx)</div><div class="driver-card__lines" style="margin-top:6px;">driver made redundant by baseline: <strong style="color:var(--text);">test_suite</strong> — the unit is observed in situ; the driver is no longer the only evidence</div></div>
+<div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.utils.setattrdeep</div><div class="driver-card__call">target/visidata/visidata/column.py:551 -- setattrdeep(row, self.expr, val)</div><div class="driver-card__lines" style="margin-top:6px;">driver made redundant by baseline: <strong style="color:var(--text);">test_suite</strong> — the unit is observed in situ; the driver is no longer the only evidence</div></div></div>
 <div style="margin-top:20px"><div class="section-heading" style="color:#cc4444;">Attempted — not confirmed (1)</div><div class="driver-card" style="border-color:#5a2020;"><div class="driver-card__name" style="color:#cc4444;">visidata.aggregators.stdev</div><div class="driver-card__call" style="color:var(--muted);">driver file exists — not yet confirmed under coverage</div></div></div>
 </section>
 
