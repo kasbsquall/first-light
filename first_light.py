@@ -998,7 +998,38 @@ body {
    figure. Saying so is cheaper than letting someone count squares and get a
    different number. */
 .map-row--excluded .map-row__name { opacity: 0.55; }
-.map-row--excluded .map-row__cells { opacity: 0.5; }
+.map-row--excluded /* The map was 250 rows tall, which pushed the driver results, the refusal
+   distribution and the footer so far down that nobody reached them. It now
+   scrolls inside a bounded box: the whole population is still there, and the
+   rest of the report is one screen away instead of nine. */
+.map-body {
+  max-height: 62vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 8px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.map-body::-webkit-scrollbar { width: 10px; }
+.map-body::-webkit-scrollbar-track { background: transparent; }
+.map-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border: 3px solid var(--bg);
+  border-radius: 6px;
+}
+.map-body::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+.map-body { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+.map-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  padding: 8px 0 0;
+}
+
+.map-row__cells { opacity: 0.5; }
 
 .map-row__scope {
   font-size: 9px;
@@ -1024,7 +1055,26 @@ body {
   width: var(--cell-size);
   height: var(--cell-size);
   flex-shrink: 0;
+  position: relative;
+  transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
 }
+
+/* A cell is a function. Hovering one should feel like pointing at it, and the
+   tooltip that was already there becomes discoverable instead of accidental. */
+.cell:hover {
+  transform: scale(1.6);
+  z-index: 3;
+  box-shadow: 0 0 0 1px var(--text);
+}
+
+/* Hovering a row dims the rest, so 250 rows of texture become one row you are
+   actually reading. */
+.map-body:hover .map-row { opacity: 0.45; }
+.map-body:hover .map-row:hover { opacity: 1; }
+.map-row { transition: opacity 120ms linear; }
+
+.map-row:hover .map-row__name { color: var(--text); }
+.map-row:hover .map-row__count--high { color: var(--amber); }
 
 .cell--never {
   background: var(--never);
@@ -1219,6 +1269,30 @@ body {
 }
 
 .headline__never { will-change: contents; }
+
+/* The context figures were inert. A pointer on one should make it the one you
+   are reading, which is most of what "dynamic" means on a page of numbers. */
+.ctx-item {
+  transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+  cursor: default;
+}
+.ctx-item:hover { transform: translateY(-2px); }
+.ctx-item:hover .ctx-item__num { color: var(--amber); }
+.ctx-item__num { transition: color 120ms linear; }
+
+.scope-block { transition: border-color 140ms linear; }
+.scope-block:hover { border-color: var(--muted); }
+
+.driver-card { transition: border-color 140ms linear, transform 120ms cubic-bezier(0.23,1,0.32,1); }
+.driver-card:hover { border-color: var(--muted); transform: translateY(-1px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .cell, .cell:hover, .ctx-item, .ctx-item:hover,
+  .driver-card, .driver-card:hover, .map-row {
+    transition: none !important;
+    transform: none !important;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .rise, .js-on .rise {
@@ -1968,7 +2042,11 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     </div>
   </div>
   <div class="map">
+<div class="map-body">
 {map_html}
+</div>
+  <p class="map-hint">Every square is one function. Hover a square to see which.
+     The map scrolls; the rest of the report continues below.</p>
   </div>
 </section>
 
