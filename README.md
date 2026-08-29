@@ -284,18 +284,28 @@ rejects generated code on evidence rather than on how it reads. That makes
 `evidence.json` an evaluation harness, and the figure worth publishing is how
 many of a model's drivers survive verification and how the refusals distribute.
 
-It was attempted and not built. The event provisions IBM Bob per participant and
-makes watsonx a separate, optional request for a team cloud account, which we did
-not make. So authentication succeeds and the account lists twenty foundation
-models including `ibm/granite-4-h-small`, but no watsonx.ai Runtime can be
-attached to the project and inference returns
-`no_associated_service_instance_error`. The captured responses are in
-[docs/watsonx-attempt.md](docs/watsonx-attempt.md). The limit was the account we
-were working in, and it was ours to request.
+`tools/wx_draft_driver.py` does exactly that. It asks
+`ibm/granite-4-h-small` on watsonx.ai to draft a driver for a function that has
+never been observed executing, handing it the function's source and every line
+in the package that calls it by name. It promotes nothing: the draft lands in
+`drivers-candidates/` and the same gate judges it, with the same rules and the
+same refusal classes.
 
-Nothing here calls watsonx.ai and no reported figure depends on a model having
-been asked anything. Publishing an integration that does not run would be the
-same unverified assertion this tool exists to detect.
+On the first five functions it was given, the gate accepted two and refused
+three. `visidata.graph.format_input_value` and `visidata.threads.codestr` cite
+real call sites and their drivers run; the other three drivers exited non-zero.
+The captured request and response, the model list, and the gate's verdict on
+each draft are in [docs/watsonx-attempt.md](docs/watsonx-attempt.md), along with
+the account misconfiguration that made our first attempt fail and the fix.
+
+Those two are not folded into the published figures. They were drafted hours
+before submission and no human has reviewed the fixtures they build, and moving
+`never_observed` from 1200 to 1198 on an unreviewed model draft is the shape of
+claim this project argues against. So the tool is real, the run reproduces, and
+the model's output is recorded as candidates rather than counted as evidence.
+
+Credentials come from `WATSONX_APIKEY` or `WATSONX_APIKEY_FILE` in the
+environment. Nothing in this repository contains a key.
 
 ---
 

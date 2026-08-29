@@ -45,10 +45,10 @@ Coverage tools count lines and test generators write tests. What neither does
 is separate evidence gathered by watching a program work from evidence
 manufactured to fill a gap, or publish that distinction for an agent to read.
 
-Nothing here runs on watsonx.ai. Driver generation is where it belongs and the
-verifier is the hard half, which exists; the event account's catalog offered no
-AI category, so the runtime could not be provisioned. We would rather say so
-than ship an integration that does not run.
+Driver generation runs on watsonx.ai. `ibm/granite-4-h-small` drafts a driver
+for a function nothing has been seen to execute, and the same gate judges it: of
+the first five, two were accepted and three refused. Those two ship as
+candidates, not as figures, because no human has reviewed them yet.
 
 The tool demonstrated this on itself. The test suite made five of our agent's
 ten drivers unnecessary and the replay made a sixth. Two more were refused
