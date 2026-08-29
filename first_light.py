@@ -641,16 +641,37 @@ R.classList.add('js-on');
     rows.forEach(r => r.classList.add('is-in'));
     return;
   }
+  const reveal = (el, n) => {
+    if (el.classList.contains('is-in')) return;
+    el.style.setProperty('--r', String(Math.min(n, 7)));
+    el.classList.add('is-in');
+    io.unobserve(el);
+  };
   const io = new IntersectionObserver((entries) => {
     let n = 0;
-    entries.forEach(en => {
-      if (!en.isIntersecting) return;
-      en.target.style.setProperty('--r', String(Math.min(n++, 7)));
-      en.target.classList.add('is-in');
-      io.unobserve(en.target);
-    });
+    entries.forEach(en => { if (en.isIntersecting) reveal(en.target, n++); });
   }, { rootMargin: '80px 0px' });
   rows.forEach(r => io.observe(r));
+
+  /* An anchor jump skips rows without ever intersecting them, and they would
+     stay at opacity 0 for good. Anything at or above the fold is revealed
+     outright, and a failsafe reveals everything shortly after load. A row must
+     never depend on an animation firing in order to be readable. */
+  const sweep = () => {
+    const edge = window.innerHeight + 80;
+    for (const r of rows) {
+      if (r.classList.contains('is-in')) continue;
+      if (r.getBoundingClientRect().top < edge) reveal(r, 0);
+    }
+  };
+  let ticking = false;
+  addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => { sweep(); ticking = false; });
+  }, { passive: true });
+  sweep();
+  setTimeout(() => rows.forEach(r => reveal(r, 0)), 2500);
 })();
 
 /* Filtering. The map was 250 rows with no way in; this makes the number
