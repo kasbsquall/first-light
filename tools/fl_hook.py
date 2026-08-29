@@ -149,9 +149,14 @@ def _file_integrity(abs_path: str, integrity: dict) -> str:
 
 
 def _overlaps(unit: dict, start_line: int | None, end_line: int | None) -> bool:
-    """Return True if [start_line, end_line] overlaps the unit's body range."""
+    """Return True if [start_line, end_line] overlaps the unit's body range.
+
+    With no line number every unit in the file matches.  That is not an
+    assertion that the edit touches any of them; it is the caller's cue that the
+    edit could not be located, and the caller must say so rather than pick one.
+    """
     if start_line is None:
-        return True   # no line info → conservatively match any unit in the file
+        return True
     s = start_line
     e = end_line if end_line is not None else start_line
     return s <= unit["body_end"] and e >= unit["body_start"]
@@ -277,6 +282,23 @@ def query(
 
     # ── build advisory ────────────────────────────────────────────────────
     # If multiple units match, report the most specific (smallest body).
+    # Bob's Edit, Write and MultiEdit payloads carry no line number, and those
+    # are the matchers this hook is wired to.  Without one, every unit in the
+    # file matched, and naming the smallest would assert something the payload
+    # does not support: precisely the failure this project exists to detect.
+    # Report the file's state instead, and say the edit could not be placed.
+    if start_line is None and len(matching) > 1:
+        never = sum(1 for _, u in matching
+                    if u.get("provenance") == PROVENANCE_NEVER)
+        msg = (
+            f"[first_light] edit not located within {Path(abs_path).name} "
+            f"(no line number in payload) -- {len(matching)} tracked functions "
+            f"here, {never} never observed"
+        )
+        if file_state == "changed":
+            msg += " [FILE CHANGED since observation -- re-run first_light.py]"
+        return msg
+
     matching.sort(key=lambda kv: kv[1]["body_end"] - kv[1]["body_start"])
     key, unit = matching[0]
     _qname_raw = key.split("::", 1)[1] if "::" in key else key
@@ -298,6 +320,20 @@ def query(
             f"{qualname} has never been observed executing "
             f"(baselines run: {scope})"
         )
+        # A driver may have reached this function and had its promotion refused.
+        # Saying only "never observed" would drop that, and the difference is
+        # the whole point: no baseline ran it, something did run it, and the
+        # claim about where it runs in production could not be verified.
+        if unit.get("driver_reached"):
+            _n = len(unit.get("driver_reached_lines") or [])
+            _why = ("no call site was declared"
+                    if not unit.get("driver_declared_call_site")
+                    else "its declared call site could not be confirmed")
+            explanation += (
+                f". A driver did reach it, executing {_n} line"
+                f"{'' if _n == 1 else 's'} of the body, but {_why}, "
+                f"so the promotion was refused"
+            )
     elif provenance == PROVENANCE_IN_SITU:
         explanation = (
             f"{qualname} was observed executing under normal operation "

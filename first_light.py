@@ -1184,7 +1184,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         exit_code = bl.get("exit_code", 0)
         exit_color = "var(--amber)" if exit_code != 0 else "var(--text)"
         partial_note = (
-            f' <span style="color:{exit_color};font-weight:600;">[exit {exit_code} — partial run]</span>'
+            f' <span style="color:{exit_color};font-weight:600;">[exit {exit_code}, partial run]</span>'
             if exit_code != 0 else ""
         )
         bl_obs = prod_bl_counts.get(bl_id, 0)
@@ -1207,7 +1207,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
             )
         baseline_cards_html.append(f"""
 <div class="baseline" style="margin-bottom:16px;">
-  <div class="label">Baseline &mdash; {e(bl_id)}{partial_note}</div>
+  <div class="label">Baseline: {e(bl_id)}{partial_note}</div>
   <div class="baseline__grid">
     <span class="baseline__key">runner</span>
     <span class="baseline__val">{e(runner_rel)}</span>
@@ -1314,7 +1314,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
             f'<div class="driver-card__name" style="color:#b8a030;">{e(d["name"])}</div>'
             f'<div class="driver-card__call">{call_html}</div>'
             f'<div class="driver-card__lines" style="margin-top:6px;">'
-            f'driver made redundant by baseline: <strong style="color:var(--text);">{e(red_by)}</strong> — '
+            f'driver made redundant by baseline: <strong style="color:var(--text);">{e(red_by)}</strong>. '
             f'the unit is observed in situ; the driver is no longer the only evidence'
             f'</div>'
             f'</div>'
@@ -1370,7 +1370,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>First Light &mdash; Evidence Report</title>
+<title>First Light : Evidence Report</title>
 <style>
 {_HTML_CSS}
 </style>
@@ -1381,7 +1381,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
      SECTION 1 — HEADLINE NUMBER
      ═══════════════════════════════════════════════════════ -->
 <header class="headline">
-  <span class="label">First Light &mdash; Function Observation Report</span>
+  <span class="label">First Light : Function Observation Report</span>
   <span class="headline__never">{e(str(prod_never))}</span>
   <span class="headline__word">product-code functions never observed</span>
 
@@ -1480,7 +1480,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
      SECTION 2 — BASELINES
      ═══════════════════════════════════════════════════════ -->
 <section>
-  <div class="label" style="margin-bottom:12px;">Baselines — exactly what was executed</div>
+  <div class="label" style="margin-bottom:12px;">Baselines: exactly what was executed</div>
   <div style="font-size:11px;color:var(--muted);margin-bottom:16px;">
     generated {e(generated_at)} &nbsp;&middot;&nbsp; First Light v{e(version)}
   </div>
@@ -1491,7 +1491,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
      SECTION 3 — EVIDENCE MAP
      ═══════════════════════════════════════════════════════ -->
 <section class="map-section">
-  <div class="section-heading">Evidence map — every module, every function</div>
+  <div class="section-heading">Evidence map: every module, every function</div>
   <div class="legend">
     <div class="legend__item">
       <span class="swatch swatch--insitu"></span>
@@ -1515,14 +1515,14 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
      SECTION 4 — DRIVER RESULTS
      ═══════════════════════════════════════════════════════ -->
 <section class="drivers-section">
-  <div class="section-heading">Driver results — {e(str(len(confirmed_drivers)))} confirmed, {e(str(len(redundant_drivers)))} driver redundant, {e(str(len(attempted_drivers)))} not confirmed</div>
+  <div class="section-heading">Driver results: {e(str(len(confirmed_drivers)))} confirmed, {e(str(len(redundant_drivers)))} driver redundant, {e(str(len(attempted_drivers)))} not confirmed</div>
 {drivers_html}
 {f'<div style="margin-top:28px"><div class="section-heading" style="color:#b8a030;">Driver made redundant by baseline ({e(str(len(redundant_drivers)))})</div><p style="font-size:12px;color:var(--muted);margin-bottom:12px;">These functions were genuinely observed by a baseline, making the corresponding driver redundant. The unit&#x2019;s provenance is observed_in_situ. The driver file is kept as a record of the path that was built.</p>' + redundant_html + '</div>' if redundant_drivers else ''}
-{f'<div style="margin-top:20px"><div class="section-heading" style="color:#cc4444;">Attempted — not confirmed ({e(str(len(attempted_drivers)))})</div>' + attempted_html + '</div>' if attempted_drivers else ''}
+{f'<div style="margin-top:20px"><div class="section-heading" style="color:#cc4444;">Attempted, not confirmed ({e(str(len(attempted_drivers)))})</div>' + attempted_html + '</div>' if attempted_drivers else ''}
 </section>
 
 <footer class="footer">
-  Made with IBM Bob &mdash; First Light v{e(version)} &mdash; {e(generated_at)}
+  Made with IBM Bob : First Light v{e(version)} : {e(generated_at)}
 </footer>
 
 </body>

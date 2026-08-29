@@ -5,12 +5,11 @@ produced with **Export Task History** from the Bob command palette. It covers
 10 tasks and 952 messages.
 
 - `bob-tasks-first-light-2026-08-29.md` is the readable transcript. Start here.
-  Note that it runs **newest task first**, the reverse of the table below.
 - `bob-tasks-first-light-2026-08-29.json` is the same record in full fidelity,
   including tool results. It is 19MB and is meant for machines.
 
-The table lists the tasks in the order they were run, which is the order they
-appear in the JSON and the reverse of the order they appear in the Markdown.
+The table below lists the tasks in the order they were run. Both files store
+them newest first, so both are the reverse of this table.
 
 | # | Started (UTC) | Messages | Task |
 |--:|---------------|---------:|------|
@@ -68,11 +67,13 @@ built the coverage gate that rejects that approach and proved the gate works by
 writing a deliberately bad inline-copy driver and confirming the real source
 file showed zero hits.
 
-Twice, Bob declined an instruction and proposed something better. The clearest
-case: told to patch `os._exit` inside `first_light.py`, Bob pointed out the
-patch belongs in the runner subprocess, because that is the process that calls
-it, and proposed generating a wrapper script instead. The instruction as given
-would not have worked.
+At least once, Bob declined an instruction and proposed something better. Told
+to patch `os._exit` inside `first_light.py`, Bob pointed out that the patch
+belongs in the runner subprocess, because that is the process that calls it,
+and proposed generating a wrapper script instead. The instruction as given
+would not have worked. This one is quoted here because it is the one that
+survives a search of the transcript; a count higher than one would be a claim
+this record does not clearly support.
 
 ## A limitation of the Markdown
 

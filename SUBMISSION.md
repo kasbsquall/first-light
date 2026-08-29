@@ -2,12 +2,12 @@
 
 ## The problem
 
-Agents now write code faster than anyone can read it, and they treat every
-function the same. To an editing agent, a function exercised by a passing test
-and a function that has never executed in its life look identical. Coverage does
-not close that gap. Coverage reports that a line was touched. It says nothing
-about whether anyone has ever observed what that function does when it runs.
-Teams read a coverage percentage as confidence and let agents edit on that basis.
+Agents write code faster than anyone can read it, and they treat every function
+the same. To an editing agent, a function exercised by a passing test and one
+that has never executed look identical. Coverage does not close that gap: it
+reports that a line was touched, and says nothing about whether anyone has ever
+observed what the function does when it runs. Teams read a coverage percentage
+as confidence and let agents edit on that basis.
 
 We measured visidata, a widely used Python tool. Of 2290 functions in its product
 code, 1343 have never been observed executing by anything. That figure holds
@@ -21,33 +21,36 @@ running program reaches 10 the tests never touch.
 First Light enumerates every function in a package, runs baselines under
 instrumentation, and assigns each function a provenance it refuses to blur:
 
-- `never_observed`. Nothing has ever run this.
+- `never_observed`. No baseline reached it, and no driver has produced a
+  verified claim about it.
 - `observed_in_situ`. A baseline executed it during real operation.
 - `observed_under_driver`. It ran only because an agent wrote code to reach it.
 
-The third level carries the idea. When an agent writes a driver to exercise dead
-code, the evidence produced is weaker than evidence from real use, and First
-Light records it as weaker instead of promoting it. Every driver must also
-declare, in a comment, where the function is reached in production. The tool
-opens that file and checks the claim. A driver that declares nothing, or names a
-call site that cannot be confirmed, is refused.
+The third level carries the idea. Evidence an agent manufactured is weaker than
+evidence from real use, and First Light records it as weaker instead of
+promoting it. Every driver must also declare where the function is reached in
+production. The tool opens that file and checks it. A driver that declares
+nothing, or names a call site that cannot be confirmed, is refused, and the
+evidence keeps both facts: the driver did reach the function, and its claim
+could not be checked.
 
-The result is published as a machine-readable evidence file that a Bob
-`PreToolUse` hook reads before every edit, so the agent is told what is known
-about the function at the moment it changes it.
+The evidence file is machine-readable, and a Bob `PreToolUse` hook reads it
+before every edit, so the agent is told what is known about the function as it
+changes it. First Light was built with IBM Bob across ten tasks; `bob_sessions/`
+holds that record and an index of what it shows.
 
 ## Who uses it
 
-Teams pointing coding agents at code nobody has verified. They run one command,
-get a report and an evidence file, and wire the hook once. After that the
+Teams pointing coding agents at code nobody has verified. One command produces
+the report and the evidence file; the hook is wired once. After that the
 evidence travels with the agent.
 
 ## Why this is new
 
-Test generators write tests. Coverage tools count lines. Neither publishes an
-epistemic state that an agent consults while editing, and neither separates
-evidence gathered by watching a program work from evidence manufactured to fill
-a gap.
+Coverage tools count lines and test generators write tests. What neither does
+is separate evidence gathered by watching a program work from evidence
+manufactured to fill a gap, or publish that distinction for an agent to read
+while editing.
 
 The tool demonstrated this on itself. Adding the test-suite baseline made five of
 our own agent's ten drivers unnecessary, and we published that rather than
@@ -55,5 +58,5 @@ quietly deleting them. The call-site check then rejected two of our agent's
 drivers. Closing the last gap in that check cost us a promotion we had already
 counted, and we kept the closure and lowered the number.
 
-A system that reports the work its own agent wasted, and refuses its own agent's
-unverifiable claims, is the only kind worth trusting with the answer.
+It reports the work its own agent wasted and refuses its own agent's
+unverifiable claims. That is the standard the answer has to meet.

@@ -24,16 +24,16 @@ git clone https://github.com/saulpw/visidata.git target/visidata
 git -C target/visidata checkout 1d8a6fcd7f031a140c5662943af868e9108343ed
 py -m venv target/visidata/.venv
 
-# Install coverage.py into the target's own virtual environment.
+# Install the target itself into its own virtual environment.
 # (visidata example; adjust for a different target.)
 .\target\visidata\.venv\Scripts\python.exe -m pip install -e target\visidata
 
-# Both baselines run in one pass.  The headline figure depends on running
-# both: the program alone and the test suite alone reach different
-# functions, and neither is a superset of the other.
+# Runner-layer dependencies: coverage, pytest, and windows-curses.
 .\target\visidata\.venv\Scripts\python.exe -m pip install -r requirements-runners.txt
 
-# Run the full observation pass.
+# Run the full observation pass.  Both baselines run together: the
+# program alone and the test suite alone reach different functions and
+# neither is a superset of the other, so the figure depends on both.
 .\target\visidata\.venv\Scripts\python.exe first_light.py `
     --package .\target\visidata\visidata `
     --runner  .\runners\visidata_runner.py        --runner-id cli `
