@@ -21,7 +21,9 @@ from __future__ import annotations
 
 import argparse
 import ast
+import copy
 import datetime
+import enum
 import hashlib
 import json
 import os
@@ -49,6 +51,61 @@ PROVENANCE_IN_SITU         = "observed_in_situ"
 PROVENANCE_UNDER_DRIVER    = "observed_under_driver"
 # PROVENANCE_SUPERSEDED is kept as a read-time alias for backward-compat migration only.
 PROVENANCE_SUPERSEDED      = "superseded"
+
+
+# ---------------------------------------------------------------------------
+# Refusal classes — every distinct way a driver can fail the promotion gate.
+# ---------------------------------------------------------------------------
+
+class RefusalClass(str, enum.Enum):
+    """Machine-readable reason a driver was refused promotion.
+
+    Each member maps to one distinct branch in cmd_promote_driver.  A unit
+    that was attempted but not promoted carries ``refusal_class`` (this enum
+    value) and ``refusal_reason`` (the human-readable string) in evidence.json.
+    """
+    # The driver's filename stem did not match any unit key in evidence.json.
+    # This is a configuration error, not a gate failure.
+    unit_not_found           = "unit_not_found"
+
+    # The driver process returned a non-zero exit code.
+    driver_exited_nonzero    = "driver_exited_nonzero"
+
+    # coverage json export failed after the driver ran.
+    coverage_export_failed   = "coverage_export_failed"
+
+    # The driver ran and exited cleanly but no line inside the function body
+    # was executed.
+    body_never_reached       = "body_never_reached"
+
+    # The driver has no "# call site:" comment — it declared nothing to verify.
+    no_call_site             = "no_call_site"
+
+    # An indirect call site comment that does not contain exactly two
+    # semicolon-separated segments.
+    indirect_wrong_format    = "indirect_wrong_format"
+
+    # The call site text does not parse as "file:N (-- ...)" form.
+    call_site_not_file_line  = "call_site_not_file_line"
+
+    # The file named in the call site comment does not exist on disk.
+    call_site_file_not_found = "call_site_file_not_found"
+
+    # The file exists but is not inside the package under analysis.
+    call_site_outside_package = "call_site_outside_package"
+
+    # The line number named in the call site exceeds the file's length.
+    call_site_line_out_of_range = "call_site_line_out_of_range"
+
+    # The function's simple name does not appear on the cited line.
+    name_not_on_line         = "name_not_on_line"
+
+    # The cited line exists and contains the name, but is a definition,
+    # import, decorator, __all__ declaration, or comment — not a use.
+    line_not_a_call_site     = "line_not_a_call_site"
+
+    # The cited line falls inside the target function's own body range.
+    call_site_inside_own_body = "call_site_inside_own_body"
 
 
 # ---------------------------------------------------------------------------
@@ -558,8 +615,10 @@ _HTML_CSS = """\
   --muted:       #8A7F74;
   --amber:       #C8761A;
   --amber-dim:   #7A4810;
-  --never:       #2C2825;
-  --never-border:#3D3730;
+  --never:       #4A423A;
+  --never-border:#6B6055;
+  --redundant:   #8A6A1E;
+  --redundant-br:#C8A44A;
   --cell-size:   10px;
   --font-mono:   "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
 }
@@ -811,15 +870,53 @@ body {
 }
 
 .map-row__label {
-  width: 200px;
+  width: 260px;
   flex-shrink: 0;
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--muted);
   padding-top: 1px;
-  white-space: nowrap;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.map-row__name {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* The count is the actionable fact in the row. Without it a file that is 75
+   unobserved out of 82 looks the same as a four-function stub. */
+.map-row__count {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+
+.map-row__count--high { color: #C89C6A; }
+.map-row__count--none { color: #5A5149; }
+
+/* Rows outside the product scope are in the map but not in the headline
+   figure. Saying so is cheaper than letting someone count squares and get a
+   different number. */
+.map-row--excluded .map-row__name { opacity: 0.55; }
+.map-row--excluded .map-row__cells { opacity: 0.5; }
+
+.map-row__scope {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6B6055;
+  flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+  .map-row { flex-direction: column; gap: 4px; }
+  .map-row__label { width: auto; }
 }
 
 .map-row__cells {
@@ -858,8 +955,13 @@ body {
 }
 
 .cell--redundant {
-  background: #2a2a12;
-  border: 1px solid #b8a030;
+  background: var(--redundant);
+  border: 1px solid var(--redundant-br);
+}
+
+.swatch--redundant {
+  background: var(--redundant);
+  border: 1px solid var(--redundant-br);
 }
 
 /* ── Drivers section ────────────────────────────────────── */
@@ -1099,16 +1201,14 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     # additive contribution: units first seen by each baseline
     # (i.e. observed by this baseline but by NO earlier baseline)
     prod_bl_additive: dict[str, int] = {}
-    seen_by_prior: set[str] = set()
     for bl in raw_baselines:
         bl_id = bl["id"]
-        additive = 0
+        only_here = 0
         for u in prod_units.values():
             obs = u.get("observed_in_baseline", [])
-            if bl_id in obs and not any(p in obs for p in seen_by_prior):
-                additive += 1
-        prod_bl_additive[bl_id] = additive
-        seen_by_prior.add(bl_id)
+            if obs == [bl_id]:
+                only_here += 1
+        prod_bl_additive[bl_id] = only_here
 
     # ── Build per-module map data ────────────────────────────────────────────
     # Group functions by their source file (relative path stripped to module name)
@@ -1134,13 +1234,21 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
             "qname": _strip_def_line_suffix(raw_qname),
             "provenance": u["provenance"],
             "driver_redundant_baseline": u.get("driver_redundant_baseline", ""),
+            "in_scope": key in prod_units,
         })
 
     # Sort modules: observed-first, then alphabetically
     def _module_sort_key(item):
+        # Lead with the files that carry the headline. Sorting by observed count
+        # put the most-covered modules at the top, so a report whose headline is
+        # about unobserved code opened on a wall of observed cells and argued
+        # against itself for the first screen. Rank by how much of each module
+        # has never been observed, and put excluded modules last: they are shown
+        # for completeness but they are not part of the figure above.
         label, funcs = item
-        obs = sum(1 for f in funcs if f["provenance"] != PROVENANCE_NEVER)
-        return (-obs, label)
+        never = sum(1 for f in funcs if f["provenance"] == PROVENANCE_NEVER)
+        in_scope = bool(funcs) and funcs[0].get("in_scope", True)
+        return (0 if in_scope else 1, -never, label)
 
     sorted_modules = sorted(module_map.items(), key=_module_sort_key)
 
@@ -1207,7 +1315,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         )
         bl_obs = prod_bl_counts.get(bl_id, 0)
         bl_add = prod_bl_additive.get(bl_id, 0)
-        add_note = f" (+{bl_add} unique)" if bl_add > 0 else (" (no unique additions)" if raw_baselines.index(bl) > 0 else "")
+        add_note = f" ({bl_add} reached by this baseline alone)"
         # pytest counts row (only when the baseline recorded them)
         py_collected = bl.get("pytest_collected")
         py_passed = bl.get("pytest_passed")
@@ -1267,9 +1375,25 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
             cells.append(f'<span class="{cls}" title="{title}"></span>')
         cells_html = "\n".join(cells)
         label_html = e(mod_label)
+        # Count what the row is about, and say whether it counts toward the
+        # headline. A row of squares alone is texture. A row that carries its
+        # own tally is something a reader can act on, and marking the rows
+        # outside the product figure stops anyone counting squares and
+        # arriving at a different total than the one printed above.
+        n_total   = len(funcs)
+        n_never   = sum(1 for f in funcs if f["provenance"] == PROVENANCE_NEVER)
+        in_scope  = bool(funcs) and funcs[0].get("in_scope", True)
+        count_cls = "map-row__count--none" if n_never == 0 else "map-row__count--high"
+        scope_tag = "" if in_scope else '<span class="map-row__scope">excluded</span>'
+        row_cls   = "map-row" if in_scope else "map-row map-row--excluded"
         map_rows_html.append(
-            f'<div class="map-row">'
-            f'<span class="map-row__label" title="{label_html}">{label_html}</span>'
+            f'<div class="{row_cls}">'
+            f'<span class="map-row__label" title="{label_html}">'
+            f'<span class="map-row__name">{label_html}</span>'
+            f'{scope_tag}'
+            f'<span class="map-row__count {count_cls}" '
+            f'title="{n_never} of {n_total} never observed">{n_never}/{n_total}</span>'
+            f'</span>'
             f'<div class="map-row__cells">{cells_html}</div>'
             f'</div>'
         )
@@ -1481,7 +1605,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         <span class="scope-block__val">{e(str(prod_bl_counts.get(bl["id"],0)))}</span>
       </div>
       <div class="scope-block__row">
-        <span class="scope-block__key">unique addition</span>
+        <span class="scope-block__key">only this one</span>
         <span class="scope-block__val">{e(str(prod_bl_additive.get(bl["id"],0)))}</span>
       </div>
       <div class="scope-block__row">
@@ -1775,11 +1899,14 @@ def cmd_promote_driver(
                 unit = u
                 break
         if unit_key is None:
+            _reason = (
+                f"no unit found for qualified name '{driver_path.stem}' in {evidence_path}"
+            )
             print(
-                f"[promote-driver] FAIL  {driver_path.name} — "
-                f"no unit found for qualified name '{driver_path.stem}' in {evidence_path}",
+                f"[promote-driver] FAIL  {driver_path.name} — {_reason}",
                 file=sys.stderr,
             )
+            # No unit to annotate — nothing to write into doc.
             failed += 1
             continue
 
@@ -1860,15 +1987,22 @@ def cmd_promote_driver(
             continue
 
         if status != "reached":
-            reason = {
-                "not_reached": f"driver ran but zero body lines ({body_start}-{body_end}) hit in {src_abs}",
-                "crash":       "driver process exited with non-zero return code",
-                "cov_fail":    "coverage JSON export failed",
-            }.get(status, status)
+            _rc_map = {
+                "not_reached": (RefusalClass.body_never_reached,
+                                f"driver ran but zero body lines ({body_start}-{body_end}) hit in {src_abs}"),
+                "crash":       (RefusalClass.driver_exited_nonzero,
+                                "driver process exited with non-zero return code"),
+                "cov_fail":    (RefusalClass.coverage_export_failed,
+                                "coverage JSON export failed"),
+            }
+            _rc, reason = _rc_map.get(status, (RefusalClass.body_never_reached, status))
             print(
                 f"[promote-driver] FAIL  {driver_path.name} — {reason}",
                 file=sys.stderr,
             )
+            doc["units"][unit_key]["refusal_class"]  = _rc.value
+            doc["units"][unit_key]["refusal_reason"] = reason
+            touched += 1
             failed += 1
             continue
 
@@ -1908,11 +2042,15 @@ def cmd_promote_driver(
         # in production on the strength of an assertion nobody made.  An absent
         # claim is not a verified one: the gate fails closed.
         if not call_site:
-            print(
-                f"[promote-driver] FAIL  {driver_path.name} -- "
-                f"no '# call site:' comment; a driver must declare where the "
-                f"function is reached in production so the claim can be checked"
+            _reason = (
+                "no '# call site:' comment; a driver must declare where the "
+                "function is reached in production so the claim can be checked"
             )
+            print(
+                f"[promote-driver] FAIL  {driver_path.name} -- {_reason}"
+            )
+            doc["units"][unit_key]["refusal_class"]  = RefusalClass.no_call_site.value
+            doc["units"][unit_key]["refusal_reason"] = _reason
             failed += 1
             continue
 
@@ -1921,13 +2059,17 @@ def cmd_promote_driver(
                 # ── indirect call site: two segments separated by " ; " ──
                 segments = [s.strip() for s in call_site.split(";")]
                 if len(segments) != 2:
+                    _reason = (
+                        "indirect call site must have exactly two segments separated by ';': "
+                        "'dispatch_file:N -- text ; binding_file:M -- binding_name'. "
+                        "Correct the '# call site (indirect):' comment."
+                    )
                     print(
-                        f"[promote-driver] FAIL  {driver_path.name} -- "
-                        f"indirect call site must have exactly two segments separated by ';': "
-                        f"'dispatch_file:N -- text ; binding_file:M -- binding_name'. "
-                        f"Correct the '# call site (indirect):' comment.",
+                        f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
                         file=sys.stderr,
                     )
+                    doc["units"][unit_key]["refusal_class"]  = RefusalClass.indirect_wrong_format.value
+                    doc["units"][unit_key]["refusal_reason"] = _reason
                     failed += 1
                     continue
 
