@@ -4,7 +4,9 @@ fl_hook.py -- First Light pre-edit advisory hook.
 
 Bob calls this before a file write.  It reads a JSON payload from stdin,
 resolves which function unit the target line range falls into, and prints
-one advisory line to stdout.  It ALWAYS exits 0.  It never blocks an edit.
+one advisory line to stdout.  It exits 0 and never blocks an edit, unless
+--strict is passed (or FIRST_LIGHT_STRICT=1), in which case an edit to a
+function with no execution record exits 2.  Off by default.
 
 Stdin payload -- Bob may nest tool_input at any depth, e.g.:
     {"tool_input": {"file_path": "...", "line": 7}}
@@ -369,6 +371,13 @@ def _parse_stdin() -> tuple[str, int | None]:
 
 
 def _hook_main() -> None:
+    # --strict turns the advisory into a gate. It is off by default and stays
+    # off by default: a tool that blocks an edit the first time you install it
+    # gets disabled the same afternoon, and a disabled hook reports nothing.
+    # But an advisory that can never say no is a report, not a control, and an
+    # org that wants the control should not have to fork the file to get it.
+    strict = "--strict" in sys.argv or os.environ.get("FIRST_LIGHT_STRICT") == "1"
+
     file_path, start_line = _parse_stdin()
 
     if not file_path:
@@ -378,9 +387,22 @@ def _hook_main() -> None:
     try:
         result = query(file_path, start_line, None)
     except Exception as exc:
-        result = f"[first_light] internal error ({exc}) -- advisory skipped"
+        # An internal failure must not block work. The tool refusing to assert
+        # what it cannot verify applies to itself: it does not know whether this
+        # edit is safe, so it does not claim it is unsafe either.
+        _print(f"[first_light] internal error ({exc}) -- advisory skipped")
+        sys.exit(0)
 
     _print(result)
+
+    if strict and _PROVENANCE_LABELS[PROVENANCE_NEVER] in result:
+        _print(
+            "[first_light] blocked by --strict: this function has no execution "
+            "record. Run it, add a driver that declares a verifiable call site, "
+            "or edit it with --strict off and accept that nothing observed it."
+        )
+        sys.exit(2)
+
     sys.exit(0)
 
 

@@ -233,12 +233,13 @@ such a workload usually lacks, which is a verifier that can reject the model's
 output on evidence rather than on taste.
 
 The gate does not ask whether generated code looks right. It runs the driver
-under coverage and checks that lines inside the real function executed, and it
-opens the file the driver names as the production call site and confirms the
-function's name is on that line, inside the package under analysis. A driver
-that copies a function body, exits non-zero, cites a line that does not contain
-the call, cites a file outside the package, or cites nothing at all, is refused.
-Two of the ten drivers in `drivers/` were refused for exactly these reasons.
+under coverage and checks that lines inside the real function executed. Then it
+parses the file the driver names as the production call site and requires the
+cited line to carry a call whose callee resolves to that function, inside the
+package under analysis. A driver that copies a function body, exits non-zero,
+cites a line that mentions the function without calling it, cites a file outside
+the package, or cites nothing at all, is refused. Two of the ten drivers in
+`drivers/` were refused for exactly these reasons.
 
 `evidence.json` is an evaluation harness for generated code. The figure worth
 publishing is not that a model can write a driver. It is how many of its drivers
@@ -306,6 +307,19 @@ blocks an edit.
 
 To activate the hook, add the entry documented in `docs/hook-config.md` to
 `~/.claude/hooks/hooks.json`.
+
+### Turning the advisory into a gate
+
+By default the hook reports and never blocks. Pass `--strict` in the hook command
+(or set `FIRST_LIGHT_STRICT=1`) and an edit to a function with no execution
+record exits 2, which stops the write.
+
+It is off by default on purpose. A tool that blocks an edit the first time you
+install it gets disabled the same afternoon, and a disabled hook reports nothing.
+But an advisory that can never say no is a report rather than a control, and a
+team that wants the control should not have to fork the file to get it. An
+internal error in the hook never blocks either: not knowing whether an edit is
+safe is not the same as knowing it is unsafe.
 
 The `FIRST_LIGHT_EVIDENCE` environment variable overrides the evidence file
 location when it is not adjacent to the files being edited.

@@ -700,12 +700,29 @@ R.classList.add('js-on');
       apply();
     });
   }
-  radios.forEach(c => {
-    c.addEventListener('click', () => {
-      state.show = c.dataset.only;
-      radios.forEach(o => o.setAttribute('aria-checked',
-        String(o.dataset.only === state.show)));
-      apply();
+  /* A radiogroup promises arrow-key selection and a single tab stop. Declaring
+     the role without implementing that is worse than plain buttons, because a
+     screen reader announces a keyboard model that is not there. */
+  function select(c) {
+    state.show = c.dataset.only;
+    radios.forEach(o => {
+      const on = o.dataset.only === state.show;
+      o.setAttribute('aria-checked', String(on));
+      o.tabIndex = on ? 0 : -1;
+    });
+    apply();
+  }
+  radios.forEach((c, i) => {
+    c.tabIndex = c.getAttribute('aria-checked') === 'true' ? 0 : -1;
+    c.addEventListener('click', () => select(c));
+    c.addEventListener('keydown', (ev) => {
+      let next = null;
+      if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') next = radios[(i + 1) % radios.length];
+      if (ev.key === 'ArrowLeft'  || ev.key === 'ArrowUp')   next = radios[(i - 1 + radios.length) % radios.length];
+      if (!next) return;
+      ev.preventDefault();
+      select(next);
+      next.focus();
     });
   });
   apply();
@@ -1330,7 +1347,9 @@ body {
   border: 0;
 }
 
-.headline__never { will-change: contents; }
+h1.headline { margin: 0; font-weight: inherit; }
+
+.headline__never { will-change: contents; display: block; }
 
 /* The context figures were inert. A pointer on one should make it the one you
    are reading, which is most of what "dynamic" means on a page of numbers. */
@@ -2025,8 +2044,11 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     <a href="#map">Evidence map</a>
     <a href="#refusals">Refusals</a>
   </nav>
-  <h1 class="headline__never">{e(str(prod_never))}</h1>
-  <span class="headline__word">product-code functions never observed</span>
+  <h1 class="headline">
+    <span class="headline__never">{e(str(prod_never))}</span>
+    <span class="headline__word">of {e(str(prod_total))} product-code functions
+      in visidata have never been observed executing</span>
+  </h1>
 
   <div class="headline__context">
     <div class="ctx-item ctx-item__amber">
