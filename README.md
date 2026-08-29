@@ -155,6 +155,21 @@ directories.  Whole package includes them.
 
 ---
 
+## How this was built
+
+First Light was built with IBM Bob across ten tasks. `bob_sessions/` holds the
+exported record of every one of them, as a readable Markdown transcript and as
+JSON, with an index naming each task and what the record shows. That includes
+the parts that do not flatter the process: Bob's first ten drivers copied
+function bodies instead of importing them and marked ten functions as observed
+when nothing had executed, a human caught it, and the coverage gate that now
+rejects that approach was built in response.
+
+The index also states what the export does not cover, because commits made
+after it was taken were corrections rather than Bob tasks.
+
+---
+
 ## Where watsonx.ai fits
 
 Driver generation is already a model-in-a-loop step. A function that nothing has

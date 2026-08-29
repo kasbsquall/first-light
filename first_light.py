@@ -1315,7 +1315,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
             f'<div class="driver-card__call">{call_html}</div>'
             f'<div class="driver-card__lines" style="margin-top:6px;">'
             f'driver made redundant by baseline: <strong style="color:var(--text);">{e(red_by)}</strong>. '
-            f'the unit is observed in situ; the driver is no longer the only evidence'
+            f'The unit is observed in situ; the driver is no longer the only evidence'
             f'</div>'
             f'</div>'
         )

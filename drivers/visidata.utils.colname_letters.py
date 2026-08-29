@@ -2,6 +2,8 @@
 #
 # NOTE: windows-curses installed to satisfy curses dependency
 #
+# call site: target/visidata/visidata/sheets.py:1086 -- colname_letters(self.colname_ctr)
+#
 # Real call sites:
 #   target/visidata/visidata/sheets.py:1086  ->  colname_letters(self.colname_ctr)
 #       colname_ctr is a 1-based int counter incremented per new column

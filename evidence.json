@@ -24392,7 +24392,7 @@
         "test_suite"
       ],
       "driver": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.utils.colname_letters.py",
-      "call_site": "",
+      "call_site": "target/visidata/visidata/sheets.py:1086 -- colname_letters(self.colname_ctr)",
       "driver_redundant_baseline": "test_suite"
     },
     "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\utils.py::visidata.utils.colname_letters.divmod_excel#222": {
