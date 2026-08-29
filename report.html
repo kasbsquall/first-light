@@ -441,8 +441,11 @@ body {
 
 /* Map rows draw in as they enter the viewport, capped so a long file does
    not turn into a slow crawl. */
-.js-on .map-row { opacity: 0; transform: translateY(4px); }
-.js-on .map-row.is-in {
+/* Nothing is hidden by default. JS marks the rows below the fold, and only
+   those. If the script never runs, or throws halfway, every row is readable,
+   because a row must not depend on an animation firing in order to be seen. */
+.map-row.will-rise { opacity: 0; transform: translateY(4px); }
+.map-row.is-in {
   animation: rise 200ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
   animation-delay: calc(var(--r, 0) * 30ms);
 }
@@ -3668,9 +3671,16 @@ R.classList.add('js-on');
   const reveal = (el, n) => {
     if (el.classList.contains('is-in')) return;
     el.style.setProperty('--r', String(Math.min(n, 7)));
+    el.classList.remove('will-rise');
     el.classList.add('is-in');
     io.unobserve(el);
   };
+  // Hide only what is below the fold right now, and only after we know the
+  // observer exists to bring it back.
+  const fold = window.innerHeight;
+  rows.forEach(r => {
+    if (r.getBoundingClientRect().top > fold) r.classList.add('will-rise');
+  });
   const io = new IntersectionObserver((entries) => {
     let n = 0;
     entries.forEach(en => { if (en.isIntersecting) reveal(en.target, n++); });
