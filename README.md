@@ -194,18 +194,48 @@ that copies a function body, exits non-zero, cites a line that does not contain
 the call, cites a file outside the package, or cites nothing at all, is refused.
 Two of the ten drivers in `drivers/` were refused for exactly these reasons.
 
-That makes `evidence.json` an evaluation harness for generated code. The figure
-worth publishing is not that a model can write a driver. It is how many of its
-drivers survive verification, and how the refusals distribute: fabricated call
-sites fail differently from inlined function bodies, and the distribution says
-something measurable about how far a model's output can be trusted unreviewed.
+`evidence.json` is an evaluation harness for generated code. The figure worth
+publishing is not that a model can write a driver. It is how many of its drivers
+survive verification, and how the refusals distribute: fabricated call sites fail
+differently from inlined function bodies, and the distribution says something
+measurable about how far a model's output can be trusted unreviewed.
 
-This was attempted and not completed. The IBM Cloud account provisioned for this
-event exposes a catalog of twelve infrastructure services with no AI or machine
-learning category, so watsonx.ai Runtime could not be provisioned and the
-project could not be associated with an inference instance. Authentication
-against IBM Cloud IAM succeeds and the account can list twenty foundation
-models, `ibm/granite-4-h-small` among them, but inference returns
+Each refusal is now recorded as a machine-readable class on the unit in
+`evidence.json`. The `refusal_class` field carries one of thirteen named values
+from a `RefusalClass` enum (`body_never_reached`, `no_call_site`,
+`call_site_not_file_line`, `call_site_file_not_found`, `call_site_outside_package`,
+`call_site_line_out_of_range`, `name_not_on_line`, `line_not_a_call_site`,
+`call_site_inside_own_body`, and others). The `refusal_reason` field carries the
+human-readable explanation already printed to stderr.
+
+Running `--refusal-report` against the ten drivers in this repository measures
+the distribution without touching the published evidence file:
+
+```
+Drivers measured : 10
+Promoted         : 3
+Made redundant   : 5  (unit reached by a baseline)
+Refused          : 2
+
+Refusal class                        Count
+--------------------------------------------
+name_not_on_line                         1
+no_call_site                             1
+```
+
+`report.html` renders this distribution as its own section, next to the driver
+results. The two refused drivers are `visidata.aggregators.stdev` (its declared
+call site names a line where `self.funcValues(vals)` appears rather than
+`stdev`) and `visidata.path.vstat` (no call site declared at all). Both remain
+`never_observed`. The counts are read from the generated output, not estimated.
+
+This was attempted and not completed in the sense of the original watsonx.ai
+goal. The IBM Cloud account provisioned for this event exposes a catalog of
+twelve infrastructure services with no AI or machine learning category, so
+watsonx.ai Runtime could not be provisioned and the project could not be
+associated with an inference instance. Authentication against IBM Cloud IAM
+succeeds and the account can list twenty foundation models,
+`ibm/granite-4-h-small` among them, but inference returns
 `no_associated_service_instance_error`.
 
 The work is scoped rather than claimed. Nothing in this repository calls

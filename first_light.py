@@ -698,12 +698,21 @@ body {
 }
 
 /* ── Dual-scope panel (product-code vs whole-package) ───── */
+/* A flex wrap put three cards on one row and stranded the fourth beside half a
+   page of dead space, which split the two baseline cards that exist to be read
+   against each other. A grid keeps the scope pair on one line and the baseline
+   pair on the next, at every width that fits two. */
 .scope-panel {
-  display: flex;
-  gap: 32px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 24px 32px;
   margin-top: 24px;
   margin-left: 4px;
-  flex-wrap: wrap;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .scope-panel { grid-template-columns: 1fr; }
 }
 
 .scope-block {
