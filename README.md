@@ -155,6 +155,44 @@ directories.  Whole package includes them.
 
 ---
 
+## Where watsonx.ai fits
+
+Driver generation is already a model-in-a-loop step. A function that nothing has
+ever executed is handed to a model, which writes code that tries to reach it.
+In this repository that step was done by Bob. It belongs on watsonx.ai with a
+Granite model, and the reason is specific: this project already has the piece
+such a workload usually lacks, which is a verifier that can reject the model's
+output on evidence rather than on taste.
+
+The gate does not ask whether generated code looks right. It runs the driver
+under coverage and checks that lines inside the real function executed, and it
+opens the file the driver names as the production call site and confirms the
+function's name is on that line, inside the package under analysis. A driver
+that copies a function body, exits non-zero, cites a line that does not contain
+the call, cites a file outside the package, or cites nothing at all, is refused.
+Two of the ten drivers in `drivers/` were refused for exactly these reasons.
+
+That makes `evidence.json` an evaluation harness for generated code. The figure
+worth publishing is not that a model can write a driver. It is how many of its
+drivers survive verification, and how the refusals distribute: fabricated call
+sites fail differently from inlined function bodies, and the distribution says
+something measurable about how far a model's output can be trusted unreviewed.
+
+This was attempted and not completed. The IBM Cloud account provisioned for this
+event exposes a catalog of twelve infrastructure services with no AI or machine
+learning category, so watsonx.ai Runtime could not be provisioned and the
+project could not be associated with an inference instance. Authentication
+against IBM Cloud IAM succeeds and the account can list twenty foundation
+models, `ibm/granite-4-h-small` among them, but inference returns
+`no_associated_service_instance_error`.
+
+The work is scoped rather than claimed. Nothing in this repository calls
+watsonx.ai, and no part of the reported figures depends on a model having been
+asked anything. Publishing an integration that does not run would be the same
+unverified assertion this tool exists to detect.
+
+---
+
 ## Hook wiring
 
 `tools/fl_hook.py` is a Bob pre-edit advisory hook.  Before every file write,
