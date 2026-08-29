@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-29T21:22:58.642768+00:00",
+  "generated_at": "2026-08-29T21:53:13.030919+00:00",
   "first_light_version": "0.3.0",
   "baselines": [
     {
@@ -1050,7 +1050,7 @@
         "replay"
       ],
       "driver": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.aggregators.mean.py",
-      "call_site": "target/visidata/visidata/features/ping.py:33 -- mean(r.getValues(col.sheet.source.rows))",
+      "call_site": "",
       "driver_redundant_baseline": "replay"
     },
     "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\aggregators.py::visidata.aggregators.vsum#153": {
