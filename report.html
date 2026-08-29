@@ -441,15 +441,6 @@ body {
 
 /* Map rows draw in as they enter the viewport, capped so a long file does
    not turn into a slow crawl. */
-/* Nothing is hidden by default. JS marks the rows below the fold, and only
-   those. If the script never runs, or throws halfway, every row is readable,
-   because a row must not depend on an animation firing in order to be seen. */
-.map-row.will-rise { opacity: 0; transform: translateY(4px); }
-.map-row.is-in {
-  animation: rise 200ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
-  animation-delay: calc(var(--r, 0) * 30ms);
-}
-
 /* ── Sticky toolbar ─────────────────────────────────────── */
 .toolbar {
   position: sticky;
@@ -548,8 +539,7 @@ body {
 .headline__never { will-change: contents; }
 
 @media (prefers-reduced-motion: reduce) {
-  .rise, .js-on .rise,
-  .js-on .map-row, .js-on .map-row.is-in {
+  .rise, .js-on .rise {
     opacity: 1 !important;
     transform: none !important;
     animation: none !important;
@@ -3657,55 +3647,6 @@ R.classList.add('js-on');
     else el.textContent = target;
   }
   requestAnimationFrame(frame);
-})();
-
-/* Rows draw in as they scroll into view, capped at eight steps so a long
-   file does not become a slow crawl. */
-(function cascadeRows() {
-  const rows = Array.from(document.querySelectorAll('.map-row'));
-  if (!rows.length) return;
-  if (reduce || !('IntersectionObserver' in window)) {
-    rows.forEach(r => r.classList.add('is-in'));
-    return;
-  }
-  const reveal = (el, n) => {
-    if (el.classList.contains('is-in')) return;
-    el.style.setProperty('--r', String(Math.min(n, 7)));
-    el.classList.remove('will-rise');
-    el.classList.add('is-in');
-    io.unobserve(el);
-  };
-  // Hide only what is below the fold right now, and only after we know the
-  // observer exists to bring it back.
-  const fold = window.innerHeight;
-  rows.forEach(r => {
-    if (r.getBoundingClientRect().top > fold) r.classList.add('will-rise');
-  });
-  const io = new IntersectionObserver((entries) => {
-    let n = 0;
-    entries.forEach(en => { if (en.isIntersecting) reveal(en.target, n++); });
-  }, { rootMargin: '80px 0px' });
-  rows.forEach(r => io.observe(r));
-
-  /* An anchor jump skips rows without ever intersecting them, and they would
-     stay at opacity 0 for good. Anything at or above the fold is revealed
-     outright, and a failsafe reveals everything shortly after load. A row must
-     never depend on an animation firing in order to be readable. */
-  const sweep = () => {
-    const edge = window.innerHeight + 80;
-    for (const r of rows) {
-      if (r.classList.contains('is-in')) continue;
-      if (r.getBoundingClientRect().top < edge) reveal(r, 0);
-    }
-  };
-  let ticking = false;
-  addEventListener('scroll', () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(() => { sweep(); ticking = false; });
-  }, { passive: true });
-  sweep();
-  setTimeout(() => rows.forEach(r => reveal(r, 0)), 2500);
 })();
 
 /* Filtering. The map was 250 rows with no way in; this makes the number
