@@ -93,7 +93,7 @@ function object to the name.  Starting the observation range at `node.lineno`
 (the `def` line) would therefore mark every imported function as observed and
 inflate the result toward 100%.
 
-First Light starts the observation range at `node.body[0].lineno` — the first
+First Light starts the observation range at `node.body[0].lineno`, the first
 line of the function's body, which only runs if the function is actually called.
 This is the line recorded as `body_start` in `evidence.json`.
 
