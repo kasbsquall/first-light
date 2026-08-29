@@ -276,7 +276,7 @@ rather than trusting that it is still current.
 
 ---
 
-## Where watsonx.ai fits
+## Driver generation on watsonx.ai
 
 Driver generation is a model-in-a-loop step, and it is where watsonx.ai belongs.
 This project already has the piece such a workload usually lacks: a verifier that
@@ -295,7 +295,7 @@ On the first five functions it was given, the gate accepted two and refused
 three. `visidata.graph.format_input_value` and `visidata.threads.codestr` cite
 real call sites and their drivers run; the other three drivers exited non-zero.
 The captured request and response, the model list, and the gate's verdict on
-each draft are in [docs/watsonx-attempt.md](docs/watsonx-attempt.md), along with
+each draft are in [docs/watsonx.md](docs/watsonx.md), along with
 the account misconfiguration that made our first attempt fail and the fix.
 
 Those two are not folded into the published figures. They were drafted hours
@@ -306,6 +306,15 @@ the model's output is recorded as candidates rather than counted as evidence.
 
 Credentials come from `WATSONX_APIKEY` or `WATSONX_APIKEY_FILE` in the
 environment. Nothing in this repository contains a key.
+
+To run it yourself, against a copy of the evidence rather than the published
+file, which the promotion step would otherwise edit:
+
+```
+python tools/wx_draft_driver.py --unit graph.format_input_value
+python first_light.py --promote-driver --all `
+    --drivers-dir drivers-candidates --evidence evidence-copy.json
+```
 
 ---
 
