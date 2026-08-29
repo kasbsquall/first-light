@@ -6,6 +6,6 @@ import visidata
 
 from visidata.aggregators import stdev  # the REAL function
 
-# call site: target/visidata/visidata/aggregators.py:162 -- funcValues(vals) where funcValues=stdev
+# call site: target/visidata/visidata/aggregators.py:93 -- self.funcValues(vals) where funcValues=stdev
 result = stdev([2.1, 5.6, 3.4, 7.2, 1.8])
 print(f"stdev([2.1, 5.6, 3.4, 7.2, 1.8]) = {result}")

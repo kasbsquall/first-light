@@ -127,3 +127,7 @@ target/
 htmlcov/
 *.vdbak
 salida.tsv
+
+# evidence.json lives at the repo root and MUST be committed.
+# The target/ rule above would otherwise swallow it if stored there.
+!evidence.json

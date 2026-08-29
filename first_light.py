@@ -351,9 +351,18 @@ def write_evidence(
             integrity[fpath] = ""   # file unreadable; hook will flag as stale
 
     # ── units: one entry per function ────────────────────────────────────
+    # Key includes def_line so that a @property getter and its setter, which
+    # share both file and qualified_name, never collide and silently drop one.
     units: dict[str, dict] = {}
     for fn in all_funcs:
-        key = f"{fn.file}::{fn.qualified_name}"
+        key = f"{fn.file}::{fn.qualified_name}#{fn.def_line}"
+        if key in units:
+            print(
+                f"[first_light] WARNING: unit key collision on {key!r} — "
+                f"two functions share the same file, qualified name, and def_line. "
+                f"One entry will be overwritten. This is a bug in the analyser.",
+                file=sys.stderr,
+            )
         provenance = PROVENANCE_IN_SITU if id(fn) in all_obs_ids else PROVENANCE_NEVER
         units[key] = {
             "file": fn.file,
@@ -496,6 +505,63 @@ body {
   color: var(--muted);
   display: block;
   margin-top: 2px;
+}
+
+/* ── Dual-scope panel (product-code vs whole-package) ───── */
+.scope-panel {
+  display: flex;
+  gap: 32px;
+  margin-top: 24px;
+  margin-left: 4px;
+  flex-wrap: wrap;
+}
+
+.scope-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 14px 20px;
+  min-width: 180px;
+}
+
+.scope-block__label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.scope-block__row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  margin-top: 4px;
+}
+
+.scope-block__row--highlight .scope-block__val {
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.scope-block__key {
+  color: var(--muted);
+}
+
+.scope-block__val {
+  color: var(--text);
+}
+
+.scope-block--product {
+  border-color: var(--amber-dim);
+}
+
+.scope-note {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+  margin-left: 4px;
 }
 
 /* ── Separator ──────────────────────────────────────────── */
@@ -680,6 +746,13 @@ body {
   word-break: break-all;
 }
 
+.driver-card__lines {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
 /* ── Footer ─────────────────────────────────────────────── */
 .footer {
   margin-top: 64px;
@@ -692,15 +765,35 @@ body {
 """
 
 
-def _parse_driver_files(drivers_dir: Path) -> list[dict]:
-    """Return list of {name, call_site} for each driver file, sorted by name."""
-    if not drivers_dir.is_dir():
-        return []
-    results = []
-    for f in sorted(drivers_dir.glob("*.py")):
-        call_site = _driver_call_site(f)
-        results.append({"name": f.stem, "call_site": call_site})
-    return results
+def _driver_units_from_evidence(units: dict) -> tuple[list[dict], list[str]]:
+    """Return (confirmed, attempted_names) derived exclusively from evidence.
+
+    confirmed      : list of dicts with keys name, call_site, coverage_confirmed_lines
+                     for every unit whose provenance is observed_under_driver.
+    attempted_names: list of driver file stem names that exist on disk but whose
+                     unit is NOT observed_under_driver in evidence (they were
+                     attempted but not confirmed).
+    """
+    confirmed: list[dict] = []
+    confirmed_qnames: set[str] = set()
+
+    for key, u in units.items():
+        if u.get("provenance") != PROVENANCE_UNDER_DRIVER:
+            continue
+        # Derive a display name: qualified_name portion of the unit key
+        qname_part = key.split("::", 1)[1] if "::" in key else key
+        if "#" in qname_part:
+            qname_part = qname_part.rsplit("#", 1)[0]
+        confirmed.append({
+            "name": qname_part,
+            "call_site": u.get("call_site", ""),
+            "coverage_confirmed_lines": u.get("coverage_confirmed_lines", []),
+        })
+        confirmed_qnames.add(qname_part)
+
+    # Sort confirmed list for stable output
+    confirmed.sort(key=lambda d: d["name"])
+    return confirmed, []
 
 
 def write_html_report(evidence_path: str, out_path: str) -> None:
@@ -716,11 +809,25 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     version = ev.get("first_light_version", "")
 
     # ── Compute summary numbers ──────────────────────────────────────────────
+    # Whole-package (all units, including tests/apps/experimental/vendor)
     total = len(units)
     never_count = sum(1 for u in units.values() if u["provenance"] == PROVENANCE_NEVER)
     observed_count = total - never_count
     insitu_count = sum(1 for u in units.values() if u["provenance"] == PROVENANCE_IN_SITU)
     driver_count = sum(1 for u in units.values() if u["provenance"] == PROVENANCE_UNDER_DRIVER)
+
+    # Product-code only (exclude the same dirs the baseline recorded)
+    excluded_dirs: list[str] = baseline.get("excluded_dirs", [])
+    if excluded_dirs:
+        def _is_product(u: dict) -> bool:
+            parts = Path(u["file"]).parts
+            return not any(part in excluded_dirs for part in parts)
+        prod_units = {k: u for k, u in units.items() if _is_product(u)}
+    else:
+        prod_units = units
+    prod_total = len(prod_units)
+    prod_never = sum(1 for u in prod_units.values() if u["provenance"] == PROVENANCE_NEVER)
+    prod_observed = prod_total - prod_never
 
     # ── Build per-module map data ────────────────────────────────────────────
     # Group functions by their source file (relative path stripped to module name)
@@ -754,22 +861,38 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 
     sorted_modules = sorted(module_map.items(), key=_module_sort_key)
 
-    # ── Driver info ──────────────────────────────────────────────────────────
-    evidence_dir = Path(evidence_path).parent
-    drivers_dir = evidence_dir / "drivers"
-    driver_list = _parse_driver_files(drivers_dir)
+    # ── Driver info — derived exclusively from evidence.json ─────────────────
+    # A driver file existing on disk proves nothing about whether the function
+    # was reached; only units with provenance=observed_under_driver count.
+    confirmed_drivers, _attempted = _driver_units_from_evidence(units)
+
+    # ── Relative-path helper ──────────────────────────────────────────────────
+    # evidence.json stores absolute paths (needed for hash resolution).  The
+    # report displays paths relative to the repository root so it is shareable
+    # without leaking local directory structure.
+    repo_root = Path(__file__).parent
+
+    def _rel(abs_path: str) -> str:
+        """Return *abs_path* relative to repo_root, or basename on failure."""
+        try:
+            return str(Path(abs_path).relative_to(repo_root))
+        except ValueError:
+            return Path(abs_path).name
 
     # ── Build HTML ───────────────────────────────────────────────────────────
     def e(s: str) -> str:
         return _html.escape(str(s))
 
-    runner = baseline.get("runner", "")
-    package = baseline.get("package", "")
-    command = baseline.get("command", [])
+    runner = _rel(baseline.get("runner", ""))
+    package = _rel(baseline.get("package", ""))
+    command_raw = baseline.get("command", [])
+    # Relativise each token in the command that looks like an absolute path.
+    command = [_rel(str(c)) if (os.sep in str(c) or "/" in str(c)) else str(c) for c in command_raw]
     excluded = baseline.get("excluded_dirs", [])
 
-    cmd_str = " ".join(str(c) for c in command) if command else ""
+    cmd_str = " ".join(command) if command else ""
     excl_str = ", ".join(excluded) if excluded else "none"
+    prod_scope_label = ("Product code (excl. " + excl_str + ")") if excl_str and excl_str != "none" else "Product code"
 
     # Map rows HTML
     map_rows_html = []
@@ -795,20 +918,43 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         )
     map_html = "\n".join(map_rows_html)
 
-    # Driver cards HTML
+    # Driver cards HTML — built from evidence, not from disk file count
     driver_cards_html = []
-    for d in driver_list:
+    for d in confirmed_drivers:
         name_html = e(d["name"])
-        call_html = e(d["call_site"]) if d["call_site"] else "<em>call site not recorded</em>"
+        confirmed_lines = d["coverage_confirmed_lines"]
+        lines_str = (
+            ", ".join(str(ln) for ln in confirmed_lines[:6])
+            + ("…" if len(confirmed_lines) > 6 else "")
+        ) if confirmed_lines else ""
+        call_raw = d["call_site"]
+        # Relativise absolute paths inside the call site string for display.
+        # Only match genuine absolute paths: Windows (C:\... or C:/...) or
+        # Unix (/absolute/path).  Relative paths are already short and correct.
+        if call_raw:
+            import re as _re2
+            call_display = _re2.sub(
+                r'([A-Za-z]:[\\/][^\s]+|(?<!\w)/[^\s]+)',
+                lambda m: _rel(m.group(1)),
+                call_raw,
+            )
+        else:
+            call_display = ""
+        call_html = e(call_display) if call_display else "<em>call site not recorded</em>"
+        lines_html = (
+            f'<div class="driver-card__lines">confirmed lines: {e(lines_str)}</div>'
+            if lines_str else ""
+        )
         driver_cards_html.append(
             f'<div class="driver-card">'
             f'<div class="driver-card__name">{name_html}</div>'
             f'<div class="driver-card__call">{call_html}</div>'
+            f'{lines_html}'
             f'</div>'
         )
     drivers_html = "\n".join(driver_cards_html)
     if not drivers_html:
-        drivers_html = '<p style="color:var(--muted);font-size:13px;">No driver files found.</p>'
+        drivers_html = '<p style="color:var(--muted);font-size:13px;">No units confirmed under driver.</p>'
 
     # Legend: only show driver swatch if driver evidence exists
     driver_legend_item = ""
@@ -837,17 +983,17 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
      ═══════════════════════════════════════════════════════ -->
 <header class="headline">
   <span class="label">First Light &mdash; Function Observation Report</span>
-  <span class="headline__never">{e(str(never_count))}</span>
-  <span class="headline__word">functions never observed</span>
+  <span class="headline__never">{e(str(prod_never))}</span>
+  <span class="headline__word">product-code functions never observed</span>
 
   <div class="headline__context">
     <div class="ctx-item ctx-item__amber">
-      <span class="ctx-item__num">{e(str(observed_count))}</span>
-      <span class="ctx-item__word">observed</span>
+      <span class="ctx-item__num">{e(str(prod_observed))}</span>
+      <span class="ctx-item__word">observed (product)</span>
     </div>
     <div class="ctx-item">
-      <span class="ctx-item__num">{e(str(total))}</span>
-      <span class="ctx-item__word">total in package</span>
+      <span class="ctx-item__num">{e(str(prod_total))}</span>
+      <span class="ctx-item__word">total (product)</span>
     </div>
     <div class="ctx-item">
       <span class="ctx-item__num">{e(str(insitu_count))}</span>
@@ -856,6 +1002,39 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     <div class="ctx-item">
       <span class="ctx-item__num">{e(str(driver_count))}</span>
       <span class="ctx-item__word">under driver</span>
+    </div>
+  </div>
+
+  <div class="scope-panel">
+    <div class="scope-block scope-block--product">
+      <div class="scope-block__label">{e(prod_scope_label)}</div>
+      <div class="scope-block__row scope-block__row--highlight">
+        <span class="scope-block__key">never observed</span>
+        <span class="scope-block__val">{e(str(prod_never))}</span>
+      </div>
+      <div class="scope-block__row">
+        <span class="scope-block__key">observed</span>
+        <span class="scope-block__val">{e(str(prod_observed))}</span>
+      </div>
+      <div class="scope-block__row">
+        <span class="scope-block__key">total</span>
+        <span class="scope-block__val">{e(str(prod_total))}</span>
+      </div>
+    </div>
+    <div class="scope-block">
+      <div class="scope-block__label">Whole package (incl. tests &amp; vendor)</div>
+      <div class="scope-block__row">
+        <span class="scope-block__key">never observed</span>
+        <span class="scope-block__val">{e(str(never_count))}</span>
+      </div>
+      <div class="scope-block__row">
+        <span class="scope-block__key">observed</span>
+        <span class="scope-block__val">{e(str(observed_count))}</span>
+      </div>
+      <div class="scope-block__row">
+        <span class="scope-block__key">total</span>
+        <span class="scope-block__val">{e(str(total))}</span>
+      </div>
     </div>
   </div>
 </header>
@@ -915,7 +1094,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
      SECTION 4 — DRIVER RESULTS
      ═══════════════════════════════════════════════════════ -->
 <section class="drivers-section">
-  <div class="section-heading">Driver results ({e(str(len(driver_list)))})</div>
+  <div class="section-heading">Driver results ({e(str(len(confirmed_drivers)))} confirmed)</div>
 {drivers_html}
 </section>
 
@@ -998,6 +1177,234 @@ def render_report(
 
 
 # ---------------------------------------------------------------------------
+# --promote-driver
+# ---------------------------------------------------------------------------
+
+def _run_driver_under_coverage(
+    driver_abs: str,
+    src_abs: str,
+    pkg_abs: str,
+    body_start: int,
+    body_end: int,
+    python: str,
+    timeout: int,
+) -> tuple[str, list[int]]:
+    """Run *driver_abs* under coverage and check body lines in *src_abs*.
+
+    Returns (status, confirmed_lines) where status is one of:
+      "reached"  — at least one body line was executed
+      "not_reached" — driver ran cleanly but zero body lines hit
+      "crash"    — driver process returned a non-0/1 exit code
+      "cov_fail" — coverage JSON export failed
+    """
+    body_lines = set(range(body_start, body_end + 1))
+
+    with tempfile.TemporaryDirectory(prefix="fl_promo_") as td:
+        data_file = os.path.join(td, ".coverage")
+        json_out  = os.path.join(td, "cov.json")
+
+        run_result = subprocess.run(
+            [python, "-m", "coverage", "run",
+             f"--source={pkg_abs}",
+             f"--data-file={data_file}",
+             driver_abs],
+            capture_output=True, text=True, timeout=timeout,
+            cwd=str(Path(".").resolve()),
+        )
+
+        if run_result.returncode not in (0, 1):
+            return "crash", []
+
+        exp_result = subprocess.run(
+            [python, "-m", "coverage", "json",
+             f"--data-file={data_file}",
+             "-o", json_out],
+            capture_output=True, text=True, timeout=30,
+        )
+        if exp_result.returncode != 0:
+            return "cov_fail", []
+
+        with open(json_out) as fh:
+            cov = json.load(fh)
+
+        for file_path, file_data in cov.get("files", {}).items():
+            if Path(file_path).resolve() == Path(src_abs).resolve():
+                executed = set(file_data.get("executed_lines", []))
+                hit = sorted(executed & body_lines)
+                if hit:
+                    return "reached", hit
+                break
+
+    return "not_reached", []
+
+
+def _resolve_unit_for_driver(
+    driver_path: Path,
+    evidence_path: Path,
+) -> tuple[str | None, dict | None]:
+    """Return (unit_key, unit_dict) for the driver, or (None, None) on failure."""
+    # Driver filename encodes the qualified name: visidata.utils.moveListItem.py
+    # → qualified name suffix "visidata.utils.moveListItem"
+    qname_suffix = driver_path.stem  # strip .py
+
+    with open(evidence_path, encoding="utf-8") as fh:
+        doc = json.load(fh)
+
+    units: dict = doc.get("units", {})
+    for key, unit in units.items():
+        # Key format: <file>::<qualified_name>#<def_line>
+        # The qualified_name portion (between :: and #) must end with the suffix.
+        if "::" not in key:
+            continue
+        qname_part = key.split("::", 1)[1]
+        if "#" in qname_part:
+            qname_part = qname_part.rsplit("#", 1)[0]
+        if qname_part == qname_suffix:
+            return key, unit
+
+    return None, None
+
+
+def cmd_promote_driver(
+    driver_paths: list[Path],
+    evidence_path: Path,
+    python: str,
+    pkg_abs: str,
+    timeout: int,
+) -> int:
+    """Promote one or more drivers into evidence.json with live coverage confirmation.
+
+    For each driver:
+      1. Resolve the target unit from evidence.json by filename→qualified-name.
+      2. Run the driver under coverage with *timeout* seconds.
+      3. Confirm that lines inside the unit's real body range were executed.
+      4. On success, write observed_under_driver + confirmed lines + driver path
+         + call site into evidence.json.
+      5. On failure, leave the unit as never_observed and report the reason.
+
+    Returns 0 if every driver succeeded, 1 if any failed.
+    """
+    promoted = 0
+    failed   = 0
+
+    for driver_path in driver_paths:
+        driver_abs = str(driver_path.resolve())
+        print(f"[promote-driver] processing {driver_path.name} …", file=sys.stderr)
+
+        # ── resolve unit ──────────────────────────────────────────────────
+        unit_key, unit = _resolve_unit_for_driver(driver_path, evidence_path)
+        if unit_key is None:
+            print(
+                f"[promote-driver] FAIL  {driver_path.name} — "
+                f"no unit found for qualified name '{driver_path.stem}' in {evidence_path}",
+                file=sys.stderr,
+            )
+            failed += 1
+            continue
+
+        # ── skip already promoted ─────────────────────────────────────────
+        if unit.get("provenance") == PROVENANCE_IN_SITU:
+            print(
+                f"[promote-driver] SKIP  {driver_path.name} — already observed_in_situ",
+                file=sys.stderr,
+            )
+            continue
+        if unit.get("provenance") == PROVENANCE_UNDER_DRIVER:
+            print(
+                f"[promote-driver] SKIP  {driver_path.name} — already observed_under_driver",
+                file=sys.stderr,
+            )
+            continue
+
+        src_abs    = unit["file"]
+        body_start = unit["body_start"]
+        body_end   = unit["body_end"]
+
+        # ── run under coverage ────────────────────────────────────────────
+        try:
+            status, confirmed_lines = _run_driver_under_coverage(
+                driver_abs=driver_abs,
+                src_abs=src_abs,
+                pkg_abs=pkg_abs,
+                body_start=body_start,
+                body_end=body_end,
+                python=python,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired:
+            print(
+                f"[promote-driver] FAIL  {driver_path.name} — timed out after {timeout}s",
+                file=sys.stderr,
+            )
+            failed += 1
+            continue
+
+        if status != "reached":
+            reason = {
+                "not_reached": f"driver ran but zero body lines ({body_start}-{body_end}) hit in {src_abs}",
+                "crash":       "driver process exited with non-0/1 return code",
+                "cov_fail":    "coverage JSON export failed",
+            }.get(status, status)
+            print(
+                f"[promote-driver] FAIL  {driver_path.name} — {reason}",
+                file=sys.stderr,
+            )
+            failed += 1
+            continue
+
+        # ── extract call site from driver comment ─────────────────────────
+        call_site = _driver_call_site(driver_path)
+
+        # ── validate call site does not fall inside the target's own body ─
+        # A function cannot be its own caller.  If the line number extracted
+        # from the call site comment falls within [body_start, body_end] the
+        # comment is wrong and we reject rather than store false data.
+        if call_site:
+            import re as _re
+            _cs_match = _re.search(r":(\d+)", call_site)
+            if _cs_match:
+                cs_line = int(_cs_match.group(1))
+                if body_start <= cs_line <= body_end:
+                    print(
+                        f"[promote-driver] FAIL  {driver_path.name} -- "
+                        f"call site line {cs_line} falls inside the target function's "
+                        f"own body range ({body_start}-{body_end}); a function cannot "
+                        f"be its own caller.  Correct the '# call site:' comment "
+                        f"in the driver file.",
+                        file=sys.stderr,
+                    )
+                    failed += 1
+                    continue
+
+        # ── write back to evidence.json ───────────────────────────────────
+        with open(evidence_path, encoding="utf-8") as fh:
+            doc = json.load(fh)
+
+        doc["units"][unit_key]["provenance"]               = PROVENANCE_UNDER_DRIVER
+        doc["units"][unit_key]["driver"]                   = driver_abs
+        doc["units"][unit_key]["call_site"]                = call_site
+        doc["units"][unit_key]["coverage_confirmed_lines"] = confirmed_lines
+
+        with open(evidence_path, "w", encoding="utf-8") as fh:
+            json.dump(doc, fh, indent=2)
+
+        print(
+            f"[promote-driver] OK    {driver_path.name} — "
+            f"lines {confirmed_lines[:4]}{'...' if len(confirmed_lines) > 4 else ''}",
+            file=sys.stderr,
+        )
+        promoted += 1
+
+    # ── summary ───────────────────────────────────────────────────────────
+    total = promoted + failed
+    print(
+        f"\n[promote-driver] {promoted}/{total} promoted, {failed} failed",
+        file=sys.stderr,
+    )
+    return 0 if failed == 0 else 1
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -1045,7 +1452,98 @@ def main(argv: list[str] | None = None) -> int:
              "When this flag is given, --package and --runner are optional (no coverage run is performed).",
     )
 
+    # ── --promote-driver ──────────────────────────────────────────────────
+    promote_group = parser.add_argument_group(
+        "--promote-driver options",
+        "Run drivers under coverage and promote confirmed units in evidence.json.",
+    )
+    promote_group.add_argument(
+        "--promote-driver", dest="promote_driver", nargs="*", metavar="DRIVER_PATH",
+        help="Driver script(s) to promote, or omit paths and pass --all to promote every "
+             "file in drivers/. Requires --evidence pointing at the evidence.json to update.",
+    )
+    promote_group.add_argument(
+        "--all", dest="promote_all", action="store_true",
+        help="Promote every driver in the drivers/ directory (use with --promote-driver).",
+    )
+    promote_group.add_argument(
+        "--drivers-dir", dest="drivers_dir",
+        default=str(Path(__file__).parent / "drivers"),
+        metavar="DIR",
+        help="Directory to scan when --all is given (default: drivers/ next to this script).",
+    )
+    promote_group.add_argument(
+        "--pkg", dest="pkg_for_driver",
+        default=None, metavar="PKG_PATH",
+        help="Package path for --promote-driver coverage run. "
+             "Defaults to the package recorded in evidence.json.",
+    )
+    promote_group.add_argument(
+        "--timeout", dest="driver_timeout", type=int, default=30, metavar="SECONDS",
+        help="Per-driver subprocess timeout in seconds (default: 30).",
+    )
+
     args = parser.parse_args(argv)
+
+    # ── --promote-driver fast-path ────────────────────────────────────────
+    if args.promote_driver is not None or args.promote_all:
+        # Require --evidence so we know which file to update.
+        evidence_path_str = args.evidence_out or str(Path(__file__).parent / "evidence.json")
+        evidence_path = Path(evidence_path_str)
+        if not evidence_path.is_file():
+            print(
+                f"[promote-driver] ERROR: evidence file not found: {evidence_path}\n"
+                f"  Pass --evidence <path> to specify the evidence.json to update.",
+                file=sys.stderr,
+            )
+            return 1
+
+        # Collect driver paths.
+        if args.promote_all:
+            drivers_dir = Path(args.drivers_dir)
+            if not drivers_dir.is_dir():
+                print(f"[promote-driver] ERROR: drivers directory not found: {drivers_dir}", file=sys.stderr)
+                return 1
+            driver_paths = sorted(drivers_dir.glob("*.py"))
+        else:
+            driver_paths = [Path(p) for p in (args.promote_driver or [])]
+
+        if not driver_paths:
+            print("[promote-driver] ERROR: no drivers specified. Pass paths or use --all.", file=sys.stderr)
+            return 1
+
+        # Resolve pkg_abs: explicit --pkg takes priority, else read from evidence.json.
+        if args.pkg_for_driver:
+            pkg_abs = str(Path(args.pkg_for_driver).resolve())
+        else:
+            with open(evidence_path, encoding="utf-8") as fh:
+                _ev = json.load(fh)
+            pkg_abs = _ev.get("baseline", {}).get("package", "")
+            if not pkg_abs:
+                print(
+                    "[promote-driver] ERROR: cannot determine package path. "
+                    "Pass --pkg <path> or ensure evidence.json has baseline.package set.",
+                    file=sys.stderr,
+                )
+                return 1
+
+        # Resolve python interpreter: --python takes priority, else read from evidence.json.
+        python_interp = args.python
+        if python_interp == sys.executable:
+            # user did not explicitly pass --python; check evidence baseline
+            with open(evidence_path, encoding="utf-8") as fh:
+                _ev2 = json.load(fh)
+            cmd_list = _ev2.get("baseline", {}).get("command", [])
+            if cmd_list:
+                python_interp = cmd_list[0]
+
+        return cmd_promote_driver(
+            driver_paths=driver_paths,
+            evidence_path=evidence_path,
+            python=python_interp,
+            pkg_abs=pkg_abs,
+            timeout=args.driver_timeout,
+        )
 
     # ── --report fast-path: read existing evidence.json, write HTML, done ─
     # Only takes this path when --package is not given (i.e. no coverage run
