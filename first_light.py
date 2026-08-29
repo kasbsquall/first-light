@@ -804,13 +804,30 @@ body {
    page of dead space, which split the two baseline cards that exist to be read
    against each other. A grid keeps the scope pair on one line and the baseline
    pair on the next, at every width that fits two. */
+/* Six columns so two groups of different size share one rhythm: the two scope
+   panels take three each, the baseline cards take two each. A plain two-column
+   grid orphaned the third baseline on a row of its own, next to half a page of
+   nothing, and split the cards that exist to be read against each other. */
 .scope-panel {
   display: grid;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
-  gap: 24px 32px;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 24px 24px;
   margin-top: 24px;
   margin-left: 4px;
   align-items: start;
+}
+
+.scope-panel > .scope-block { grid-column: span 3; }
+.scope-panel > .scope-block--baseline { grid-column: span 2; }
+
+@media (max-width: 900px) {
+  .scope-panel { grid-template-columns: repeat(2, 1fr); }
+  .scope-panel > .scope-block,
+  .scope-panel > .scope-block--baseline { grid-column: span 1; }
+}
+
+@media (max-width: 640px) {
+  .scope-panel { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 640px) {
@@ -2067,7 +2084,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
       </div>
     </div>
     {''.join(f"""
-    <div class="scope-block">
+    <div class="scope-block scope-block--baseline">
       <div class="scope-block__label">Baseline: {e(bl["id"])}</div>
       <div class="scope-block__row">
         <span class="scope-block__key">observed</span>
