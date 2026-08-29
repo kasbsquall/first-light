@@ -1,8 +1,12 @@
 # Bob session export
 
-`bob-tasks-first-light-2026-08-29.json` is the full export of every Bob task used
-to build First Light, produced with **Export Task History** from the Bob command
-palette. It covers 10 tasks and 952 messages, in the order they were run.
+This folder holds the full export of every Bob task used to build First Light,
+produced with **Export Task History** from the Bob command palette. It covers
+10 tasks and 952 messages, in the order they were run.
+
+- `bob-tasks-first-light-2026-08-29.md` is the readable transcript. Start here.
+- `bob-tasks-first-light-2026-08-29.json` is the same record in full fidelity,
+  including tool calls and diffs. It is 19MB and is meant for machines.
 
 Each entry below is one Bob task. The JSON holds the complete transcript for each:
 every prompt, every tool call, every diff Bob proposed and whether it was accepted.
