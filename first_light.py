@@ -381,6 +381,558 @@ def write_evidence(
 
 
 # ---------------------------------------------------------------------------
+# HTML report generator  (reads evidence.json, writes self-contained HTML)
+# ---------------------------------------------------------------------------
+
+def _driver_call_site(driver_path: Path) -> str:
+    """Extract the first 'call site:' comment from a driver file, or ''."""
+    try:
+        text = driver_path.read_text(encoding="utf-8", errors="replace")
+        for line in text.splitlines():
+            stripped = line.strip().lstrip("#").strip()
+            if stripped.lower().startswith("call site:"):
+                return stripped[len("call site:"):].strip()
+        # Fallback: look for 'Real call site' / 'call site' in docstring lines
+        for line in text.splitlines():
+            lower = line.lower()
+            if "call site" in lower and "--" in line:
+                after = line[line.index("--"):].strip(" -")
+                if after:
+                    return after
+    except OSError:
+        pass
+    return ""
+
+
+_HTML_CSS = """\
+/* ============================================================
+   FIRST LIGHT -- report styles
+   All CSS lives here. Layout and content are in the <body>.
+   ============================================================ */
+
+:root {
+  --bg:          #1A1714;
+  --surface:     #211E1B;
+  --border:      #312C27;
+  --text:        #E8E0D5;
+  --muted:       #8A7F74;
+  --amber:       #C8761A;
+  --amber-dim:   #7A4810;
+  --never:       #2C2825;
+  --never-border:#3D3730;
+  --cell-size:   10px;
+  --font-mono:   "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { background: var(--bg); }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+/* ── Typography ─────────────────────────────────────────── */
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── Headline block ─────────────────────────────────────── */
+.headline {
+  margin-bottom: 40px;
+}
+
+.headline__never {
+  font-size: 96px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -3px;
+  color: var(--text);
+  display: block;
+}
+
+.headline__word {
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--muted);
+  display: block;
+  margin-top: 4px;
+  margin-left: 4px;
+}
+
+.headline__context {
+  display: flex;
+  gap: 40px;
+  margin-top: 20px;
+  margin-left: 4px;
+}
+
+.ctx-item__num {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text);
+  display: block;
+  line-height: 1;
+}
+
+.ctx-item__amber .ctx-item__num {
+  color: var(--amber);
+}
+
+.ctx-item__word {
+  font-size: 11px;
+  color: var(--muted);
+  display: block;
+  margin-top: 2px;
+}
+
+/* ── Separator ──────────────────────────────────────────── */
+.sep {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 36px 0;
+}
+
+/* ── Baseline block ─────────────────────────────────────── */
+.baseline {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 20px 24px;
+  margin-bottom: 40px;
+}
+
+.baseline__grid {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  row-gap: 8px;
+  column-gap: 16px;
+  margin-top: 12px;
+}
+
+.baseline__key {
+  color: var(--muted);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  padding-top: 1px;
+}
+
+.baseline__val {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  word-break: break-all;
+}
+
+.baseline__val--cmd {
+  color: var(--amber);
+}
+
+/* ── Map section ────────────────────────────────────────── */
+.map-section {
+  margin-bottom: 48px;
+}
+
+.section-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.legend {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.legend__item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Legend swatches */
+.swatch {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.swatch--never {
+  background: var(--never);
+  border: 1px solid var(--never-border);
+}
+
+.swatch--insitu {
+  background: var(--amber);
+}
+
+.swatch--driver {
+  background: var(--amber-dim);
+  /* hatching pattern using CSS gradient stripes */
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 2px,
+    rgba(200,118,26,0.45) 2px,
+    rgba(200,118,26,0.45) 4px
+  );
+  background-color: var(--amber-dim);
+  border: 1px solid var(--amber);
+}
+
+/* Map rows */
+.map-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+
+.map-row__label {
+  width: 200px;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  padding-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.map-row__cells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  flex: 1;
+}
+
+.cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  flex-shrink: 0;
+}
+
+.cell--never {
+  background: var(--never);
+  border: 1px solid var(--never-border);
+}
+
+.cell--insitu {
+  background: var(--amber);
+  border: 1px solid var(--amber);
+}
+
+.cell--driver {
+  background-color: var(--amber-dim);
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 2px,
+    rgba(200,118,26,0.55) 2px,
+    rgba(200,118,26,0.55) 4px
+  );
+  border: 1px solid var(--amber);
+}
+
+/* ── Drivers section ────────────────────────────────────── */
+.drivers-section {
+  margin-bottom: 48px;
+}
+
+.driver-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 16px 20px;
+  margin-bottom: 10px;
+}
+
+.driver-card__name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--amber);
+  margin-bottom: 4px;
+}
+
+.driver-card__call {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+/* ── Footer ─────────────────────────────────────────────── */
+.footer {
+  margin-top: 64px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+}
+"""
+
+
+def _parse_driver_files(drivers_dir: Path) -> list[dict]:
+    """Return list of {name, call_site} for each driver file, sorted by name."""
+    if not drivers_dir.is_dir():
+        return []
+    results = []
+    for f in sorted(drivers_dir.glob("*.py")):
+        call_site = _driver_call_site(f)
+        results.append({"name": f.stem, "call_site": call_site})
+    return results
+
+
+def write_html_report(evidence_path: str, out_path: str) -> None:
+    """Read *evidence_path* (evidence.json) and write a self-contained HTML report to *out_path*."""
+    import html as _html
+
+    with open(evidence_path, encoding="utf-8") as fh:
+        ev = json.load(fh)
+
+    baseline = ev.get("baseline", {})
+    units = ev.get("units", {})
+    generated_at = ev.get("generated_at", "")
+    version = ev.get("first_light_version", "")
+
+    # ── Compute summary numbers ──────────────────────────────────────────────
+    total = len(units)
+    never_count = sum(1 for u in units.values() if u["provenance"] == PROVENANCE_NEVER)
+    observed_count = total - never_count
+    insitu_count = sum(1 for u in units.values() if u["provenance"] == PROVENANCE_IN_SITU)
+    driver_count = sum(1 for u in units.values() if u["provenance"] == PROVENANCE_UNDER_DRIVER)
+
+    # ── Build per-module map data ────────────────────────────────────────────
+    # Group functions by their source file (relative path stripped to module name)
+    pkg_path_str = baseline.get("package", "")
+    pkg_root = Path(pkg_path_str) if pkg_path_str else None
+
+    module_map: dict[str, list[dict]] = {}
+    for key, u in units.items():
+        fpath = Path(u["file"])
+        if pkg_root and pkg_root.exists():
+            try:
+                rel = fpath.relative_to(pkg_root.parent)
+                mod_label = str(rel)
+            except ValueError:
+                mod_label = fpath.name
+        else:
+            mod_label = fpath.name
+
+        if mod_label not in module_map:
+            module_map[mod_label] = []
+        module_map[mod_label].append({
+            "qname": key.split("::")[-1] if "::" in key else key,
+            "provenance": u["provenance"],
+        })
+
+    # Sort modules: observed-first, then alphabetically
+    def _module_sort_key(item):
+        label, funcs = item
+        obs = sum(1 for f in funcs if f["provenance"] != PROVENANCE_NEVER)
+        return (-obs, label)
+
+    sorted_modules = sorted(module_map.items(), key=_module_sort_key)
+
+    # ── Driver info ──────────────────────────────────────────────────────────
+    evidence_dir = Path(evidence_path).parent
+    drivers_dir = evidence_dir / "drivers"
+    driver_list = _parse_driver_files(drivers_dir)
+
+    # ── Build HTML ───────────────────────────────────────────────────────────
+    def e(s: str) -> str:
+        return _html.escape(str(s))
+
+    runner = baseline.get("runner", "")
+    package = baseline.get("package", "")
+    command = baseline.get("command", [])
+    excluded = baseline.get("excluded_dirs", [])
+
+    cmd_str = " ".join(str(c) for c in command) if command else ""
+    excl_str = ", ".join(excluded) if excluded else "none"
+
+    # Map rows HTML
+    map_rows_html = []
+    for mod_label, funcs in sorted_modules:
+        cells = []
+        for fn in funcs:
+            prov = fn["provenance"]
+            if prov == PROVENANCE_IN_SITU:
+                cls = "cell cell--insitu"
+            elif prov == PROVENANCE_UNDER_DRIVER:
+                cls = "cell cell--driver"
+            else:
+                cls = "cell cell--never"
+            title = e(fn["qname"])
+            cells.append(f'<span class="{cls}" title="{title}"></span>')
+        cells_html = "\n".join(cells)
+        label_html = e(mod_label)
+        map_rows_html.append(
+            f'<div class="map-row">'
+            f'<span class="map-row__label" title="{label_html}">{label_html}</span>'
+            f'<div class="map-row__cells">{cells_html}</div>'
+            f'</div>'
+        )
+    map_html = "\n".join(map_rows_html)
+
+    # Driver cards HTML
+    driver_cards_html = []
+    for d in driver_list:
+        name_html = e(d["name"])
+        call_html = e(d["call_site"]) if d["call_site"] else "<em>call site not recorded</em>"
+        driver_cards_html.append(
+            f'<div class="driver-card">'
+            f'<div class="driver-card__name">{name_html}</div>'
+            f'<div class="driver-card__call">{call_html}</div>'
+            f'</div>'
+        )
+    drivers_html = "\n".join(driver_cards_html)
+    if not drivers_html:
+        drivers_html = '<p style="color:var(--muted);font-size:13px;">No driver files found.</p>'
+
+    # Legend: only show driver swatch if driver evidence exists
+    driver_legend_item = ""
+    if driver_count > 0:
+        driver_legend_item = (
+            '<div class="legend__item">'
+            '<span class="swatch swatch--driver"></span>'
+            'observed under driver'
+            '</div>'
+        )
+
+    html_doc = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>First Light &mdash; Evidence Report</title>
+<style>
+{_HTML_CSS}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 1 — HEADLINE NUMBER
+     ═══════════════════════════════════════════════════════ -->
+<header class="headline">
+  <span class="label">First Light &mdash; Function Observation Report</span>
+  <span class="headline__never">{e(str(never_count))}</span>
+  <span class="headline__word">functions never observed</span>
+
+  <div class="headline__context">
+    <div class="ctx-item ctx-item__amber">
+      <span class="ctx-item__num">{e(str(observed_count))}</span>
+      <span class="ctx-item__word">observed</span>
+    </div>
+    <div class="ctx-item">
+      <span class="ctx-item__num">{e(str(total))}</span>
+      <span class="ctx-item__word">total in package</span>
+    </div>
+    <div class="ctx-item">
+      <span class="ctx-item__num">{e(str(insitu_count))}</span>
+      <span class="ctx-item__word">in-situ</span>
+    </div>
+    <div class="ctx-item">
+      <span class="ctx-item__num">{e(str(driver_count))}</span>
+      <span class="ctx-item__word">under driver</span>
+    </div>
+  </div>
+</header>
+
+<hr class="sep">
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 2 — BASELINE
+     ═══════════════════════════════════════════════════════ -->
+<section class="baseline">
+  <div class="label">Baseline — exactly what was executed</div>
+  <div class="baseline__grid">
+    <span class="baseline__key">runner</span>
+    <span class="baseline__val">{e(runner)}</span>
+
+    <span class="baseline__key">package</span>
+    <span class="baseline__val">{e(package)}</span>
+
+    <span class="baseline__key">command</span>
+    <span class="baseline__val baseline__val--cmd">{e(cmd_str)}</span>
+
+    <span class="baseline__key">excluded</span>
+    <span class="baseline__val">{e(excl_str)}</span>
+
+    <span class="baseline__key">generated</span>
+    <span class="baseline__val">{e(generated_at)}</span>
+
+    <span class="baseline__key">version</span>
+    <span class="baseline__val">{e(version)}</span>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 3 — EVIDENCE MAP
+     ═══════════════════════════════════════════════════════ -->
+<section class="map-section">
+  <div class="section-heading">Evidence map — every module, every function</div>
+  <div class="legend">
+    <div class="legend__item">
+      <span class="swatch swatch--insitu"></span>
+      observed in situ
+    </div>
+    {driver_legend_item}
+    <div class="legend__item">
+      <span class="swatch swatch--never"></span>
+      never observed
+    </div>
+  </div>
+  <div class="map">
+{map_html}
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 4 — DRIVER RESULTS
+     ═══════════════════════════════════════════════════════ -->
+<section class="drivers-section">
+  <div class="section-heading">Driver results ({e(str(len(driver_list)))})</div>
+{drivers_html}
+</section>
+
+<footer class="footer">
+  Made with IBM Bob &mdash; First Light v{e(version)} &mdash; {e(generated_at)}
+</footer>
+
+</body>
+</html>"""
+
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(html_doc, encoding="utf-8")
+    print(f"[first_light] HTML report written to {out_path}", file=sys.stderr)
+
+
+# ---------------------------------------------------------------------------
 # Report rendering
 # ---------------------------------------------------------------------------
 
@@ -455,12 +1007,14 @@ def main(argv: list[str] | None = None) -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        "--package", required=True,
-        help="Path to the Python package directory to analyse (e.g. target/visidata/visidata)",
+        "--package", default=None,
+        help="Path to the Python package directory to analyse (e.g. target/visidata/visidata). "
+             "Required unless --report is given.",
     )
     parser.add_argument(
-        "--runner", required=True,
-        help="Python script that runs the target application",
+        "--runner", default=None,
+        help="Python script that runs the target application. "
+             "Required unless --report is given.",
     )
     parser.add_argument(
         "--python", default=sys.executable,
@@ -485,8 +1039,38 @@ def main(argv: list[str] | None = None) -> int:
         help="Write evidence.json artifact to PATH "
              "(recommended: <target-repo-root>/evidence.json)",
     )
+    parser.add_argument(
+        "--report", dest="report_out", default=None, metavar="PATH",
+        help="Read an existing evidence.json and write a self-contained HTML report to PATH. "
+             "When this flag is given, --package and --runner are optional (no coverage run is performed).",
+    )
 
     args = parser.parse_args(argv)
+
+    # ── --report fast-path: read existing evidence.json, write HTML, done ─
+    # Only takes this path when --package is not given (i.e. no coverage run
+    # is requested). If --package is also given the report is generated at the
+    # end of the full run, after --evidence has been written.
+    if args.report_out and not args.package:
+        evidence_src = args.evidence_out or str(Path(__file__).parent / "evidence.json")
+        if not Path(evidence_src).is_file():
+            print(
+                f"[first_light] ERROR: evidence file not found: {evidence_src}\n"
+                f"  Hint: run first_light.py with --evidence to produce it first,\n"
+                f"        or pass --evidence <path> to point at the correct location.",
+                file=sys.stderr,
+            )
+            return 1
+        write_html_report(evidence_src, args.report_out)
+        return 0
+
+    # ── Full coverage-run path ────────────────────────────────────────────
+    if not args.package:
+        print("[first_light] ERROR: --package is required when not using --report", file=sys.stderr)
+        return 1
+    if not args.runner:
+        print("[first_light] ERROR: --runner is required when not using --report", file=sys.stderr)
+        return 1
 
     pkg_path = Path(args.package).resolve()
     if not pkg_path.is_dir():
@@ -560,6 +1144,18 @@ def main(argv: list[str] | None = None) -> int:
             all_obs_ids=all_observed_ids,
         )
         print(f"[first_light] evidence written to {args.evidence_out}", file=sys.stderr)
+
+    # ── optional HTML report ──────────────────────────────────────────────
+    if args.report_out:
+        evidence_src = args.evidence_out or str(Path(__file__).parent / "evidence.json")
+        if Path(evidence_src).is_file():
+            write_html_report(evidence_src, args.report_out)
+        else:
+            print(
+                f"[first_light] WARNING: --report requested but evidence file not found at {evidence_src}. "
+                f"Pass --evidence <path> to generate evidence.json first.",
+                file=sys.stderr,
+            )
 
     # ── optional JSON output ─────────────────────────────────────────────
     if args.json_out:
