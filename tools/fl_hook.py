@@ -526,6 +526,30 @@ def _selftest() -> None:
         # Completely unparseable input.
         ("malformed JSON",               "not json at all",           "no path"),
     ]
+
+    # Payload shapes Bob actually sends.  Edit, Write and MultiEdit carry no
+    # line number, and those are the matchers this hook is wired to, so the
+    # case below is the common one rather than an edge case.
+    if examples:
+        _p0 = next(iter(examples.values()))[1]["file"].replace("\\", "\\\\")
+        degrade_cases.append((
+            "known file, edit with no line number",
+            f'{{"tool_input": {{"file_path": "{_p0}", "old_string": "x"}}}}',
+            "edit not located",
+        ))
+    # A function whose driver was refused must still report that the driver
+    # reached it; saying only "never observed" would drop a recorded fact.
+    _refused = [(k, u) for k, u in units.items()
+                if u.get("driver_reached")
+                and u.get("provenance") == PROVENANCE_NEVER]
+    if _refused:
+        _k, _u = _refused[0]
+        _pf = _u["file"].replace("\\", "\\\\")
+        degrade_cases.append((
+            "never observed, but a refused driver reached it",
+            f'{{"file_path": "{_pf}", "line": {_u["body_start"]}}}',
+            "A driver did reach it",
+        ))
     for label, json_str, expected_fragment in degrade_cases:
         result = _run_hook_with_stdin(json_str)
         ok     = expected_fragment in result

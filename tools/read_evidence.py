@@ -21,7 +21,13 @@ prod = {k: u for k, u in units.items() if is_product(u)}
 
 total  = len(prod)
 never  = sum(1 for u in prod.values() if u["provenance"] == "never_observed")
-insitu = sum(1 for u in prod.values() if u["provenance"] == "observed_in_situ")
+# The 5 units whose driver a baseline made redundant are observed_in_situ and
+# are also reported on their own, so the two figures are named separately
+# rather than folded together under one label.
+redundant = sum(1 for u in prod.values() if u.get("driver_redundant_baseline"))
+insitu = sum(1 for u in prod.values()
+             if u["provenance"] == "observed_in_situ"
+             and not u.get("driver_redundant_baseline"))
 driver = sum(1 for u in prod.values() if u["provenance"] == "observed_under_driver")
 obs    = insitu + driver
 
@@ -39,6 +45,7 @@ print("PRODUCT SCOPE (excl. tests/vendor/apps/experimental)")
 print(f"  total                  = {total}")
 print(f"  never_observed         = {never}")
 print(f"  observed_in_situ       = {insitu}")
+print(f"  driver_redundant       = {redundant}")
 print(f"  observed_under_driver  = {driver}")
 print(f"  observed (total)       = {obs}")
 print()

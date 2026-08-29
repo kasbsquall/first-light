@@ -211,7 +211,10 @@ unverified assertion this tool exists to detect.
 ## Hook wiring
 
 `tools/fl_hook.py` is a Bob pre-edit advisory hook.  Before every file write,
-Bob passes the target file path and line number to the hook via stdin.  The hook
+Bob passes the target file path to the hook via stdin, and a line number when
+the tool provides one.  Edit, Write and MultiEdit do not, so the hook reports
+the file's state and says the edit could not be placed rather than naming a
+function it cannot locate.  The hook
 looks up the function unit that contains that line in `evidence.json` and prints
 one advisory line describing the unit's provenance.  It always exits 0 and never
 blocks an edit.

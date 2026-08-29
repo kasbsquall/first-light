@@ -25,6 +25,7 @@ import datetime
 import hashlib
 import json
 import os
+import re as _re_mod
 import subprocess
 import sys
 import tempfile
@@ -1179,7 +1180,24 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         runner_rel = _rel(bl.get("runner", ""))
         package_rel = _rel(bl.get("package", ""))
         command_raw = bl.get("command", [])
-        cmd_tokens = [_rel(str(c)) if (os.sep in str(c) or "/" in str(c)) else str(c) for c in command_raw]
+        # Shorten paths for display without changing what the command says.
+        # _rel() falls back to the bare filename when a path is not under the
+        # repo, which turned "--source=<abspath>" into the word "visidata" and
+        # printed a command that never ran, under a heading promising the
+        # opposite. Only rewrite a token when it actually resolves inside the
+        # repo, and rewrite the value of "--flag=path" rather than the whole
+        # token.
+        def _shorten(tok: str) -> str:
+            if "=" in tok and not tok.startswith("="):
+                flag, _, val = tok.partition("=")
+                if os.sep in val or "/" in val:
+                    return f"{flag}={_rel(val)}"
+                return tok
+            if os.sep in tok or "/" in tok:
+                return _rel(tok)
+            return tok
+
+        cmd_tokens = [_shorten(str(c)) for c in command_raw]
         cmd_str = " ".join(cmd_tokens) if cmd_tokens else ""
         exit_code = bl.get("exit_code", 0)
         exit_color = "var(--amber)" if exit_code != 0 else "var(--text)"
@@ -1625,6 +1643,28 @@ def render_report(
 # --promote-driver
 # ---------------------------------------------------------------------------
 
+def _is_not_a_call_site(line_text: str, name: str) -> str | None:
+    """Return a refusal reason if *line_text* cannot be a call site for *name*.
+
+    The name appearing on a line is necessary but nowhere near sufficient. A
+    definition, an import, an ``__all__`` entry or a comment all contain the
+    name and none of them is a place the function is reached in production.
+    Accepting them would let a driver satisfy the check without citing a use.
+    """
+    stripped = line_text.strip()
+    if stripped.startswith("#"):
+        return "the cited line is a comment"
+    if _re_mod.match(r"^\s*(async\s+)?def\s+" + _re_mod.escape(name) + r"\b", line_text):
+        return "the cited line is the function's own definition"
+    if _re_mod.match(r"^\s*@", line_text):
+        return "the cited line is a decorator"
+    if _re_mod.match(r"^\s*(from|import)\s", line_text):
+        return "the cited line is an import"
+    if _re_mod.match(r"^\s*__all__\s*=", line_text):
+        return "the cited line is an __all__ declaration"
+    return None
+
+
 def _run_driver_under_coverage(
     driver_abs: str,
     src_abs: str,
@@ -1681,33 +1721,6 @@ def _run_driver_under_coverage(
                 break
 
     return "not_reached", []
-
-
-def _resolve_unit_for_driver(
-    driver_path: Path,
-    evidence_path: Path,
-) -> tuple[str | None, dict | None]:
-    """Return (unit_key, unit_dict) for the driver, or (None, None) on failure."""
-    # Driver filename encodes the qualified name: visidata.utils.moveListItem.py
-    # → qualified name suffix "visidata.utils.moveListItem"
-    qname_suffix = driver_path.stem  # strip .py
-
-    with open(evidence_path, encoding="utf-8") as fh:
-        doc = json.load(fh)
-
-    units: dict = doc.get("units", {})
-    for key, unit in units.items():
-        # Key format: <file>::<qualified_name>#<def_line>
-        # The qualified_name portion (between :: and #) must end with the suffix.
-        if "::" not in key:
-            continue
-        qname_part = key.split("::", 1)[1]
-        if "#" in qname_part:
-            qname_part = qname_part.rsplit("#", 1)[0]
-        if qname_part == qname_suffix:
-            return key, unit
-
-    return None, None
 
 
 def cmd_promote_driver(
@@ -1955,6 +1968,23 @@ def cmd_promote_driver(
                         )
                         cs_ok = False
                         break
+                    # Same containment rule as the direct form. Without it the
+                    # indirect form is a way around it: a driver could cite a
+                    # throwaway file anywhere on disk, or itself, as the place
+                    # the function is reached in production.
+                    try:
+                        _seg_inside = seg_file_path.resolve().is_relative_to(Path(pkg_abs).resolve())
+                    except (OSError, ValueError):
+                        _seg_inside = False
+                    if not _seg_inside:
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                            f"indirect call site {seg_label} file '{seg_file_raw}' is "
+                            f"outside the package under analysis.",
+                            file=sys.stderr,
+                        )
+                        cs_ok = False
+                        break
                     try:
                         seg_text_lines = seg_file_path.read_text(encoding="utf-8", errors="replace").splitlines()
                         if seg_line < 1 or seg_line > len(seg_text_lines):
@@ -1978,6 +2008,20 @@ def cmd_promote_driver(
                             )
                             cs_ok = False
                             break
+                        # Rule 2b: the name being present is not enough.  A
+                        # definition, an import or an __all__ entry all contain
+                        # it and none is a place the function is reached.
+                        if check_name:
+                            _bad = _is_not_a_call_site(seg_line_text, func_simple_name)
+                            if _bad:
+                                print(
+                                    f"[promote-driver] FAIL  {driver_path.name} -- "
+                                    f"{seg_label} line {seg_line} of '{seg_file_raw}' "
+                                    f"cannot be a call site: {_bad}.",
+                                    file=sys.stderr,
+                                )
+                                cs_ok = False
+                                break
                         # Rule 3: neither line may fall inside the function's own body.
                         if Path(seg_file_raw).resolve() == Path(src_abs).resolve() and body_start <= seg_line <= body_end:
                             print(
@@ -2066,6 +2110,16 @@ def cmd_promote_driver(
                                 f"function name '{func_simple_name}' not found on "
                                 f"line {cs_line} of '{cs_file_raw}'; "
                                 f"correct the '# call site:' comment in the driver file.",
+                                file=sys.stderr,
+                            )
+                            failed += 1
+                            continue
+                        _bad = _is_not_a_call_site(cs_text, func_simple_name)
+                        if _bad:
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                                f"line {cs_line} of '{cs_file_raw}' cannot be a "
+                                f"call site: {_bad}.",
                                 file=sys.stderr,
                             )
                             failed += 1
