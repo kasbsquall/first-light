@@ -109,7 +109,9 @@ def call_sites(package: Path, name: str) -> list[str]:
 
     The model is given real lines rather than left to invent one. It still has to
     choose, and the gate still has to agree: it parses the cited line and refuses
-    it unless it is a call to this function in a file that defines or imports it.
+    it unless the name is called there, in a file that defines or imports the
+    function. That is a name match, not a resolved binding. See the limit
+    documented under "Testing the gate" in the README.
     """
     try:
         out = subprocess.run(
@@ -193,8 +195,10 @@ def main() -> None:
     print("declares  :", declared.group(0).strip() if declared else "(no call site declared)")
     print()
     print("This is a candidate. Nothing is promoted until the gate agrees:")
-    print("  python first_light.py --promote-driver --all --drivers-dir %s --evidence %s"
-          % (out_dir.name, Path(args.evidence).name))
+    print("  python first_light.py --promote-driver --all --drivers-dir %s "
+          "--evidence <a copy>" % out_dir.name)
+    print("Point it at a copy. The published evidence is what the report is built")
+    print("from, and the promotion step would edit it.")
 
 
 if __name__ == "__main__":

@@ -234,6 +234,27 @@ audit promoted a function by citing the definition line of a different function
 whose name contained it; six of the ten refused forms in that file are what
 that rule used to accept; the shape check already caught the other four.
 
+### What the check still cannot do
+
+The rule confirms that the cited line calls **something of that name**. It does
+not resolve the binding. When the cited file is the file that defines the
+function, the import guard is skipped, because a file needs no import to reach
+its own contents, and what is left is a name comparison on the attribute.
+
+An audit found a real case in the target. `stored_list.py:34` reads
+`ret.append(value)`, where `ret` is a plain Python list, and the line two below
+it even says `# replace without using .append`. That line satisfies a claim
+about `visidata.stored_list.StoredList.append`, and the gate promotes it. There
+are 134 same-file attribute citations in this package that the check cannot tell
+apart from real dispatch. Most are ordinary polymorphism; `ret.append` is not.
+
+No published figure rests on one: the two promotions this repository ships cite
+plain function calls, not attribute calls, and both were verified by hand. But
+the honest description of the check is a name match plus a shape check plus an
+import rule for cross-file citations, and resolving the receiver is the next
+thing it should do. Saying it was stronger than that would be the failure this
+tool exists to detect.
+
 ---
 
 ## Refusals are recorded, not printed and dropped

@@ -285,6 +285,37 @@ def test_hook_is_portable() -> None:
         _sh.rmtree(root, ignore_errors=True)
 
 
+# ---------------------------------------------------------------------------
+# 8. A known limit, recorded rather than hidden. An audit promoted
+#    StoredList.append by citing stored_list.py:34, which is `ret.append(value)`
+#    on a plain Python list. The import guard is skipped when the cited file is
+#    the defining file, so all that runs is an attribute-name comparison.
+#
+#    This test asserts the CURRENT behaviour, which is that the citation is
+#    accepted. It fails the day someone resolves the receiver, and that failure
+#    is the reminder to delete the "What the check still cannot do" section of
+#    the README along with this test.
+# ---------------------------------------------------------------------------
+def test_known_limit_same_file_attribute() -> None:
+    print(chr(10) + "--- known limit: same-file attribute citation ---")
+    src = ROOT / "target" / "visidata" / "visidata" / "stored_list.py"
+    if not src.is_file():
+        check("the target is present", False, "-> skipping")
+        return
+
+    line = src.read_text(encoding="utf-8", errors="replace").splitlines()[33]
+    check("stored_list.py:34 is still ret.append(value)",
+          "ret.append(value)" in line, "-> %r" % line.strip())
+
+    same_file = FL._cites_the_right_function(str(src), str(src), "append")
+    check("the import guard is skipped for a same-file citation",
+          same_file is None, "-> %r" % same_file)
+
+    calls = FL._line_calls(str(src), 34, "append")
+    check("the shape check accepts it on the attribute name alone",
+          calls is None, "-> %r" % calls)
+
+
 def main() -> int:
     print("first_light gate tests")
     test_call_site_rule()
@@ -294,6 +325,7 @@ def main() -> int:
     test_strict_gate()
     test_citation_belongs_to_the_function()
     test_hook_is_portable()
+    test_known_limit_same_file_attribute()
     print("\n%d passed, %d failed" % (PASSED, FAILED))
     return 0 if FAILED == 0 else 1
 

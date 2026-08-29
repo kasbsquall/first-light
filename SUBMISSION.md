@@ -25,7 +25,7 @@ instrumentation, and gives each one a provenance it refuses to blur:
 The third level carries the idea. Evidence an agent manufactured is weaker than
 evidence from real use, and First Light records it as weaker. Every driver must
 declare where the function is reached in production, and the tool parses that
-file to confirm the line really calls it. A driver that declares nothing, or
+file to confirm the name is called there. A driver that declares nothing, or
 names a line that is not a call, is refused, and the evidence keeps both facts:
 the driver reached the function, and its claim could not be checked.
 
