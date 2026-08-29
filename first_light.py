@@ -601,6 +601,108 @@ def _driver_call_site(driver_path: Path) -> tuple[str, bool]:
     return "", False
 
 
+_HTML_JS = """
+const R = document.documentElement;
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+R.classList.add('js-on');
+
+/* The headline resolves from noise into the figure. It is the one piece of
+   motion here that carries meaning rather than polish: something that could
+   not be read becoming readable is what the project is named after. */
+(function resolveHeadline() {
+  const el = document.querySelector('.headline__never');
+  if (!el || reduce) return;
+  const target = el.textContent.trim();
+  const glyphs = '0123456789';
+  const start = performance.now();
+  const DURATION = 600;
+  function frame(now) {
+    const t = Math.min(1, (now - start) / DURATION);
+    let out = '';
+    for (let k = 0; k < target.length; k++) {
+      const settleAt = (k + 1) / target.length;
+      out += t >= settleAt
+        ? target[k]
+        : glyphs[(Math.random() * glyphs.length) | 0];
+    }
+    el.textContent = out;
+    if (t < 1) requestAnimationFrame(frame);
+    else el.textContent = target;
+  }
+  requestAnimationFrame(frame);
+})();
+
+/* Rows draw in as they scroll into view, capped at eight steps so a long
+   file does not become a slow crawl. */
+(function cascadeRows() {
+  const rows = Array.from(document.querySelectorAll('.map-row'));
+  if (!rows.length) return;
+  if (reduce || !('IntersectionObserver' in window)) {
+    rows.forEach(r => r.classList.add('is-in'));
+    return;
+  }
+  const io = new IntersectionObserver((entries) => {
+    let n = 0;
+    entries.forEach(en => {
+      if (!en.isIntersecting) return;
+      en.target.style.setProperty('--r', String(Math.min(n++, 7)));
+      en.target.classList.add('is-in');
+      io.unobserve(en.target);
+    });
+  }, { rootMargin: '80px 0px' });
+  rows.forEach(r => io.observe(r));
+})();
+
+/* Filtering. The map was 250 rows with no way in; this makes the number
+   in the headline something you can walk to. */
+(function filters() {
+  const search = document.getElementById('fl-search');
+  const chips  = Array.from(document.querySelectorAll('.chip'));
+  const status = document.getElementById('fl-status');
+  const rows   = Array.from(document.querySelectorAll('.map-row'));
+  if (!rows.length) return;
+  const state = { q: '', only: 'all' };
+
+  function apply() {
+    let shown = 0, never = 0;
+    rows.forEach(row => {
+      const name = (row.dataset.name || '').toLowerCase();
+      const nNever = parseInt(row.dataset.never || '0', 10);
+      const nTotal = parseInt(row.dataset.total || '0', 10);
+      const inScope = row.dataset.scope === 'product';
+      let ok = !state.q || name.indexOf(state.q) !== -1;
+      if (ok && state.only === 'never')   ok = nNever > 0;
+      if (ok && state.only === 'clean')   ok = nNever === 0 && nTotal > 0;
+      if (ok && state.only === 'product') ok = inScope;
+      row.hidden = !ok;
+      if (ok) { shown++; never += nNever; }
+    });
+    if (status) {
+      status.textContent = shown + ' of ' + rows.length + ' modules, '
+                         + never + ' never observed';
+    }
+  }
+
+  if (search) {
+    search.addEventListener('input', () => {
+      state.q = search.value.trim().toLowerCase();
+      apply();
+    });
+  }
+  chips.forEach(c => {
+    c.addEventListener('click', () => {
+      const v = c.dataset.only;
+      state.only = (state.only === v) ? 'all' : v;
+      chips.forEach(o => o.setAttribute('aria-pressed',
+        String(o.dataset.only === state.only)));
+      apply();
+    });
+  });
+  apply();
+})();
+"""
+
+
 _HTML_CSS = """\
 /* ============================================================
    FIRST LIGHT -- report styles
@@ -1016,6 +1118,139 @@ body {
   font-size: 11px;
   color: var(--muted);
 }
+
+/* ── Entrance choreography ──────────────────────────────────
+   Only transform and opacity, so nothing here can cause layout work.
+   Every duration is under 300ms. The whole thing is off under
+   prefers-reduced-motion, and the page renders complete without it: the
+   animation is an enhancement, never a gate on the content. */
+.rise {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.js-on .rise {
+  animation: rise 240ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+@keyframes rise {
+  to { opacity: 1; transform: none; }
+}
+
+/* Map rows draw in as they enter the viewport, capped so a long file does
+   not turn into a slow crawl. */
+.js-on .map-row { opacity: 0; transform: translateY(4px); }
+.js-on .map-row.is-in {
+  animation: rise 200ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  animation-delay: calc(var(--r, 0) * 30ms);
+}
+
+/* ── Sticky toolbar ─────────────────────────────────────── */
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 12px 0;
+  margin-bottom: 20px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.toolbar__search {
+  flex: 1 1 200px;
+  min-width: 160px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 7px 10px;
+}
+
+.toolbar__search::placeholder { color: var(--muted); }
+.toolbar__search:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 1px;
+}
+
+.chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.chip:hover { color: var(--text); border-color: var(--muted); }
+.chip:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
+.chip[aria-pressed="true"] {
+  color: var(--bg);
+  background: var(--amber);
+  border-color: var(--amber);
+}
+
+.chip__count {
+  font-variant-numeric: tabular-nums lining-nums;
+  opacity: 0.75;
+  margin-left: 6px;
+}
+
+.toolbar__status {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums lining-nums;
+  margin-left: auto;
+}
+
+.map-row[hidden] { display: none; }
+
+/* ── Section navigation ─────────────────────────────────── */
+.topnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 10px 0 22px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.topnav a { color: var(--muted); text-decoration: none; }
+.topnav a:hover { color: var(--amber); }
+.topnav a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+/* Visible to a screen reader, not on screen. The search input needs a real
+   label; a placeholder is not one. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.headline__never { will-change: contents; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rise, .js-on .rise,
+  .js-on .map-row, .js-on .map-row.is-in {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+}
 """
 
 
@@ -1418,7 +1653,9 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         scope_tag = "" if in_scope else '<span class="map-row__scope">excluded</span>'
         row_cls   = "map-row" if in_scope else "map-row map-row--excluded"
         map_rows_html.append(
-            f'<div class="{row_cls}">'
+            f'<div class="{row_cls}" data-name="{label_html}" '
+            f'data-never="{n_never}" data-total="{n_total}" '
+            f'data-scope="{"product" if in_scope else "excluded"}">'
             f'<span class="map-row__label" title="{label_html}">'
             f'<span class="map-row__name">{label_html}</span>'
             f'{scope_tag}'
@@ -1609,8 +1846,13 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 <!-- ═══════════════════════════════════════════════════════
      SECTION 1 — HEADLINE NUMBER
      ═══════════════════════════════════════════════════════ -->
-<header class="headline">
+<header class="headline rise" style="--i:0">
   <span class="label">First Light : Function Observation Report</span>
+  <nav class="topnav" aria-label="Report sections">
+    <a href="#baselines">Baselines</a>
+    <a href="#drivers">Driver results</a>
+    <a href="#map">Evidence map</a>
+  </nav>
   <span class="headline__never">{e(str(prod_never))}</span>
   <span class="headline__word">product-code functions never observed</span>
 
@@ -1708,7 +1950,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 <!-- ═══════════════════════════════════════════════════════
      SECTION 2 — BASELINES
      ═══════════════════════════════════════════════════════ -->
-<section>
+<section class="rise" style="--i:1" id="baselines">
   <div class="label" style="margin-bottom:12px;">Baselines: exactly what was executed</div>
   <div style="font-size:11px;color:var(--muted);margin-bottom:16px;">
     generated {e(generated_at)} &nbsp;&middot;&nbsp; First Light v{e(version)}
@@ -1719,8 +1961,24 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 <!-- ═══════════════════════════════════════════════════════
      SECTION 3 — EVIDENCE MAP
      ═══════════════════════════════════════════════════════ -->
-<section class="map-section">
+<section class="map-section rise" id="map" style="--i:3">
   <div class="section-heading">Evidence map: every module, every function</div>
+
+  <div class="toolbar" role="group" aria-label="Filter the evidence map">
+    <label class="sr-only" for="fl-search">Filter modules by name</label>
+    <input id="fl-search" class="toolbar__search" type="search"
+           placeholder="filter modules by name" autocomplete="off">
+    <button type="button" class="chip" data-only="never" aria-pressed="false">
+      has unobserved
+    </button>
+    <button type="button" class="chip" data-only="clean" aria-pressed="false">
+      fully observed
+    </button>
+    <button type="button" class="chip" data-only="product" aria-pressed="false">
+      product scope only
+    </button>
+    <span class="toolbar__status" id="fl-status" role="status" aria-live="polite"></span>
+  </div>
   <div class="legend">
     <div class="legend__item">
       <span class="swatch swatch--insitu"></span>
@@ -1743,8 +2001,8 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 <!-- ═══════════════════════════════════════════════════════
      SECTION 4 — DRIVER RESULTS
      ═══════════════════════════════════════════════════════ -->
-<section class="drivers-section">
-  <div class="section-heading">Driver results: {e(str(len(confirmed_drivers)))} confirmed, {e(str(len(redundant_drivers)))} driver redundant, {e(str(len(attempted_drivers)))} not confirmed</div>
+<section class="drivers-section rise" style="--i:2">
+  <div class="section-heading" id="drivers">Driver results: {e(str(len(confirmed_drivers)))} confirmed, {e(str(len(redundant_drivers)))} driver redundant, {e(str(len(attempted_drivers)))} not confirmed</div>
 {drivers_html}
 {f'<div style="margin-top:28px"><div class="section-heading" style="color:#b8a030;">Driver made redundant by baseline ({e(str(len(redundant_drivers)))})</div><p style="font-size:12px;color:var(--muted);margin-bottom:12px;">These functions were genuinely observed by a baseline, making the corresponding driver redundant. The unit&#x2019;s provenance is observed_in_situ. The driver file is kept as a record of the path that was built.</p>' + redundant_html + '</div>' if redundant_drivers else ''}
 {f'<div style="margin-top:20px"><div class="section-heading" style="color:#cc4444;">Attempted, not confirmed ({e(str(len(attempted_drivers)))})</div>' + attempted_html + '</div>' if attempted_drivers else ''}
@@ -1760,6 +2018,10 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 <footer class="footer">
   Made with IBM Bob : First Light v{e(version)} : {e(generated_at)}
 </footer>
+
+<script>
+{_HTML_JS}
+</script>
 
 </body>
 </html>"""
