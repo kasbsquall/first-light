@@ -286,19 +286,24 @@ def test_hook_is_portable() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 8. A known limit, recorded rather than hidden. An audit promoted
-#    StoredList.append by citing stored_list.py:34, which is `ret.append(value)`
-#    on a plain Python list. The import guard is skipped when the cited file is
-#    the defining file, so all that runs is an attribute-name comparison.
+# 8. The receiver rule. An audit promoted StoredList.append by citing
+#    stored_list.py:34, which is `ret.append(value)` on a plain Python list; the
+#    line below it in visidata's own source reads "replace without using
+#    .append". Neither existing check could catch it: the import guard
+#    short-circuits when the cited file is the defining file, and the shape
+#    check compares the attribute name and nothing else. Both of those are
+#    asserted below, because they are the reason a third check exists.
 #
-#    This test asserts the CURRENT behaviour, which is that the citation is
-#    accepted. It fails the day someone resolves the receiver, and that failure
-#    is the reminder to delete the "What the check still cannot do" section of
-#    the README along with this test.
+#    The rule has to close that without refusing real dispatch.
+#    `sheet.changestr(...)` is also an attribute call in the defining file, but
+#    changestr carries @Sheet.api, so visidata binds it to the class at import
+#    time and any instance is a legitimate receiver. Refusing it would have cost
+#    a published promotion.
 # ---------------------------------------------------------------------------
-def test_known_limit_same_file_attribute() -> None:
-    print(chr(10) + "--- known limit: same-file attribute citation ---")
-    src = ROOT / "target" / "visidata" / "visidata" / "stored_list.py"
+def test_receiver_rule() -> None:
+    print(chr(10) + "--- the receiver of an attribute call ---")
+    base = ROOT / "target" / "visidata" / "visidata"
+    src = base / "stored_list.py"
     if not src.is_file():
         check("the target is present", False, "-> skipping")
         return
@@ -307,13 +312,29 @@ def test_known_limit_same_file_attribute() -> None:
     check("stored_list.py:34 is still ret.append(value)",
           "ret.append(value)" in line, "-> %r" % line.strip())
 
-    same_file = FL._cites_the_right_function(str(src), str(src), "append")
-    check("the import guard is skipped for a same-file citation",
-          same_file is None, "-> %r" % same_file)
+    check("the import guard alone would let it through",
+          FL._cites_the_right_function(str(src), str(src), "append") is None)
+    check("the shape check alone would let it through",
+          FL._line_calls(str(src), 34, "append") is None)
 
-    calls = FL._line_calls(str(src), 34, "append")
-    check("the shape check accepts it on the attribute name alone",
-          calls is None, "-> %r" % calls)
+    check("the receiver rule refuses it",
+          FL._receiver_is_plausible(str(src), 34, "append", str(src)) is not None)
+
+    # Every call site this repository actually publishes must survive the rule,
+    # including the one attribute call among them.
+    real = [
+        ("sheet.changestr, attached with @Sheet.api",
+         base / "modify.py", 345, "changestr", base / "modify.py"),
+        ("_percentile", base / "aggregators.py", 198, "_percentile", base / "aggregators.py"),
+        ("getattrdeep", base / "column.py", 546, "getattrdeep", base / "utils.py"),
+        ("setattrdeep", base / "column.py", 551, "setattrdeep", base / "utils.py"),
+        ("moveListItem", base / "features" / "slide.py", 22, "moveListItem", base / "utils.py"),
+        ("colname_letters", base / "sheets.py", 1086, "colname_letters", base / "utils.py"),
+        ("modtime", base / "_urlcache.py", 18, "modtime", base / "path.py"),
+    ]
+    for label, cited, line_no, name, defining in real:
+        got = FL._receiver_is_plausible(str(cited), line_no, name, str(defining))
+        check("still accepted: %s" % label, got is None, "-> %r" % got)
 
 
 def main() -> int:
@@ -325,7 +346,7 @@ def main() -> int:
     test_strict_gate()
     test_citation_belongs_to_the_function()
     test_hook_is_portable()
-    test_known_limit_same_file_attribute()
+    test_receiver_rule()
     print("\n%d passed, %d failed" % (PASSED, FAILED))
     return 0 if FAILED == 0 else 1
 

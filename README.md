@@ -234,26 +234,32 @@ audit promoted a function by citing the definition line of a different function
 whose name contained it; six of the ten refused forms in that file are what
 that rule used to accept; the shape check already caught the other four.
 
-### What the check still cannot do
+### Resolving the receiver
 
-The rule confirms that the cited line calls **something of that name**. It does
-not resolve the binding. When the cited file is the file that defines the
-function, the import guard is skipped, because a file needs no import to reach
-its own contents, and what is left is a name comparison on the attribute.
+The name check was not enough on its own. An audit promoted
+`visidata.stored_list.StoredList.append` by citing `stored_list.py:34`, which
+reads `ret.append(value)` where `ret` is a plain Python list. The line two below
+it, in visidata's own source, says `# replace without using .append`. Neither
+existing check could catch it: the import guard short-circuits when the cited
+file is the file that defines the function, and the shape check compares the
+attribute name and nothing else.
 
-An audit found a real case in the target. `stored_list.py:34` reads
-`ret.append(value)`, where `ret` is a plain Python list, and the line two below
-it even says `# replace without using .append`. That line satisfies a claim
-about `visidata.stored_list.StoredList.append`, and the gate promotes it. There
-are 134 same-file attribute citations in this package that the check cannot tell
-apart from real dispatch. Most are ordinary polymorphism; `ret.append` is not.
+So an attribute call now has to have a receiver that could carry the function.
+`self` or `cls` passes, as does the defining module, its alias, or the defining
+class. A module-level function decorated with an `.api` attacher passes with any
+receiver, because that is how visidata binds `changestr` to `Sheet` at import
+time and `sheet.changestr(...)` really does reach it. A local list named `ret`
+passes none of them.
 
-No published figure rests on one: the two promotions this repository ships cite
-plain function calls, not attribute calls, and both were verified by hand. But
-the honest description of the check is a name match plus a shape check plus an
-import rule for cross-file citations, and resolving the receiver is the next
-thing it should do. Saying it was stronger than that would be the failure this
-tool exists to detect.
+This resolves the receiver by shape, not by type inference, so it still cannot
+prove a binding. What it removes is the class of citation where the receiver
+obviously could not be the function. It is deliberately willing to refuse a true
+citation: a refusal costs a promotion, and that is the direction this tool
+should be wrong in.
+
+It cost none here. Every call site this repository publishes still passes, the
+one attribute call among them included, and `tests/test_gate.py` asserts each of
+them by name so a future tightening cannot quietly drop one.
 
 ---
 

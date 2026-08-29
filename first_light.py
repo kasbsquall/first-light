@@ -1663,6 +1663,10 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     # Group functions by their source file (relative path stripped to module name)
     pkg_path_str = first_bl.get("package", "")
     pkg_root = Path(pkg_path_str) if pkg_path_str else None
+    # The headline used to say "in visidata" whatever it had measured, so the
+    # report mislabelled every other package the CLI is pointed at. Name what was
+    # actually measured, and say nothing when the baseline did not record it.
+    pkg_label = (" in %s" % pkg_root.name) if pkg_root and pkg_root.name else ""
 
     module_map: dict[str, list[dict]] = {}
     for key, u in units.items():
@@ -2082,7 +2086,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
   <h1 class="headline">
     <span class="headline__never">{e(str(prod_never))}</span>
     <span class="headline__word">of {e(str(prod_total))} product-code functions
-      in visidata have never been observed executing</span>
+      {e(pkg_label)} have never been observed executing</span>
   </h1>
 
   <div class="headline__context">
@@ -2424,6 +2428,111 @@ def _cites_the_right_function(cited: str, defining: str, name: str) -> str | Non
                         return None
     return ("the cited file does not import %s, so the %s it calls is not this one"
             % (mod, name))
+
+
+def _defines_how(defining: str, name: str):
+    """Describe how *name* is defined in *defining*: (is_method, class_name, dynamic).
+
+    ``dynamic`` is True when the function is written at module level but carries a
+    decorator that attaches it to a class at import time. visidata does this
+    everywhere with ``@Sheet.api``, so ``sheet.changestr(...)`` really does reach
+    the module-level ``changestr``. Returns ``None`` when the name is not defined
+    in that file at all.
+    """
+    try:
+        tree = ast.parse(Path(defining).read_text(encoding="utf-8", errors="replace"))
+    except (OSError, SyntaxError):
+        return None
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef):
+            for child in node.body:
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)) \
+                        and child.name == name:
+                    return (True, node.name, False)
+
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name:
+            dynamic = False
+            for dec in node.decorator_list:
+                d = dec.func if isinstance(dec, ast.Call) else dec
+                # @Sheet.api, @VisiData.api, @BaseSheet.class_api and friends
+                if isinstance(d, ast.Attribute) and d.attr.endswith("api"):
+                    dynamic = True
+            return (False, None, dynamic)
+    return None
+
+
+def _receiver_is_plausible(cited: str, line_no: int, name: str,
+                           defining: str) -> str | None:
+    """Refuse an attribute call whose receiver cannot be the defining function.
+
+    ``_line_calls`` matches the attribute name and nothing else, so
+    ``ret.append(value)`` on a plain list satisfied a claim about
+    ``StoredList.append``. An audit promoted exactly that, and the line below it
+    in visidata's own source reads ``replace without using .append``. The import
+    guard could not catch it because both lines live in the defining file, where
+    that guard short-circuits.
+
+    So for an attribute call the receiver has to be something that could carry
+    this function:
+
+    * ``self`` or ``cls``, which is dispatch inside the class;
+    * anything at all when the function is module-level and decorated with an
+      ``.api`` attacher, because it was bound to a class at import time and the
+      receiver is an instance of that class;
+    * a name that is the defining module, its alias, or the defining class.
+
+    A local list named ``ret`` is none of those. This resolves the receiver by
+    shape, not by type inference, so it still cannot prove the binding: it rules
+    out the receivers that obviously cannot be it. Refusing a true citation costs
+    a promotion, which is the direction this tool is willing to be wrong in.
+    """
+    try:
+        tree = ast.parse(Path(cited).read_text(encoding="utf-8", errors="replace"))
+    except (OSError, SyntaxError):
+        return None      # _line_calls already refuses an unparseable file
+
+    receiver = None
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        lo = getattr(node, "lineno", None)
+        hi = getattr(node, "end_lineno", lo) or lo
+        if lo is None or not (lo <= line_no <= hi):
+            continue
+        fn = node.func
+        if isinstance(fn, ast.Attribute) and fn.attr == name:
+            receiver = fn.value
+            break
+    if receiver is None:
+        return None      # a bare call; this rule has nothing to say about it
+
+    how = _defines_how(defining, name)
+    if how is None:
+        return None      # not defined there; the import rule owns that case
+    is_method, class_name, dynamic = how
+
+    if isinstance(receiver, ast.Name):
+        who = receiver.id
+        if who in ("self", "cls"):
+            return None
+        if class_name and who == class_name:
+            return None
+        if who == Path(defining).stem or who == Path(defining).parent.name:
+            return None
+    elif isinstance(receiver, ast.Attribute):
+        if receiver.attr in ("self", "cls", Path(defining).stem):
+            return None
+
+    if dynamic:
+        return None      # attached to a class at import time; any instance works
+
+    if is_method:
+        return ("the cited line calls %s on a receiver that is not self, cls or %s, "
+                "so it is not necessarily this method" % (name, class_name))
+    return ("the cited line calls %s as an attribute of something that is not the "
+            "module that defines it" % name)
 
 
 def _line_calls(path: str, line_no: int, name: str) -> str | None:
@@ -2864,6 +2973,10 @@ def cmd_promote_driver(
                         if check_name and not _no_call:
                             _no_call = _cites_the_right_function(
                                 str(seg_file_path), src_abs, func_simple_name)
+                        if check_name and not _no_call:
+                            _no_call = _receiver_is_plausible(
+                                str(seg_file_path), seg_line, func_simple_name,
+                                src_abs)
                         if check_name and _no_call:
                             _cs_refusal_reason = (
                                 f"{seg_label} line {seg_line} of '{seg_file_raw}' "
@@ -3002,6 +3115,10 @@ def cmd_promote_driver(
                         if not _no_call:
                             _no_call = _cites_the_right_function(
                                 str(cs_file_path), src_abs, func_simple_name)
+                        if not _no_call:
+                            _no_call = _receiver_is_plausible(
+                                str(cs_file_path), cs_line, func_simple_name,
+                                src_abs)
                         if _no_call:
                             _reason = (
                                 f"line {cs_line} of '{cs_file_raw}' is not a call "
