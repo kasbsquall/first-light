@@ -89,11 +89,23 @@ Provisioning Watson Machine Learning through the project dialog returns
 
 ---
 
-## What this means and what it does not
+## Why the account cannot provision it
 
-The limit is the service catalog exposed to this event account, not the
-platform. An account with watsonx.ai Runtime available would reach the same
-model the specs endpoint already lists here.
+The event's own rules answer this. IBM Bob is provisioned per participant and
+comes with 40 Bobcoins. watsonx is a separate, optional request:
+
+> Optionally, if your team would like to use IBM watsonx Orchestrate or
+> watsonx.ai as part of your project, you can also request an IBM Cloud account
+> including those services for your team.
+
+We used the individually-provisioned Bob account and did not request the team
+cloud account that carries those services. That is why the catalog shows twelve
+infrastructure products and no AI category, and why the Runtime is not offered
+in the project's associate-service dialog. The limit is the account we were
+working in, not the platform, and it was ours to request and we did not.
+
+An account with watsonx.ai Runtime attached would reach the same model the specs
+endpoint already lists here.
 
 We did not build the integration and nothing in this repository calls
 watsonx.ai. Publishing one that does not run would be the same unverified

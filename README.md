@@ -284,13 +284,14 @@ rejects generated code on evidence rather than on how it reads. That makes
 `evidence.json` an evaluation harness, and the figure worth publishing is how
 many of a model's drivers survive verification and how the refusals distribute.
 
-It was attempted and not built. Authentication succeeds and the account lists
-twenty foundation models including `ibm/granite-4-h-small`, but the event
-account's catalog exposes twelve infrastructure services with no AI category, so
-watsonx.ai Runtime could not be provisioned and inference returns
+It was attempted and not built. The event provisions IBM Bob per participant and
+makes watsonx a separate, optional request for a team cloud account, which we did
+not make. So authentication succeeds and the account lists twenty foundation
+models including `ibm/granite-4-h-small`, but no watsonx.ai Runtime can be
+attached to the project and inference returns
 `no_associated_service_instance_error`. The captured responses are in
-[docs/watsonx-attempt.md](docs/watsonx-attempt.md). The limit is that catalog,
-not the platform.
+[docs/watsonx-attempt.md](docs/watsonx-attempt.md). The limit was the account we
+were working in, and it was ours to request.
 
 Nothing here calls watsonx.ai and no reported figure depends on a model having
 been asked anything. Publishing an integration that does not run would be the
