@@ -11,7 +11,7 @@ from visidata.path import vstat  # the REAL function
 
 # Use an absolute path so lru_cache sees a fresh argument it has never seen before.
 # This guarantees the function body executes rather than returning a cached result.
-evidence_abs = os.path.abspath('target/visidata/evidence.json')
+evidence_abs = os.path.abspath('evidence.json')
 
 # Test 1: existing file -> os.stat_result
 result = vstat(evidence_abs)

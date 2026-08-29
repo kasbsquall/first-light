@@ -126,9 +126,8 @@ looks up the function unit that contains that line in `evidence.json` and prints
 one advisory line describing the unit's provenance.  It always exits 0 and never
 blocks an edit.
 
-The hook is registered in Bob's user-level `~/.claude/hooks/hooks.json` as a
-`PreToolUse` hook matching the `Edit|Write|MultiEdit` pattern, pointing at
-`tools/fl_hook.py`.  See `docs/hook-config.md` for the exact entry.
+To activate the hook, add the entry documented in `docs/hook-config.md` to
+`~/.claude/hooks/hooks.json`.
 
 The `FIRST_LIGHT_EVIDENCE` environment variable overrides the evidence file
 location when it is not adjacent to the files being edited.

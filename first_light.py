@@ -765,14 +765,24 @@ body {
 """
 
 
-def _driver_units_from_evidence(units: dict) -> tuple[list[dict], list[str]]:
-    """Return (confirmed, attempted_names) derived exclusively from evidence.
+def _strip_def_line_suffix(qname: str) -> str:
+    """Strip the '#<lineno>' suffix appended to unit keys before showing to humans."""
+    if "#" in qname:
+        return qname.rsplit("#", 1)[0]
+    return qname
+
+
+def _driver_units_from_evidence(
+    units: dict,
+    drivers_dir: Path | None = None,
+) -> tuple[list[dict], list[str]]:
+    """Return (confirmed, attempted_names).
 
     confirmed      : list of dicts with keys name, call_site, coverage_confirmed_lines
                      for every unit whose provenance is observed_under_driver.
-    attempted_names: list of driver file stem names that exist on disk but whose
-                     unit is NOT observed_under_driver in evidence (they were
-                     attempted but not confirmed).
+    attempted_names: list of qualified names whose driver file exists on disk but
+                     whose unit is NOT observed_under_driver in evidence — i.e.
+                     drivers that were attempted but not confirmed.
     """
     confirmed: list[dict] = []
     confirmed_qnames: set[str] = set()
@@ -782,8 +792,7 @@ def _driver_units_from_evidence(units: dict) -> tuple[list[dict], list[str]]:
             continue
         # Derive a display name: qualified_name portion of the unit key
         qname_part = key.split("::", 1)[1] if "::" in key else key
-        if "#" in qname_part:
-            qname_part = qname_part.rsplit("#", 1)[0]
+        qname_part = _strip_def_line_suffix(qname_part)
         confirmed.append({
             "name": qname_part,
             "call_site": u.get("call_site", ""),
@@ -791,9 +800,32 @@ def _driver_units_from_evidence(units: dict) -> tuple[list[dict], list[str]]:
         })
         confirmed_qnames.add(qname_part)
 
+    # Attempted: driver file exists but unit is not observed_under_driver.
+    # Build a map of qname_suffix -> unit provenance from evidence so we can
+    # cross-reference against files on disk.
+    attempted_names: list[str] = []
+    if drivers_dir is not None and drivers_dir.is_dir():
+        # Build set of qname suffixes that are NOT yet confirmed under driver.
+        evidence_qnames: dict[str, str] = {}  # qname_suffix -> provenance
+        for key, u in units.items():
+            if "::" not in key:
+                continue
+            qname_part = key.split("::", 1)[1]
+            qname_part = _strip_def_line_suffix(qname_part)
+            evidence_qnames[qname_part] = u.get("provenance", PROVENANCE_NEVER)
+
+        for driver_file in sorted(drivers_dir.glob("*.py")):
+            stem = driver_file.stem
+            prov = evidence_qnames.get(stem)
+            # "Attempted" = driver file exists but not promoted.
+            # (None means the driver has no matching unit in evidence at all —
+            # also worth reporting.)
+            if prov != PROVENANCE_UNDER_DRIVER:
+                attempted_names.append(stem)
+
     # Sort confirmed list for stable output
     confirmed.sort(key=lambda d: d["name"])
-    return confirmed, []
+    return confirmed, attempted_names
 
 
 def write_html_report(evidence_path: str, out_path: str) -> None:
@@ -828,6 +860,8 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     prod_total = len(prod_units)
     prod_never = sum(1 for u in prod_units.values() if u["provenance"] == PROVENANCE_NEVER)
     prod_observed = prod_total - prod_never
+    prod_insitu_count = sum(1 for u in prod_units.values() if u["provenance"] == PROVENANCE_IN_SITU)
+    prod_driver_count = sum(1 for u in prod_units.values() if u["provenance"] == PROVENANCE_UNDER_DRIVER)
 
     # ── Build per-module map data ────────────────────────────────────────────
     # Group functions by their source file (relative path stripped to module name)
@@ -848,8 +882,9 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 
         if mod_label not in module_map:
             module_map[mod_label] = []
+        raw_qname = key.split("::")[-1] if "::" in key else key
         module_map[mod_label].append({
-            "qname": key.split("::")[-1] if "::" in key else key,
+            "qname": _strip_def_line_suffix(raw_qname),
             "provenance": u["provenance"],
         })
 
@@ -861,10 +896,11 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 
     sorted_modules = sorted(module_map.items(), key=_module_sort_key)
 
-    # ── Driver info — derived exclusively from evidence.json ─────────────────
-    # A driver file existing on disk proves nothing about whether the function
-    # was reached; only units with provenance=observed_under_driver count.
-    confirmed_drivers, _attempted = _driver_units_from_evidence(units)
+    # ── Driver info ───────────────────────────────────────────────────────────
+    # confirmed: units with provenance=observed_under_driver (coverage verified).
+    # attempted: driver files that exist on disk but are not yet confirmed.
+    _drivers_dir = Path(__file__).parent / "drivers"
+    confirmed_drivers, attempted_drivers = _driver_units_from_evidence(units, _drivers_dir)
 
     # ── Relative-path helper ──────────────────────────────────────────────────
     # evidence.json stores absolute paths (needed for hash resolution).  The
@@ -956,6 +992,17 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     if not drivers_html:
         drivers_html = '<p style="color:var(--muted);font-size:13px;">No units confirmed under driver.</p>'
 
+    # Attempted-but-not-confirmed driver cards
+    attempted_cards_html = []
+    for name in attempted_drivers:
+        attempted_cards_html.append(
+            f'<div class="driver-card" style="border-color:#5a2020;">'
+            f'<div class="driver-card__name" style="color:#cc4444;">{e(name)}</div>'
+            f'<div class="driver-card__call" style="color:var(--muted);">driver file exists — not yet confirmed under coverage</div>'
+            f'</div>'
+        )
+    attempted_html = "\n".join(attempted_cards_html)
+
     # Legend: only show driver swatch if driver evidence exists
     driver_legend_item = ""
     if driver_count > 0:
@@ -996,12 +1043,12 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
       <span class="ctx-item__word">total (product)</span>
     </div>
     <div class="ctx-item">
-      <span class="ctx-item__num">{e(str(insitu_count))}</span>
-      <span class="ctx-item__word">in-situ</span>
+      <span class="ctx-item__num">{e(str(prod_insitu_count))}</span>
+      <span class="ctx-item__word">in-situ (product)</span>
     </div>
     <div class="ctx-item">
-      <span class="ctx-item__num">{e(str(driver_count))}</span>
-      <span class="ctx-item__word">under driver</span>
+      <span class="ctx-item__num">{e(str(prod_driver_count))}</span>
+      <span class="ctx-item__word">under driver (product)</span>
     </div>
   </div>
 
@@ -1094,8 +1141,9 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
      SECTION 4 — DRIVER RESULTS
      ═══════════════════════════════════════════════════════ -->
 <section class="drivers-section">
-  <div class="section-heading">Driver results ({e(str(len(confirmed_drivers)))} confirmed)</div>
+  <div class="section-heading">Driver results ({e(str(len(confirmed_drivers)))} confirmed, {e(str(len(attempted_drivers)))} attempted)</div>
 {drivers_html}
+{f'<div style="margin-top:20px"><div class="section-heading" style="color:#cc4444;">Attempted — not confirmed ({e(str(len(attempted_drivers)))})</div>' + attempted_html + '</div>' if attempted_drivers else ''}
 </section>
 
 <footer class="footer">
@@ -1212,7 +1260,7 @@ def _run_driver_under_coverage(
             cwd=str(Path(".").resolve()),
         )
 
-        if run_result.returncode not in (0, 1):
+        if run_result.returncode != 0:
             return "crash", []
 
         exp_result = subprocess.run(
@@ -1278,21 +1326,42 @@ def cmd_promote_driver(
       1. Resolve the target unit from evidence.json by filename→qualified-name.
       2. Run the driver under coverage with *timeout* seconds.
       3. Confirm that lines inside the unit's real body range were executed.
-      4. On success, write observed_under_driver + confirmed lines + driver path
-         + call site into evidence.json.
+      4. On success, record observed_under_driver + confirmed lines + driver path
+         + call site into the in-memory document.
       5. On failure, leave the unit as never_observed and report the reason.
+
+    The evidence file is read once before the loop, all mutations are accumulated
+    in memory, and a single atomic os.replace() write happens at the end.
 
     Returns 0 if every driver succeeded, 1 if any failed.
     """
     promoted = 0
     failed   = 0
 
+    # ── read evidence once ─────────────────────────────────────────────────
+    with open(evidence_path, encoding="utf-8") as fh:
+        doc = json.load(fh)
+
     for driver_path in driver_paths:
         driver_abs = str(driver_path.resolve())
         print(f"[promote-driver] processing {driver_path.name} …", file=sys.stderr)
 
         # ── resolve unit ──────────────────────────────────────────────────
-        unit_key, unit = _resolve_unit_for_driver(driver_path, evidence_path)
+        # Re-use the already-loaded doc so we see mutations from earlier
+        # iterations in the same run (e.g. same unit promoted twice).
+        qname_suffix = driver_path.stem
+        unit_key = None
+        unit = None
+        for key, u in doc.get("units", {}).items():
+            if "::" not in key:
+                continue
+            qname_part = key.split("::", 1)[1]
+            if "#" in qname_part:
+                qname_part = qname_part.rsplit("#", 1)[0]
+            if qname_part == qname_suffix:
+                unit_key = key
+                unit = u
+                break
         if unit_key is None:
             print(
                 f"[promote-driver] FAIL  {driver_path.name} — "
@@ -1342,7 +1411,7 @@ def cmd_promote_driver(
         if status != "reached":
             reason = {
                 "not_reached": f"driver ran but zero body lines ({body_start}-{body_end}) hit in {src_abs}",
-                "crash":       "driver process exited with non-0/1 return code",
+                "crash":       "driver process exited with non-zero return code",
                 "cov_fail":    "coverage JSON export failed",
             }.get(status, status)
             print(
@@ -1355,16 +1424,80 @@ def cmd_promote_driver(
         # ── extract call site from driver comment ─────────────────────────
         call_site = _driver_call_site(driver_path)
 
-        # ── validate call site does not fall inside the target's own body ─
-        # A function cannot be its own caller.  If the line number extracted
-        # from the call site comment falls within [body_start, body_end] the
-        # comment is wrong and we reject rather than store false data.
+        # ── validate call site: file exists and function name is on that line ─
+        # Parse "some/file.py:N -- funcname(...)" from the call site comment.
+        # Rules:
+        #   1. The file named before the colon must exist on disk.
+        #   2. The target function's simple name must appear on line N of that file.
+        #   3. The line must NOT fall inside the target function's own body
+        #      (a function cannot be its own caller).
+        # Any failure rejects the promotion rather than storing false data.
         if call_site:
             import re as _re
-            _cs_match = _re.search(r":(\d+)", call_site)
-            if _cs_match:
-                cs_line = int(_cs_match.group(1))
-                if body_start <= cs_line <= body_end:
+            # Extract "filepath:lineno" — file portion ends at the last colon
+            # that is immediately followed by digits (handles Windows paths like C:\...).
+            _cs_file_match = _re.match(r"^(.+):(\d+)", call_site)
+            if _cs_file_match:
+                cs_file_raw = _cs_file_match.group(1).strip()
+                cs_line = int(_cs_file_match.group(2))
+
+                # Resolve relative to the repo root (cwd at invocation time).
+                cs_file_path = Path(cs_file_raw)
+                if not cs_file_path.is_absolute():
+                    cs_file_path = Path(".").resolve() / cs_file_raw
+
+                # Rule 1: the file must exist.
+                if not cs_file_path.is_file():
+                    print(
+                        f"[promote-driver] FAIL  {driver_path.name} -- "
+                        f"call site file '{cs_file_raw}' does not exist; "
+                        f"correct the '# call site:' comment in the driver file.",
+                        file=sys.stderr,
+                    )
+                    failed += 1
+                    continue
+
+                # Rule 2: the target function's simple name must appear on that line.
+                # The function simple name is the last dot-separated component of
+                # the qualified name (e.g. "moveListItem" from "visidata.utils.moveListItem").
+                func_simple_name = unit_key.split("::", 1)[1].rsplit(".", 1)[-1] if "::" in unit_key else unit_key
+                if "#" in func_simple_name:
+                    func_simple_name = func_simple_name.rsplit("#", 1)[0]
+                try:
+                    cs_lines = cs_file_path.read_text(encoding="utf-8", errors="replace").splitlines()
+                    # Lines are 1-indexed; guard against out-of-range line numbers.
+                    if cs_line < 1 or cs_line > len(cs_lines):
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                            f"call site line {cs_line} is out of range for "
+                            f"'{cs_file_raw}' ({len(cs_lines)} lines); "
+                            f"correct the '# call site:' comment.",
+                            file=sys.stderr,
+                        )
+                        failed += 1
+                        continue
+                    cs_text = cs_lines[cs_line - 1]
+                    if func_simple_name not in cs_text:
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                            f"function name '{func_simple_name}' not found on "
+                            f"line {cs_line} of '{cs_file_raw}'; "
+                            f"correct the '# call site:' comment in the driver file.",
+                            file=sys.stderr,
+                        )
+                        failed += 1
+                        continue
+                except OSError as _cs_err:
+                    print(
+                        f"[promote-driver] FAIL  {driver_path.name} -- "
+                        f"could not read call site file '{cs_file_raw}': {_cs_err}",
+                        file=sys.stderr,
+                    )
+                    failed += 1
+                    continue
+
+                # Rule 3: call site must not fall inside the target's own body.
+                if Path(cs_file_raw).resolve() == Path(src_abs).resolve() and body_start <= cs_line <= body_end:
                     print(
                         f"[promote-driver] FAIL  {driver_path.name} -- "
                         f"call site line {cs_line} falls inside the target function's "
@@ -1376,17 +1509,11 @@ def cmd_promote_driver(
                     failed += 1
                     continue
 
-        # ── write back to evidence.json ───────────────────────────────────
-        with open(evidence_path, encoding="utf-8") as fh:
-            doc = json.load(fh)
-
+        # ── record promotion in the in-memory document ────────────────────
         doc["units"][unit_key]["provenance"]               = PROVENANCE_UNDER_DRIVER
         doc["units"][unit_key]["driver"]                   = driver_abs
         doc["units"][unit_key]["call_site"]                = call_site
         doc["units"][unit_key]["coverage_confirmed_lines"] = confirmed_lines
-
-        with open(evidence_path, "w", encoding="utf-8") as fh:
-            json.dump(doc, fh, indent=2)
 
         print(
             f"[promote-driver] OK    {driver_path.name} — "
@@ -1394,6 +1521,27 @@ def cmd_promote_driver(
             file=sys.stderr,
         )
         promoted += 1
+
+    # ── write evidence.json atomically ────────────────────────────────────
+    # Write to a temp file adjacent to the target, then rename so readers
+    # never see a partially-written file.
+    if promoted > 0:
+        tmp_fd, tmp_path = tempfile.mkstemp(
+            dir=evidence_path.parent,
+            prefix=".evidence_tmp_",
+            suffix=".json",
+        )
+        try:
+            with os.fdopen(tmp_fd, "w", encoding="utf-8") as fh:
+                json.dump(doc, fh, indent=2)
+            os.replace(tmp_path, str(evidence_path))
+        except Exception:
+            # Clean up the temp file if the rename fails.
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
 
     # ── summary ───────────────────────────────────────────────────────────
     total = promoted + failed

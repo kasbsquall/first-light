@@ -268,7 +268,8 @@ def query(
     # If multiple units match, report the most specific (smallest body).
     matching.sort(key=lambda kv: kv[1]["body_end"] - kv[1]["body_start"])
     key, unit = matching[0]
-    qualname   = key.split("::", 1)[1] if "::" in key else key
+    _qname_raw = key.split("::", 1)[1] if "::" in key else key
+    qualname   = _qname_raw.rsplit("#", 1)[0] if "#" in _qname_raw else _qname_raw
     provenance = unit.get("provenance", "unknown")
     label      = _PROVENANCE_LABELS.get(provenance, provenance)
 
@@ -374,6 +375,12 @@ def _selftest() -> None:
             "  or run: python first_light.py --evidence <dest>"
         )
         sys.exit(1)
+
+    # Pin the env var so that query() uses the same evidence file that _selftest()
+    # found here, even when querying source files deep inside target/ whose directory
+    # tree would otherwise cause _find_evidence to resolve a different (possibly
+    # stale or absent) file.
+    os.environ["FIRST_LIGHT_EVIDENCE"] = str(ev_path)
 
     ev = _load_evidence(ev_path)
     if ev is None:
