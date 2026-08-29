@@ -997,8 +997,13 @@ def _driver_units_from_evidence(
                 u = units_by_qname.get(stem, {})
                 attempted_names.append({
                     "name": stem,
-                    "coverage_confirmed_lines": u.get("coverage_confirmed_lines", []),
-                    "call_site": u.get("call_site") or "",
+                    # A refused driver may still have reached the function: the
+                    # reach and the refusal are recorded separately.
+                    "coverage_confirmed_lines": (u.get("driver_reached_lines")
+                                                 or u.get("coverage_confirmed_lines")
+                                                 or []),
+                    "call_site": (u.get("call_site")
+                                  or u.get("driver_declared_call_site") or ""),
                 })
 
     # Sort lists for stable output
@@ -1730,6 +1735,7 @@ def cmd_promote_driver(
     promoted        = 0
     redundant_count = 0
     failed          = 0
+    touched         = 0
 
     # ── read evidence once ─────────────────────────────────────────────────
     with open(evidence_path, encoding="utf-8") as fh:
@@ -1855,6 +1861,18 @@ def cmd_promote_driver(
 
         # ── extract call site from driver comment ─────────────────────────
         call_site, is_indirect = _driver_call_site(driver_path)
+
+        # Coverage has confirmed the driver executed lines inside the real
+        # function. Record that now, before the call site is checked.
+        # Whether the driver REACHED the function and whether it JUSTIFIED its
+        # claim are two different facts. A refused promotion must not erase the
+        # first one: the honest record is that the code ran, and that the claim
+        # about where it runs in production could not be verified.
+        doc["units"][unit_key]["driver_reached"]       = True
+        doc["units"][unit_key]["driver_reached_lines"] = confirmed_lines
+        doc["units"][unit_key]["driver_attempted"]     = driver_abs
+        doc["units"][unit_key]["driver_declared_call_site"] = call_site
+        touched += 1
 
         # ── validate call site ────────────────────────────────────────────
         # Direct call site rules (same as before):
@@ -2106,7 +2124,9 @@ def cmd_promote_driver(
     # Write to a temp file adjacent to the target, then rename so readers
     # never see a partially-written file.
     # Write whenever any mutation was made (full promotions OR superseded markings).
-    if promoted > 0:
+    # Write when anything changed, including a refusal that still recorded
+    # that the driver reached the function.
+    if promoted > 0 or redundant_count > 0 or touched > 0:
         tmp_fd, tmp_path = tempfile.mkstemp(
             dir=evidence_path.parent,
             prefix=".evidence_tmp_",

@@ -1007,7 +1007,14 @@
       "body_start": 161,
       "body_end": 165,
       "provenance": "never_observed",
-      "observed_in_baseline": []
+      "observed_in_baseline": [],
+      "driver_reached": true,
+      "driver_reached_lines": [
+        161,
+        162
+      ],
+      "driver_attempted": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.aggregators.stdev.py",
+      "driver_declared_call_site": "target/visidata/visidata/aggregators.py:93 -- self.funcValues(vals) where funcValues=stdev"
     },
     "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\aggregators.py::visidata.aggregators._percentile#169": {
       "file": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\aggregators.py",
@@ -18308,7 +18315,16 @@
       "body_start": 69,
       "body_end": 72,
       "provenance": "never_observed",
-      "observed_in_baseline": []
+      "observed_in_baseline": [],
+      "driver_reached": true,
+      "driver_reached_lines": [
+        69,
+        70,
+        71,
+        72
+      ],
+      "driver_attempted": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.path.vstat.py",
+      "driver_declared_call_site": ""
     },
     "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\path.py::visidata.path.filesize#74": {
       "file": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\path.py",
