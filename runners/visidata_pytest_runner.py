@@ -75,5 +75,9 @@ try:
 finally:
     os.chdir(_orig_cwd)
 
+# Declare the unit so the evidence records what was counted rather than leaving
+# a reader to infer it from the baseline id.
+print("first-light-unit: tests", flush=True)
+
 # pytest.main returns an ExitCode enum; cast to int for sys.exit.
 sys.exit(int(rc))

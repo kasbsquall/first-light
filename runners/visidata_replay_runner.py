@@ -133,5 +133,8 @@ finally:
 total = passed + failed
 print(f"collected {total} items", flush=True)
 print(f"{passed} passed, {failed} failed", flush=True)
+# Declare the unit so the evidence records what was counted rather than leaving
+# a reader to infer it from the baseline id.
+print("first-light-unit: session logs", flush=True)
 
 sys.exit(0 if failed == 0 else 1)

@@ -9,11 +9,11 @@ that a line was touched, not whether anyone has watched the function run. Teams
 read a coverage percentage as confidence and let agents edit on that.
 
 We measured visidata, a widely used Python tool. Of 2290 functions in its
-product code, 1201 have never been observed executing. That figure holds after
+product code, 1200 have never been observed executing. That figure holds after
 running the program in batch mode, after its own 256-test suite, and after
 replaying all 52 session logs the project ships. No baseline is a superset of
-any other: the test suite alone reaches 383 product functions; the replay alone
-reaches 144; the batch run alone reaches 1. After all three, 1201 product
+any other: the test suite alone reaches 384 product functions; the replay alone
+reaches 144; the batch run alone reaches 1. After all three, 1200 product
 functions have no execution record at all.
 
 ## The solution

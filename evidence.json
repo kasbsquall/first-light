@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-29T10:09:14.784433+00:00",
+  "generated_at": "2026-08-29T20:54:10.539484+00:00",
   "first_light_version": "0.3.0",
   "baselines": [
     {
@@ -41,10 +41,10 @@
         "tests",
         "vendor"
       ],
+      "run_unit": "tests",
       "pytest_collected": 256,
       "pytest_passed": 252,
-      "pytest_failed": 4,
-      "run_unit": "tests"
+      "pytest_failed": 4
     },
     {
       "id": "replay",
@@ -65,10 +65,10 @@
         "tests",
         "vendor"
       ],
+      "run_unit": "session logs",
       "pytest_collected": 52,
       "pytest_passed": 52,
-      "pytest_failed": 0,
-      "run_unit": "session logs"
+      "pytest_failed": 0
     }
   ],
   "integrity": {
@@ -1076,8 +1076,8 @@
       ],
       "driver_attempted": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.aggregators.stdev.py",
       "driver_declared_call_site": "target/visidata/visidata/aggregators.py:93 -- self.funcValues(vals) where funcValues=stdev",
-      "refusal_class": "name_not_on_line",
-      "refusal_reason": "function name 'stdev' not found on line 93 of 'target/visidata/visidata/aggregators.py'; correct the '# call site:' comment in the driver file."
+      "refusal_class": "line_not_a_call_site",
+      "refusal_reason": "line 93 of 'target/visidata/visidata/aggregators.py' is not a call site: the cited line does not call stdev; the parser finds no such call there. Correct the '# call site:' comment in the driver file."
     },
     "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\aggregators.py::visidata.aggregators._percentile#169": {
       "file": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\aggregators.py",
@@ -22374,8 +22374,10 @@
       "def_line": 27,
       "body_start": 28,
       "body_end": 28,
-      "provenance": "never_observed",
-      "observed_in_baseline": []
+      "provenance": "observed_in_situ",
+      "observed_in_baseline": [
+        "test_suite"
+      ]
     },
     "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\shell.py::visidata.shell.popen#32": {
       "file": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\shell.py",

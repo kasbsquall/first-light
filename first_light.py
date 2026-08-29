@@ -428,6 +428,7 @@ class BaselineInfo:
         pytest_collected: int | None = None,
         pytest_passed: int | None = None,
         pytest_failed: int | None = None,
+        run_unit: str | None = None,
         runner_cmd: list[str] | None = None,
     ) -> None:
         self.id = baseline_id
@@ -437,6 +438,11 @@ class BaselineInfo:
         self.exit_code = exit_code
         self.executed = executed  # {abs_path: {executed_line_numbers}}
         # Optional pytest counts (None when the runner is not pytest)
+        # What the counts above are counting. The fields share a parser with
+        # pytest, which is a convenience; they do not share a meaning. A baseline
+        # that replays recorded sessions counted sessions, and the record has to
+        # say so rather than let a reader infer it from the baseline's name.
+        self.run_unit = run_unit
         self.pytest_collected = pytest_collected
         self.pytest_passed = pytest_passed
         self.pytest_failed = pytest_failed
@@ -542,6 +548,8 @@ def write_evidence(
             "exit_code": bl.exit_code,
             "excluded_dirs": sorted(exclude_dirs),
         }
+        if bl.run_unit:
+            entry["run_unit"] = bl.run_unit
         if bl.pytest_collected is not None:
             entry["pytest_collected"] = bl.pytest_collected
         if bl.pytest_passed is not None:
@@ -1735,8 +1743,8 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         # share a meaning: one baseline collects tests, the other replays
         # recorded sessions. Printing "tests" over replayed logs would be the
         # conflation this tool exists to refuse, in its own report.
-        _is_replay = "replay" in str(bl.get("id", "")).lower()
-        _unit_word = bl.get("run_unit") or ("session logs" if _is_replay else "tests")
+        _unit_word = bl.get("run_unit") or "runs"
+        _is_replay = _unit_word == "session logs"
         _verb = "replayed" if _is_replay else ("collected, %s passed" % (py_passed or 0))
         pytest_row = ""
         if py_collected is not None:
@@ -2303,6 +2311,47 @@ def render_report(
 # --promote-driver
 # ---------------------------------------------------------------------------
 
+def _line_calls(path: str, line_no: int, name: str) -> str | None:
+    """Return a refusal reason unless *line_no* of *path* actually calls *name*.
+
+    The previous rule asked whether the function's name appeared anywhere on the
+    cited line. That is a substring test, and a substring test cannot tell a call
+    from anything else that mentions the name. It accepted the definition line of
+    a DIFFERENT function whose name contains this one (`def _recursive_bezier`
+    satisfies a check for `bezier`), an alias assignment, a registration, a cache
+    dict, a type annotation and a `del`. Six ways to satisfy the check that this
+    project's whole argument says should not satisfy it.
+
+    Parse the file instead and require a real call. The cited line must carry an
+    ast.Call whose callee resolves to *name*, either as a bare name or as the
+    attribute at the end of a dotted path. Anything the parser does not see as a
+    call is refused, and a file that will not parse is refused rather than waved
+    through, because an unparseable claim is not a verified one either.
+    """
+    try:
+        src = Path(path).read_text(encoding="utf-8", errors="replace")
+        tree = ast.parse(src)
+    except (OSError, SyntaxError) as exc:
+        return "the cited file could not be parsed (%s)" % type(exc).__name__
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        lo = getattr(node, "lineno", None)
+        hi = getattr(node, "end_lineno", lo)
+        if lo is None or not (lo <= line_no <= (hi or lo)):
+            continue
+        fn = node.func
+        called = None
+        if isinstance(fn, ast.Name):
+            called = fn.id
+        elif isinstance(fn, ast.Attribute):
+            called = fn.attr
+        if called == name:
+            return None
+    return "the cited line does not call %s; the parser finds no such call there" % name
+
+
 def _is_not_a_call_site(line_text: str, name: str) -> str | None:
     """Return a refusal reason if *line_text* cannot be a call site for *name*.
 
@@ -2689,7 +2738,10 @@ def cmd_promote_driver(
                             cs_ok = False
                             break
                         seg_line_text = seg_text_lines[seg_line - 1]
-                        if check_name and func_simple_name not in seg_line_text:
+                        _no_call = (_line_calls(str(seg_file_path), seg_line,
+                                                func_simple_name)
+                                    if check_name else None)
+                        if check_name and _no_call:
                             _cs_refusal_reason = (
                                 f"function name '{func_simple_name}' not found on "
                                 f"{seg_label} line {seg_line} of '{seg_file_raw}': "
@@ -2823,17 +2875,19 @@ def cmd_promote_driver(
                             failed += 1
                             continue
                         cs_text = cs_lines[cs_line - 1]
-                        if func_simple_name not in cs_text:
+                        _no_call = _line_calls(str(cs_file_path), cs_line,
+                                               func_simple_name)
+                        if _no_call:
                             _reason = (
-                                f"function name '{func_simple_name}' not found on "
-                                f"line {cs_line} of '{cs_file_raw}'; "
-                                f"correct the '# call site:' comment in the driver file."
+                                f"line {cs_line} of '{cs_file_raw}' is not a call "
+                                f"site: {_no_call}. Correct the "
+                                f"'# call site:' comment in the driver file."
                             )
                             print(
                                 f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
                                 file=sys.stderr,
                             )
-                            doc["units"][unit_key]["refusal_class"]  = RefusalClass.name_not_on_line.value
+                            doc["units"][unit_key]["refusal_class"]  = RefusalClass.line_not_a_call_site.value
                             doc["units"][unit_key]["refusal_reason"] = _reason
                             failed += 1
                             continue
@@ -3362,8 +3416,19 @@ def main(argv: list[str] | None = None) -> int:
             )
         # Parse pytest counts from stdout if available.
         pytest_collected, pytest_passed, pytest_failed = _parse_pytest_counts(runner_stdout)
+        # A runner may declare what it counted with a "first-light-unit: ..." line
+        # on stdout. Nothing else infers it later, so the record carries the fact
+        # rather than a guess made at render time.
+        run_unit = None
+        for _l in (runner_stdout or "").splitlines():
+            if _l.strip().lower().startswith("first-light-unit:"):
+                run_unit = _l.split(":", 1)[1].strip()
+                break
+        if run_unit is None and pytest_collected is not None:
+            run_unit = "session logs" if "replay" in bl_id.lower() else "tests"
         collected_baselines.append(BaselineInfo(
             baseline_id=bl_id,
+            run_unit=run_unit,
             runner_script=str(runner_path),
             cmd=runner_cmd,
             runner_cmd=runner_cmd,

@@ -141,13 +141,13 @@ the way a person drove it.
 
 | Scope | Total | Observed in situ | Under driver | Driver redundant | Never observed |
 |-------|------:|------------------:|-------------:|-----------------:|---------------:|
-| Product code | 2290 | 1081 | 2 | 6 | 1201 |
-| Whole package | 2791 | 1150 | 2 | 6 | 1633 |
+| Product code | 2290 | 1082 | 2 | 6 | 1200 |
+| Whole package | 2791 | 1151 | 2 | 6 | 1632 |
 
-No baseline is a superset of another.  383 product functions are reached only
+No baseline is a superset of another.  384 product functions are reached only
 by the test suite, 144 only by the replayed sessions, and 1 only by the batch
 CLI run; 298 by the replay and the suite together, 9 by the replay and the CLI,
-and 252 by all three.  After all three, 1201 product functions have no
+and 252 by all three.  After all three, 1200 product functions have no
 execution record at all.
 
 The batch CLI run is now almost entirely subsumed: replaying real sessions
@@ -187,6 +187,21 @@ rejects that approach was built in response.
 
 The index also states what the export does not cover, because commits made
 after it was taken were corrections rather than Bob tasks.
+
+---
+
+### One function moves between runs
+
+The figure is 1200 or 1201 depending on the run, and it is always the same
+function: `visidata.shell.bytes_rstrip` at `shell.py:27`. The project's own test
+suite reaches it on some runs and not others, so it lands in `observed_in_situ`
+or in `never_observed` accordingly. Nothing else in the 2290 has moved across
+the runs we have recorded.
+
+We state it because a reader who runs the pipeline twice will see it, and
+because a tool whose argument is that a claim must travel with its scope cannot
+publish a figure that quietly shifts. One unit of run-to-run variance in a
+population of 2290 does not change what the number says. Not saying so would.
 
 ---
 
@@ -232,7 +247,7 @@ Refused          : 2
 
 Refusal class                        Count
 --------------------------------------------
-name_not_on_line                         1
+line_not_a_call_site                     1
 no_call_site                             1
 ```
 

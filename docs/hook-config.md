@@ -44,17 +44,18 @@ explicitly is more reliable.
 
 ```
 [first_light] never observed -- visidata._input.injectInput has never been
-observed executing (baselines run: cli, test_suite)
+observed executing (baselines run: cli, test_suite, replay)
 ```
 
 ```
-[first_light] observed in situ -- visidata.addGlobals was observed
-executing under normal operation (observed by: cli, test_suite)
+[first_light] observed in situ -- visidata.addGlobals was observed executing
+under normal operation (observed by: cli, test_suite, replay)
 ```
 
 ```
-[first_light] observed under driver -- visidata.aggregators.mean only ran
-because a driver was built to reach it (not reached by: cli, test_suite)
+[first_light] observed under driver -- visidata.aggregators._percentile only
+ran because a driver was built to reach it (not reached by: cli, test_suite,
+replay)
 ```
 
 The hook always exits 0.  It never blocks an edit.
@@ -65,5 +66,5 @@ The hook always exits 0.  It never blocks an edit.
 python tools/fl_hook.py --selftest --evidence evidence.json
 ```
 
-This exercises three payload shapes and three graceful-degradation cases and
+This exercises three payload shapes and five graceful-degradation cases and
 prints OK/FAIL for each.

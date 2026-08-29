@@ -34,24 +34,20 @@ obs    = insitu + driver
 def in_bl(u, name):
     return name in u.get("observed_in_baseline", [])
 
-cli_only = sum(1 for u in prod.values() if in_bl(u, "cli") and not in_bl(u, "test_suite"))
-ts_only  = sum(1 for u in prod.values() if in_bl(u, "test_suite") and not in_bl(u, "cli"))
-both     = sum(1 for u in prod.values() if in_bl(u, "cli") and in_bl(u, "test_suite"))
-cli_total = cli_only + both
-ts_total  = ts_only + both
-
-print()
-print("PRODUCT SCOPE (excl. tests/vendor/apps/experimental)")
-print(f"  total                  = {total}")
-print(f"  never_observed         = {never}")
-print(f"  observed_in_situ       = {insitu}")
-print(f"  driver_redundant       = {redundant}")
-print(f"  observed_under_driver  = {driver}")
-print(f"  observed (total)       = {obs}")
-print()
-print("PER-BASELINE BREAKDOWN (product scope)")
-print(f"  cli total observed     = {cli_total}")
-print(f"  test_suite total obs   = {ts_total}")
-print(f"  cli alone (not in TS)  = {cli_only}")
-print(f"  test_suite added over cli (unique) = {ts_only}")
-print(f"  observed by both       = {both}")
+# Report the split for whatever baselines the evidence actually carries. This
+# was hardcoded to two, so it kept printing a cli-only figure from before the
+# replay baseline existed.
+from collections import Counter
+combos = Counter()
+for u in prod.values():
+    bl = u.get("observed_in_baseline") or []
+    if bl:
+        combos[" + ".join(sorted(bl))] += 1
+print("  reached by")
+for combo, n in sorted(combos.items(), key=lambda kv: -kv[1]):
+    print(f"    {combo:<32} {n}")
+for b in ev.get("baselines", []):
+    bid = b.get("id")
+    total = sum(n for combo, n in combos.items() if bid in combo.split(" + "))
+    alone = combos.get(bid, 0)
+    print(f"  {bid:<12} observed {total:>5}   only this one {alone:>4}")
