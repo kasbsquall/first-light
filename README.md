@@ -21,10 +21,16 @@ cd first-light
 # (visidata example; adjust for a different target.)
 .\target\visidata\.venv\Scripts\python.exe -m pip install coverage
 
+# Both baselines run in one pass.  The headline figure depends on running
+# both: the program alone and the test suite alone reach different
+# functions, and neither is a superset of the other.
+.\target\visidata\.venv\Scripts\python.exe -m pip install -r requirements-runners.txt
+
 # Run the full observation pass.
 .\target\visidata\.venv\Scripts\python.exe first_light.py `
     --package .\target\visidata\visidata `
-    --runner  .\runners\visidata_runner.py `
+    --runner  .\runners\visidata_runner.py        --runner-id cli `
+    --runner  .\runners\visidata_pytest_runner.py --runner-id test_suite `
     --python  .\target\visidata\.venv\Scripts\python.exe `
     --evidence evidence.json `
     --report  report.html
@@ -106,12 +112,35 @@ collisions.
 
 ## Current figures
 
-Measured against visidata 3.x with the batch-mode runner.
+Measured against visidata 3.x, after two independent baselines: the program
+run through its own CLI, and the project's own pytest suite (256 tests
+collected, 252 passing; the 4 failures are POSIX-specific and are recorded,
+not filtered out).
 
-| Scope | Total | Observed in situ | Under driver | Never observed |
-|-------|------:|------------------:|-------------:|---------------:|
-| Product code | 2290 | 262 | 10 | 2018 |
-| Whole package | 2791 | 265 | 10 | 2516 |
+| Scope | Total | Observed in situ | Under driver | Driver redundant | Never observed |
+|-------|------:|------------------:|-------------:|-----------------:|---------------:|
+| Product code | 2290 | 938 | 3 | 5 | 1344 |
+| Whole package | 2791 | 1006 | 3 | 5 | 1777 |
+
+Neither baseline is a superset of the other.  The test suite reaches 681
+product functions the running program never touches; the running program
+reaches 10 the test suite never touches; 252 are reached by both.  After
+both, 1344 product functions have no execution record at all.
+
+The 5 counted under 'driver redundant' are functions an agent had written a driver
+for before the test-suite baseline existed.  The baseline reached them on
+its own, so the driver became redundant.  Those units are marked as such
+rather than deleted, and the report shows them as their own group.
+
+Two further drivers were rejected, and both functions remain
+`never_observed`.  One declared a call site the checker could not confirm: the
+line it named is an indirect dispatch where the function's name never appears.
+The other declared no call site at all.  A driver that declares nothing has
+made no claim to verify, so the gate refuses it rather than recording the
+function as reached on the strength of an assertion nobody made.
+
+Closing that second case cost a promotion that had previously been counted.
+The count is the thing that moved, not the standard.
 
 Product code excludes the `tests`, `vendor`, `apps`, and `experimental`
 directories.  Whole package includes them.

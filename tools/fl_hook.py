@@ -129,13 +129,23 @@ def _load_evidence(ev_path: Path) -> dict | None:
         return None
 
 
-def _is_file_stale(abs_path: str, integrity: dict) -> bool:
-    """Return True if the file's current hash differs from the recorded hash."""
+def _file_integrity(abs_path: str, integrity: dict) -> str:
+    """Return the file's integrity state against the recorded evidence.
+
+    Three states, deliberately not collapsed into a boolean:
+
+      "unrecorded" — the file is not in the integrity table.  Nothing was ever
+                     recorded about it, so nothing can be said to have changed.
+      "changed"    — a hash was recorded and the file no longer matches it.
+      "unchanged"  — the file still matches the hash recorded with the evidence.
+
+    Reporting "unrecorded" as if it were "changed" would assert a fact that was
+    never observed, which is the failure this whole tool exists to refuse.
+    """
     recorded = integrity.get(abs_path, "")
     if not recorded:
-        return True   # not in the integrity table — treat as stale
-    current = _sha256(abs_path)
-    return current != recorded
+        return "unrecorded"
+    return "unchanged" if _sha256(abs_path) == recorded else "changed"
 
 
 def _overlaps(unit: dict, start_line: int | None, end_line: int | None) -> bool:
@@ -234,10 +244,10 @@ def query(
 
     integrity: dict = ev.get("integrity", {})
     units: dict     = ev.get("units", {})
-    baseline: dict  = ev.get("baseline", {})
+    baselines: list = ev.get("baselines", [])
 
     # ── stale check on the specific file ─────────────────────────────────
-    file_stale = _is_file_stale(abs_path, integrity)
+    file_state = _file_integrity(abs_path, integrity)
 
     # ── find matching units ───────────────────────────────────────────────
     # Units are keyed by  "<abs_file>::<qualified_name>"
@@ -258,9 +268,10 @@ def query(
         else:
             msg = (
                 f"[first_light] {Path(abs_path).name} is not covered by "
-                f"{ev_path.name} (recorded against: {baseline.get('package', '?')})"
+                f"{ev_path.name} (recorded against: "
+                f"{Path(baselines[0]['package']).name if baselines else '?'})"
             )
-        if file_stale:
+        if file_state == "changed":
             msg += " [FILE CHANGED since observation]"
         return msg
 
@@ -273,28 +284,35 @@ def query(
     provenance = unit.get("provenance", "unknown")
     label      = _PROVENANCE_LABELS.get(provenance, provenance)
 
-    runner = Path(baseline.get("runner", "?")).name
+    # Name the baselines that actually observed this unit.  With more than one
+    # baseline a single "runner" is a conflation: a function reached by the test
+    # suite but never by the running program is not the same fact as one reached
+    # by both, and the advisory should not flatten them.
+    _all_ids  = [b.get("id", "?") for b in baselines]
+    _seen_ids = unit.get("observed_in_baseline") or []
+    seen  = ", ".join(_seen_ids) if _seen_ids else "none"
+    scope = ", ".join(_all_ids) if _all_ids else "?"
 
     if provenance == PROVENANCE_NEVER:
         explanation = (
             f"{qualname} has never been observed executing "
-            f"(runner: {runner})"
+            f"(baselines run: {scope})"
         )
     elif provenance == PROVENANCE_IN_SITU:
         explanation = (
             f"{qualname} was observed executing under normal operation "
-            f"(runner: {runner})"
+            f"(observed by: {seen})"
         )
     elif provenance == PROVENANCE_DRIVER:
         explanation = (
             f"{qualname} only ran because a driver was built to reach it "
-            f"(runner: {runner})"
+            f"(not reached by: {scope})"
         )
     else:
         explanation = f"{qualname} -- provenance: {provenance}"
 
     msg = f"[first_light] {label} -- {explanation}"
-    if file_stale:
+    if file_state == "changed":
         msg += " [FILE CHANGED since observation -- re-run first_light.py]"
 
     return msg

@@ -1839,6 +1839,20 @@ def cmd_promote_driver(
         #              The function's simple name MUST appear on this line.
         #              Rule 3 (not-inside-own-body) applies to both lines.
         import re as _re
+
+        # A driver with no "# call site:" comment declares nothing, so there is
+        # nothing to verify.  Promoting it would record the function as reached
+        # in production on the strength of an assertion nobody made.  An absent
+        # claim is not a verified one: the gate fails closed.
+        if not call_site:
+            print(
+                f"[promote-driver] FAIL  {driver_path.name} -- "
+                f"no '# call site:' comment; a driver must declare where the "
+                f"function is reached in production so the claim can be checked"
+            )
+            failed += 1
+            continue
+
         if call_site:
             if is_indirect:
                 # ── indirect call site: two segments separated by " ; " ──

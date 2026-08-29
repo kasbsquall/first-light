@@ -43,18 +43,18 @@ explicitly is more reliable.
 ## What the hook outputs
 
 ```
-[first_light] never observed -- visidata.utils.moveListItem has never been
-observed executing (runner: visidata_runner.py)
+[first_light] never observed -- visidata._input.injectInput has never been
+observed executing (baselines run: cli, test_suite)
 ```
 
 ```
-[first_light] observed in situ -- visidata.column.Column.getValue was observed
-executing under normal operation (runner: visidata_runner.py)
+[first_light] observed in situ -- visidata.addGlobals was observed
+executing under normal operation (observed by: cli, test_suite)
 ```
 
 ```
-[first_light] observed under driver -- visidata.aggregators.stdev only ran
-because a driver was built to reach it (runner: visidata_runner.py)
+[first_light] observed under driver -- visidata.aggregators.mean only ran
+because a driver was built to reach it (not reached by: cli, test_suite)
 ```
 
 The hook always exits 0.  It never blocks an edit.

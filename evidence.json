@@ -982,13 +982,13 @@
       "body_end": 150,
       "provenance": "observed_under_driver",
       "observed_in_baseline": [],
-      "driver": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.aggregators.mean.py",
-      "call_site": "target/visidata/visidata/features/ping.py:33 -- mean(r.getValues(col.sheet.source.rows))",
       "coverage_confirmed_lines": [
         148,
         149,
         150
-      ]
+      ],
+      "driver": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.aggregators.mean.py",
+      "call_site": "target/visidata/visidata/features/ping.py:33 -- mean(r.getValues(col.sheet.source.rows))"
     },
     "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\aggregators.py::visidata.aggregators.vsum#153": {
       "file": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\aggregators.py",
@@ -1013,8 +1013,6 @@
       "body_end": 188,
       "provenance": "observed_under_driver",
       "observed_in_baseline": [],
-      "driver": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.aggregators._percentile.py",
-      "call_site": "target/visidata/visidata/aggregators.py:198 -- _percentile(sorted(col.getValues(rows)), self.pct/100, key=float)",
       "coverage_confirmed_lines": [
         179,
         180,
@@ -1026,7 +1024,9 @@
         186,
         187,
         188
-      ]
+      ],
+      "driver": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.aggregators._percentile.py",
+      "call_site": "target/visidata/visidata/aggregators.py:198 -- _percentile(sorted(col.getValues(rows)), self.pct/100, key=float)"
     },
     "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\aggregators.py::visidata.aggregators.PercentileAggregator.__init__#193": {
       "file": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\aggregators.py",
@@ -17982,8 +17982,6 @@
       "body_end": 336,
       "provenance": "observed_under_driver",
       "observed_in_baseline": [],
-      "driver": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.modify.changestr.py",
-      "call_site": "target/visidata/visidata/modify.py:345 -- sheet.changestr(adds, mods, deletes)",
       "coverage_confirmed_lines": [
         324,
         325,
@@ -17995,7 +17993,9 @@
         333,
         334,
         336
-      ]
+      ],
+      "driver": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.modify.changestr.py",
+      "call_site": "target/visidata/visidata/modify.py:345 -- sheet.changestr(adds, mods, deletes)"
     },
     "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\modify.py::visidata.modify.commit#339": {
       "file": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\modify.py",
@@ -18304,10 +18304,8 @@
       "def_line": 68,
       "body_start": 69,
       "body_end": 72,
-      "provenance": "observed_under_driver",
+      "provenance": "never_observed",
       "observed_in_baseline": [],
-      "driver": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.path.vstat.py",
-      "call_site": "",
       "coverage_confirmed_lines": [
         69,
         70,
