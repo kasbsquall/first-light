@@ -205,6 +205,24 @@ population of 2290 does not change what the number says. Not saying so would.
 
 ---
 
+## Testing the gate
+
+The gate is the part of this tool that can be wrong in a way that matters, so it
+has its own adversarial tests. They run on the standard library alone:
+
+```
+python tests/test_gate.py
+```
+
+Every case is either an attack an independent audit found and the gate accepted
+at the time, or a legitimate call site that must keep passing so a tightening
+does not quietly break the tool. The call-site rule was a substring test until an
+audit promoted a function by citing the definition line of a different function
+whose name contained it; the ten refused forms in that file are what that rule
+used to accept.
+
+---
+
 ## Where watsonx.ai fits
 
 Driver generation is already a model-in-a-loop step. A function that nothing has
