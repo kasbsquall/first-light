@@ -43,7 +43,8 @@
       ],
       "pytest_collected": 256,
       "pytest_passed": 252,
-      "pytest_failed": 4
+      "pytest_failed": 4,
+      "run_unit": "tests"
     },
     {
       "id": "replay",
@@ -66,7 +67,8 @@
       ],
       "pytest_collected": 52,
       "pytest_passed": 52,
-      "pytest_failed": 0
+      "pytest_failed": 0,
+      "run_unit": "session logs"
     }
   ],
   "integrity": {

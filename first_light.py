@@ -1690,15 +1690,21 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         py_collected = bl.get("pytest_collected")
         py_passed = bl.get("pytest_passed")
         py_failed = bl.get("pytest_failed")
+        # The counts share a field because they share a parser, but they do not
+        # share a meaning: one baseline collects tests, the other replays
+        # recorded sessions. Printing "tests" over replayed logs would be the
+        # conflation this tool exists to refuse, in its own report.
+        _is_replay = "replay" in str(bl.get("id", "")).lower()
+        _unit_word = bl.get("run_unit") or ("session logs" if _is_replay else "tests")
+        _verb = "replayed" if _is_replay else ("collected, %s passed" % (py_passed or 0))
         pytest_row = ""
         if py_collected is not None:
             fail_color = "var(--amber)" if (py_failed or 0) > 0 else "var(--text)"
             pytest_row = (
-                f'\n    <span class="baseline__key">tests</span>'
+                f'\n    <span class="baseline__key">{e(_unit_word)}</span>'
                 f'\n    <span class="baseline__val">'
-                f'collected {e(str(py_collected))}, '
-                f'passed {e(str(py_passed or 0))}, '
-                f'<span style="color:{fail_color};">failed {e(str(py_failed or 0))}</span>'
+                f'{e(str(py_collected))} {e(_verb)}, '
+                f'<span style="color:{fail_color};">{e(str(py_failed or 0))} failed</span>'
                 f'</span>'
             )
         baseline_cards_html.append(f"""
