@@ -44,6 +44,21 @@ survives the obvious objection.
 Tasks 9 and 10 close the remaining gaps the audits found in how evidence levels
 were recorded and presented.
 
+## What this export does not cover
+
+The export was taken after the tenth task. Commits made after that point are not
+in it, and they were not Bob tasks: they are direct edits made in response to
+independent audits of the code Bob had written. They include closing a second
+bypass in the promotion gate, separating the record of a driver reaching a
+function from the record of it justifying its claim, re-running both baselines
+so the published figures reproduce, and adding the section on where watsonx.ai
+would fit.
+
+The git history and this export therefore do not line up one to one, and saying
+so is cheaper than letting a reader discover it. Bob built the tool. The work
+after the export was correction, and most of it exists because an audit found
+this project asserting something its own evidence did not support.
+
 ## What this export shows about the work
 
 The record is not a clean line. Bob's first attempt at drivers copied function
