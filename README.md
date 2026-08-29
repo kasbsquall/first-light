@@ -161,7 +161,16 @@ its own, so the driver became redundant.  Those units are marked as such
 rather than deleted, and the report shows them as their own group.
 
 Two further drivers were rejected, and both functions remain
-`never_observed`.  One declared a call site the checker could not confirm: the
+`never_observed`.
+
+The indirect call-site form has a limit worth stating. It exists for `stdev`,
+which is reached through `self.funcValues(vals)` after being bound by
+`vd.aggregator('stdev', stdev, ...)`. Its binding segment is checked by the same
+rule as a direct call site, and a registration is not a call, so the case the
+form was built for cannot be expressed in it. No driver uses the indirect form
+today and none is tested. It is unfinished, not load-bearing.
+
+One declared a call site the checker could not confirm: the
 line it named is an indirect dispatch where the function's name never appears.
 The other declared no call site at all.  A driver that declares nothing has
 made no claim to verify, so the gate refuses it rather than recording the

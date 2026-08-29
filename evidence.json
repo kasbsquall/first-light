@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-29T20:54:10.539484+00:00",
+  "generated_at": "2026-08-29T21:22:58.642768+00:00",
   "first_light_version": "0.3.0",
   "baselines": [
     {
@@ -20,7 +20,8 @@
         "experimental",
         "tests",
         "vendor"
-      ]
+      ],
+      "run_unit": "batch runs"
     },
     {
       "id": "test_suite",

@@ -51,6 +51,9 @@ try:
     except SystemExit as exc:
         rc = exc.code if exc.code is not None else 0
 
+    # Declare the unit so the evidence records what this baseline counted
+    # rather than leaving it to be inferred from the baseline id.
+    print("first-light-unit: batch runs", flush=True)
     sys.exit(int(rc) if isinstance(rc, int) else 0)
 
 finally:

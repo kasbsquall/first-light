@@ -43,11 +43,22 @@ for u in prod.values():
     bl = u.get("observed_in_baseline") or []
     if bl:
         combos[" + ".join(sorted(bl))] += 1
+# These were computed and never printed, in the tool the README offers as the
+# way to check the published figures. Print them.
+print()
+print("Product scope:")
+print(f"  total                  = {total}")
+print(f"  observed_in_situ       = {insitu}")
+print(f"  observed_under_driver  = {driver}")
+print(f"  driver_redundant       = {redundant}")
+print(f"  never_observed         = {never}")
+print(f"  sum                    = {insitu + driver + redundant + never}")
+print()
 print("  reached by")
 for combo, n in sorted(combos.items(), key=lambda kv: -kv[1]):
     print(f"    {combo:<32} {n}")
 for b in ev.get("baselines", []):
     bid = b.get("id")
-    total = sum(n for combo, n in combos.items() if bid in combo.split(" + "))
+    bl_total = sum(n for combo, n in combos.items() if bid in combo.split(" + "))
     alone = combos.get(bid, 0)
-    print(f"  {bid:<12} observed {total:>5}   only this one {alone:>4}")
+    print(f"  {bid:<12} observed {bl_total:>5}   only this one {alone:>4}")

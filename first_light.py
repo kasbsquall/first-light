@@ -744,8 +744,8 @@ _HTML_CSS = """\
   --muted:       #8A7F74;
   --amber:       #C8761A;
   --amber-dim:   #7A4810;
-  --never:       #4A423A;
-  --never-border:#6B6055;
+  --never:       #75695F;
+  --never-border:#9A8D82;
   --redundant:   #8A6A1E;
   --redundant-br:#C8A44A;
   --cell-size:   10px;
@@ -1095,7 +1095,6 @@ body {
   padding: 8px 0 0;
 }
 
-.map-row__cells { opacity: 0.5; }
 
 .map-row__scope {
   font-size: 9px;
@@ -2361,8 +2360,13 @@ def _line_calls(path: str, line_no: int, name: str) -> str | None:
     project's whole argument says should not satisfy it.
 
     Parse the file instead and require a real call. The cited line must carry an
-    ast.Call whose callee resolves to *name*, either as a bare name or as the
-    attribute at the end of a dotted path. Anything the parser does not see as a
+    ast.Call whose callee *matches* *name*, either as a bare name or as the
+    attribute at the end of a dotted path.
+
+    It matches the name, it does not resolve the binding. An unrelated
+    ``other.mean(...)`` inside the package would satisfy a claim for ``mean``.
+    Resolving the binding is the next thing this check should do, and until it
+    does the docstring should say which of the two it is. Anything the parser does not see as a
     call is refused, and a file that will not parse is refused rather than waved
     through, because an unparseable claim is not a verified one either.
     """
@@ -2781,16 +2785,15 @@ def cmd_promote_driver(
                                     if check_name else None)
                         if check_name and _no_call:
                             _cs_refusal_reason = (
-                                f"function name '{func_simple_name}' not found on "
-                                f"{seg_label} line {seg_line} of '{seg_file_raw}': "
-                                f"{seg_line_text.strip()!r}. "
+                                f"{seg_label} line {seg_line} of '{seg_file_raw}' "
+                                f"is not a call site: {_no_call}. "
                                 f"Correct the '# call site (indirect):' comment."
                             )
                             print(
                                 f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
                                 file=sys.stderr,
                             )
-                            _cs_refusal_class = RefusalClass.name_not_on_line
+                            _cs_refusal_class = RefusalClass.line_not_a_call_site
                             cs_ok = False
                             break
                         # Rule 2b: the name being present is not enough.  A
@@ -3462,8 +3465,10 @@ def main(argv: list[str] | None = None) -> int:
             if _l.strip().lower().startswith("first-light-unit:"):
                 run_unit = _l.split(":", 1)[1].strip()
                 break
-        if run_unit is None and pytest_collected is not None:
-            run_unit = "session logs" if "replay" in bl_id.lower() else "tests"
+        # No fallback. A runner that does not declare its unit leaves the field
+        # empty and the report says "runs". Sniffing a baseline id is the guess
+        # this file removed from tools/read_evidence.py; keeping one here would
+        # leave a guess in the record path.
         collected_baselines.append(BaselineInfo(
             baseline_id=bl_id,
             run_unit=run_unit,
