@@ -1003,7 +1003,10 @@ body {
    scrolls inside a bounded box: the whole population is still there, and the
    rest of the report is one screen away instead of nine. */
 .map-body {
-  max-height: 62vh;
+  /* Fixed pixels rather than vh: a viewport unit resolves to zero in some
+     embedded viewers, which would collapse the map to nothing. This is about
+     seventy percent of a 1080p screen and behaves identically everywhere. */
+  max-height: 720px;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-right: 8px;
