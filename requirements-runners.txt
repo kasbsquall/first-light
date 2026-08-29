@@ -1,0 +1,4 @@
+# Runner-layer dependencies for First Light
+# Pin the exact pytest version used in the target venv so a clean clone
+# reproduces the same test run and failure counts.
+pytest==9.1.1

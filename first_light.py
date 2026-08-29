@@ -32,16 +32,20 @@ from collections import defaultdict
 from pathlib import Path
 from typing import NamedTuple
 
-FIRST_LIGHT_VERSION = "0.1.0"
+FIRST_LIGHT_VERSION = "0.3.0"
 
-# Valid provenance values — the only three that may appear in evidence.json.
+# Valid provenance values — the only four that may appear in evidence.json.
 # never_observed      : nothing we ran ever entered this function body.
 # observed_in_situ    : the system executed it on its own, under normal operation.
 # observed_under_driver: it only ran because we built something to reach it.
-#                        Not yet produced, but the schema reserves it from day one.
+# superseded          : a driver existed for this unit, but a later baseline also
+#                       reached it in situ, making the driver redundant.  The driver
+#                       is kept; this provenance records that it is no longer the only
+#                       evidence.
 PROVENANCE_NEVER           = "never_observed"
 PROVENANCE_IN_SITU         = "observed_in_situ"
 PROVENANCE_UNDER_DRIVER    = "observed_under_driver"
+PROVENANCE_SUPERSEDED      = "superseded"
 
 
 # ---------------------------------------------------------------------------
@@ -100,13 +104,20 @@ def collect_coverage(
     runner_script: str,
     python: str,
     rcfile: str | None = None,
-) -> dict[str, set[int]]:
-    """Run *runner_script* under coverage.py and return {abs_path: {executed_lines}}.
+) -> tuple[dict[str, set[int]], int, str]:
+    """Run *runner_script* under coverage.py and return ({abs_path: {lines}}, exit_code, stdout).
 
     A thin wrapper script is written to a temp file before invoking coverage.
     The wrapper patches os._exit → SystemExit so that targets which call
     os._exit() (like visidata's vd_cli) cannot prevent coverage from writing
     its data file.  A warning is emitted to stderr when the patch fires.
+
+    Returns a tuple of (executed_lines_map, runner_exit_code, runner_stdout).
+    The exit code is the raw return code of the runner subprocess (after the
+    wrapper); it is recorded verbatim in the baseline so the evidence is
+    transparent about partial runs (e.g. a test suite where some tests failed
+    on this platform).  The stdout is returned so callers can parse runner-
+    specific output (e.g. pytest collected/passed/failed counts).
     """
     pkg_abs = str(Path(package_path).resolve())
     runner_abs = str(Path(runner_script).resolve())
@@ -131,8 +142,11 @@ def collect_coverage(
         cmd.append(wrapper_path)
 
         result = subprocess.run(cmd, capture_output=True, text=True)
+        runner_exit_code = result.returncode
+        runner_stdout = result.stdout or ""
         if result.returncode not in (0, 1):
-            # rc 1 is acceptable (e.g. visidata batch mode exits 1 on warnings)
+            # rc 1 is acceptable (e.g. visidata batch mode exits 1 on warnings;
+            # pytest exits 1 when tests fail — that is expected on Windows).
             print(f"[first_light] coverage run exited {result.returncode}", file=sys.stderr)
         if result.stderr:
             print(result.stderr[:2000], file=sys.stderr)
@@ -152,7 +166,7 @@ def collect_coverage(
         if export_result.returncode != 0:
             print("[first_light] coverage json export failed:", file=sys.stderr)
             print(export_result.stderr[:2000], file=sys.stderr)
-            return {}
+            return {}, runner_exit_code, runner_stdout
 
         with open(json_path) as fh:
             data = json.load(fh)
@@ -163,7 +177,43 @@ def collect_coverage(
             executed_lines = set(file_data.get("executed_lines", []))
             executed[abs_path] = executed_lines
 
-    return executed
+    return executed, runner_exit_code, runner_stdout
+
+
+def _parse_pytest_counts(stdout: str) -> tuple[int | None, int | None, int | None]:
+    """Parse collected/passed/failed counts from pytest's summary line.
+
+    pytest prints a line like:
+        "5 passed, 2 failed in 3.14s"
+        "7 passed in 1.23s"
+        "3 failed in 0.45s"
+        "10 passed, 2 warnings in 5.00s"
+    (or a '=' separator line when --no-header is used).
+
+    Returns (collected, passed, failed) as ints, or (None, None, None) if
+    the summary line is not found.
+    """
+    import re as _re
+    passed = failed = collected = None
+    for line in reversed(stdout.splitlines()):
+        m_passed = _re.search(r'(\d+)\s+passed', line)
+        m_failed = _re.search(r'(\d+)\s+failed', line)
+        m_error  = _re.search(r'(\d+)\s+error', line)
+        if m_passed or m_failed or m_error:
+            passed  = int(m_passed.group(1)) if m_passed else 0
+            failed  = int(m_failed.group(1)) if m_failed else 0
+            if m_error:
+                failed = (failed or 0) + int(m_error.group(1))
+            # "collected N items" line appears earlier
+            for prev_line in stdout.splitlines():
+                m_coll = _re.search(r'collected\s+(\d+)\s+item', prev_line)
+                if m_coll:
+                    collected = int(m_coll.group(1))
+                    break
+            if collected is None:
+                collected = (passed or 0) + (failed or 0)
+            return collected, passed, failed
+    return None, None, None
 
 
 # ---------------------------------------------------------------------------
@@ -306,27 +356,53 @@ def _sha256(path: str) -> str:
     return h.hexdigest()
 
 
+class BaselineInfo:
+    """All the metadata and coverage results for one baseline run."""
+    def __init__(
+        self,
+        baseline_id: str,
+        runner_script: str,
+        cmd: list[str],
+        exit_code: int,
+        executed: dict[str, set[int]],
+        pytest_collected: int | None = None,
+        pytest_passed: int | None = None,
+        pytest_failed: int | None = None,
+    ) -> None:
+        self.id = baseline_id
+        self.runner_script = runner_script
+        self.cmd = cmd
+        self.exit_code = exit_code
+        self.executed = executed  # {abs_path: {executed_line_numbers}}
+        # Optional pytest counts (None when the runner is not pytest)
+        self.pytest_collected = pytest_collected
+        self.pytest_passed = pytest_passed
+        self.pytest_failed = pytest_failed
+
+
 def write_evidence(
     out_path: str,
     pkg_path: Path,
-    runner_script: str,
-    python: str,
-    cmd: list[str],
     exclude_dirs: set[str],
     all_funcs: list[FuncInfo],
-    all_obs_ids: set[int],
+    baselines: list[BaselineInfo],
 ) -> None:
     """Write the evidence.json artifact to *out_path*.
 
-    Schema fields
-    -------------
+    Schema fields (v0.3.0)
+    ----------------------
     generated_at        : ISO-8601 UTC timestamp.
     first_light_version : semver string from FIRST_LIGHT_VERSION.
-    baseline            : what was executed to produce this observation.
+    baselines           : list of baseline objects, each with:
+      id                : short identifier string ("cli", "test_suite", …).
       runner            : absolute path to the runner script.
       package           : absolute path to the analysed package.
       command           : full argv list used to produce the data.
-      excluded_dirs     : directory names excluded from product-code figure.
+      exit_code         : raw exit code of the runner subprocess.
+      excluded_dirs     : directory names excluded from the product-code figure.
+      pytest_collected  : (optional) number of tests collected, when runner is pytest.
+      pytest_passed     : (optional) number of tests that passed.
+      pytest_failed     : (optional) number of tests that failed.
     integrity           : per-file SHA-256 of every analysed source file.
                           The top-level ``stale`` boolean is computed on read
                           by fl_hook.py — it is NOT stored here (it's a
@@ -337,22 +413,33 @@ def write_evidence(
       body_start        : first line of the body (node.body[0].lineno).
       body_end          : last line of the body (node.end_lineno).
       provenance        : one of PROVENANCE_* constants.
+                          A unit is observed_in_situ when ANY baseline observed
+                          it (unless promoted to observed_under_driver).
+                          A unit is superseded when it was previously
+                          observed_under_driver but a baseline now also
+                          reaches it in situ.
+      observed_in_baseline : list of baseline ids that observed this unit.
+                          An empty list means never_observed.
     """
     now = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     # ── integrity: hash every source file that was analysed ──────────────
-    # We collect all unique file paths from all_funcs (whole-package scan).
     seen_files: set[str] = {fn.file for fn in all_funcs}
     integrity: dict[str, str] = {}
     for fpath in sorted(seen_files):
         try:
             integrity[fpath] = _sha256(fpath)
         except OSError:
-            integrity[fpath] = ""   # file unreadable; hook will flag as stale
+            integrity[fpath] = ""
+
+    # ── per-baseline observed-id sets ────────────────────────────────────
+    # For each baseline, compute which FuncInfo ids were observed.
+    baseline_obs: dict[str, set[int]] = {}
+    for bl in baselines:
+        obs, _ = classify_functions(all_funcs, bl.executed)
+        baseline_obs[bl.id] = {id(fn) for fn in obs}
 
     # ── units: one entry per function ────────────────────────────────────
-    # Key includes def_line so that a @property getter and its setter, which
-    # share both file and qualified_name, never collide and silently drop one.
     units: dict[str, dict] = {}
     for fn in all_funcs:
         key = f"{fn.file}::{fn.qualified_name}#{fn.def_line}"
@@ -363,24 +450,42 @@ def write_evidence(
                 f"One entry will be overwritten. This is a bug in the analyser.",
                 file=sys.stderr,
             )
-        provenance = PROVENANCE_IN_SITU if id(fn) in all_obs_ids else PROVENANCE_NEVER
+        fn_id = id(fn)
+        observed_in = [bl.id for bl in baselines if fn_id in baseline_obs[bl.id]]
+        provenance = PROVENANCE_IN_SITU if observed_in else PROVENANCE_NEVER
         units[key] = {
             "file": fn.file,
             "def_line": fn.def_line,
             "body_start": fn.body_start,
             "body_end": fn.body_end,
             "provenance": provenance,
+            "observed_in_baseline": observed_in,
         }
+
+    # ── baselines list ────────────────────────────────────────────────────
+    pkg_abs = str(pkg_path.resolve())
+    baselines_doc = []
+    for bl in baselines:
+        entry: dict = {
+            "id": bl.id,
+            "runner": str(Path(bl.runner_script).resolve()),
+            "package": pkg_abs,
+            "command": bl.cmd,
+            "exit_code": bl.exit_code,
+            "excluded_dirs": sorted(exclude_dirs),
+        }
+        if bl.pytest_collected is not None:
+            entry["pytest_collected"] = bl.pytest_collected
+        if bl.pytest_passed is not None:
+            entry["pytest_passed"] = bl.pytest_passed
+        if bl.pytest_failed is not None:
+            entry["pytest_failed"] = bl.pytest_failed
+        baselines_doc.append(entry)
 
     doc = {
         "generated_at": now,
         "first_light_version": FIRST_LIGHT_VERSION,
-        "baseline": {
-            "runner": str(Path(runner_script).resolve()),
-            "package": str(pkg_path.resolve()),
-            "command": cmd,
-            "excluded_dirs": sorted(exclude_dirs),
-        },
+        "baselines": baselines_doc,
         "integrity": integrity,
         "units": units,
     }
@@ -393,24 +498,39 @@ def write_evidence(
 # HTML report generator  (reads evidence.json, writes self-contained HTML)
 # ---------------------------------------------------------------------------
 
-def _driver_call_site(driver_path: Path) -> str:
-    """Extract the first 'call site:' comment from a driver file, or ''."""
+def _driver_call_site(driver_path: Path) -> tuple[str, bool]:
+    """Extract the call site declaration from a driver file.
+
+    Returns (call_site_text, is_indirect) where:
+      call_site_text : the text following "call site:" or "call site (indirect):",
+                       or '' if no such comment exists.
+      is_indirect    : True when the comment begins with "call site (indirect):".
+
+    Indirect call site format (two semicolon-separated parts):
+        # call site (indirect): file:N -- dispatch_code ; file:M -- binding_name
+
+    Direct call site format (single part, unchanged):
+        # call site: file:N -- funcname(...)
+    """
     try:
         text = driver_path.read_text(encoding="utf-8", errors="replace")
         for line in text.splitlines():
             stripped = line.strip().lstrip("#").strip()
-            if stripped.lower().startswith("call site:"):
-                return stripped[len("call site:"):].strip()
+            lower = stripped.lower()
+            if lower.startswith("call site (indirect):"):
+                return stripped[len("call site (indirect):"):].strip(), True
+            if lower.startswith("call site:"):
+                return stripped[len("call site:"):].strip(), False
         # Fallback: look for 'Real call site' / 'call site' in docstring lines
         for line in text.splitlines():
-            lower = line.lower()
-            if "call site" in lower and "--" in line:
+            lower_line = line.lower()
+            if "call site" in lower_line and "--" in line:
                 after = line[line.index("--"):].strip(" -")
                 if after:
-                    return after
+                    return after, False
     except OSError:
         pass
-    return ""
+    return "", False
 
 
 _HTML_CSS = """\
@@ -775,37 +895,48 @@ def _strip_def_line_suffix(qname: str) -> str:
 def _driver_units_from_evidence(
     units: dict,
     drivers_dir: Path | None = None,
-) -> tuple[list[dict], list[str]]:
-    """Return (confirmed, attempted_names).
+) -> tuple[list[dict], list[dict], list[str]]:
+    """Return (confirmed, superseded, attempted_names).
 
     confirmed      : list of dicts with keys name, call_site, coverage_confirmed_lines
                      for every unit whose provenance is observed_under_driver.
+    superseded     : list of dicts with keys name, superseded_by for every unit
+                     whose provenance is superseded (driver existed; a baseline now
+                     also covers it in situ, making the driver redundant).
     attempted_names: list of qualified names whose driver file exists on disk but
-                     whose unit is NOT observed_under_driver in evidence — i.e.
-                     drivers that were attempted but not confirmed.
+                     whose unit is NOT observed_under_driver or superseded in evidence
+                     — i.e. drivers that were attempted but not confirmed.
     """
     confirmed: list[dict] = []
-    confirmed_qnames: set[str] = set()
+    superseded: list[dict] = []
+    confirmed_or_superseded_qnames: set[str] = set()
 
     for key, u in units.items():
-        if u.get("provenance") != PROVENANCE_UNDER_DRIVER:
+        prov = u.get("provenance")
+        if prov not in (PROVENANCE_UNDER_DRIVER, PROVENANCE_SUPERSEDED):
             continue
-        # Derive a display name: qualified_name portion of the unit key
         qname_part = key.split("::", 1)[1] if "::" in key else key
         qname_part = _strip_def_line_suffix(qname_part)
-        confirmed.append({
-            "name": qname_part,
-            "call_site": u.get("call_site", ""),
-            "coverage_confirmed_lines": u.get("coverage_confirmed_lines", []),
-        })
-        confirmed_qnames.add(qname_part)
+        if prov == PROVENANCE_UNDER_DRIVER:
+            confirmed.append({
+                "name": qname_part,
+                "call_site": u.get("call_site", ""),
+                "coverage_confirmed_lines": u.get("coverage_confirmed_lines", []),
+            })
+        else:  # PROVENANCE_SUPERSEDED
+            superseded.append({
+                "name": qname_part,
+                "superseded_by": u.get("superseded_by", ""),
+                "call_site": u.get("call_site", ""),
+                "coverage_confirmed_lines": u.get("coverage_confirmed_lines", []),
+            })
+        confirmed_or_superseded_qnames.add(qname_part)
 
-    # Attempted: driver file exists but unit is not observed_under_driver.
+    # Attempted: driver file exists but unit is not observed_under_driver or superseded.
     # Build a map of qname_suffix -> unit provenance from evidence so we can
     # cross-reference against files on disk.
     attempted_names: list[str] = []
     if drivers_dir is not None and drivers_dir.is_dir():
-        # Build set of qname suffixes that are NOT yet confirmed under driver.
         evidence_qnames: dict[str, str] = {}  # qname_suffix -> provenance
         for key, u in units.items():
             if "::" not in key:
@@ -817,15 +948,16 @@ def _driver_units_from_evidence(
         for driver_file in sorted(drivers_dir.glob("*.py")):
             stem = driver_file.stem
             prov = evidence_qnames.get(stem)
-            # "Attempted" = driver file exists but not promoted.
+            # "Attempted" = driver file exists but not promoted or superseded.
             # (None means the driver has no matching unit in evidence at all —
             # also worth reporting.)
-            if prov != PROVENANCE_UNDER_DRIVER:
+            if prov not in (PROVENANCE_UNDER_DRIVER, PROVENANCE_SUPERSEDED):
                 attempted_names.append(stem)
 
-    # Sort confirmed list for stable output
+    # Sort lists for stable output
     confirmed.sort(key=lambda d: d["name"])
-    return confirmed, attempted_names
+    superseded.sort(key=lambda d: d["name"])
+    return confirmed, superseded, attempted_names
 
 
 def write_html_report(evidence_path: str, out_path: str) -> None:
@@ -835,10 +967,27 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     with open(evidence_path, encoding="utf-8") as fh:
         ev = json.load(fh)
 
-    baseline = ev.get("baseline", {})
+    # Support both old single-baseline schema (v0.1) and new baselines list (v0.2+).
+    raw_baselines = ev.get("baselines") or []
+    if not raw_baselines and ev.get("baseline"):
+        # Legacy v0.1 schema: wrap in a list so downstream code is uniform.
+        old = ev["baseline"]
+        raw_baselines = [{
+            "id": "cli",
+            "runner": old.get("runner", ""),
+            "package": old.get("package", ""),
+            "command": old.get("command", []),
+            "exit_code": 0,
+            "excluded_dirs": old.get("excluded_dirs", []),
+        }]
     units = ev.get("units", {})
     generated_at = ev.get("generated_at", "")
     version = ev.get("first_light_version", "")
+
+    # Use the first baseline's package/excluded_dirs as the canonical reference
+    # (all baselines share the same package and excluded list).
+    first_bl = raw_baselines[0] if raw_baselines else {}
+    excluded_dirs: list[str] = first_bl.get("excluded_dirs", [])
 
     # ── Compute summary numbers ──────────────────────────────────────────────
     # Whole-package (all units, including tests/apps/experimental/vendor)
@@ -847,9 +996,9 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     observed_count = total - never_count
     insitu_count = sum(1 for u in units.values() if u["provenance"] == PROVENANCE_IN_SITU)
     driver_count = sum(1 for u in units.values() if u["provenance"] == PROVENANCE_UNDER_DRIVER)
+    superseded_count = sum(1 for u in units.values() if u["provenance"] == PROVENANCE_SUPERSEDED)
 
     # Product-code only (exclude the same dirs the baseline recorded)
-    excluded_dirs: list[str] = baseline.get("excluded_dirs", [])
     if excluded_dirs:
         def _is_product(u: dict) -> bool:
             parts = Path(u["file"]).parts
@@ -862,10 +1011,40 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     prod_observed = prod_total - prod_never
     prod_insitu_count = sum(1 for u in prod_units.values() if u["provenance"] == PROVENANCE_IN_SITU)
     prod_driver_count = sum(1 for u in prod_units.values() if u["provenance"] == PROVENANCE_UNDER_DRIVER)
+    prod_superseded_count = sum(1 for u in prod_units.values() if u["provenance"] == PROVENANCE_SUPERSEDED)
+
+    # ── Per-baseline observation counts ─────────────────────────────────────
+    # For each baseline id, count how many product-code units it observed.
+    # Also compute the "additive" count: how many units the Nth baseline observed
+    # that none of the preceding baselines observed (cumulative increments).
+    bl_ids = [bl["id"] for bl in raw_baselines]
+
+    # product-scope per-baseline counts
+    prod_bl_counts: dict[str, int] = {}
+    for bl in raw_baselines:
+        bl_id = bl["id"]
+        prod_bl_counts[bl_id] = sum(
+            1 for u in prod_units.values()
+            if bl_id in u.get("observed_in_baseline", [])
+        )
+
+    # additive contribution: units first seen by each baseline
+    # (i.e. observed by this baseline but by NO earlier baseline)
+    prod_bl_additive: dict[str, int] = {}
+    seen_by_prior: set[str] = set()
+    for bl in raw_baselines:
+        bl_id = bl["id"]
+        additive = 0
+        for u in prod_units.values():
+            obs = u.get("observed_in_baseline", [])
+            if bl_id in obs and not any(p in obs for p in seen_by_prior):
+                additive += 1
+        prod_bl_additive[bl_id] = additive
+        seen_by_prior.add(bl_id)
 
     # ── Build per-module map data ────────────────────────────────────────────
     # Group functions by their source file (relative path stripped to module name)
-    pkg_path_str = baseline.get("package", "")
+    pkg_path_str = first_bl.get("package", "")
     pkg_root = Path(pkg_path_str) if pkg_path_str else None
 
     module_map: dict[str, list[dict]] = {}
@@ -897,10 +1076,11 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     sorted_modules = sorted(module_map.items(), key=_module_sort_key)
 
     # ── Driver info ───────────────────────────────────────────────────────────
-    # confirmed: units with provenance=observed_under_driver (coverage verified).
-    # attempted: driver files that exist on disk but are not yet confirmed.
+    # confirmed : units with provenance=observed_under_driver (coverage verified).
+    # superseded: driver existed but a baseline now also covers the unit in situ.
+    # attempted : driver files that exist on disk but are not yet confirmed.
     _drivers_dir = Path(__file__).parent / "drivers"
-    confirmed_drivers, attempted_drivers = _driver_units_from_evidence(units, _drivers_dir)
+    confirmed_drivers, superseded_drivers, attempted_drivers = _driver_units_from_evidence(units, _drivers_dir)
 
     # ── Relative-path helper ──────────────────────────────────────────────────
     # evidence.json stores absolute paths (needed for hash resolution).  The
@@ -919,16 +1099,68 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     def e(s: str) -> str:
         return _html.escape(str(s))
 
-    runner = _rel(baseline.get("runner", ""))
-    package = _rel(baseline.get("package", ""))
-    command_raw = baseline.get("command", [])
-    # Relativise each token in the command that looks like an absolute path.
-    command = [_rel(str(c)) if (os.sep in str(c) or "/" in str(c)) else str(c) for c in command_raw]
-    excluded = baseline.get("excluded_dirs", [])
-
-    cmd_str = " ".join(command) if command else ""
+    excluded = excluded_dirs
     excl_str = ", ".join(excluded) if excluded else "none"
     prod_scope_label = ("Product code (excl. " + excl_str + ")") if excl_str and excl_str != "none" else "Product code"
+
+    # ── Per-baseline cards HTML ───────────────────────────────────────────────
+    import re as _re_html
+    baseline_cards_html = []
+    for bl in raw_baselines:
+        bl_id = bl["id"]
+        runner_rel = _rel(bl.get("runner", ""))
+        package_rel = _rel(bl.get("package", ""))
+        command_raw = bl.get("command", [])
+        cmd_tokens = [_rel(str(c)) if (os.sep in str(c) or "/" in str(c)) else str(c) for c in command_raw]
+        cmd_str = " ".join(cmd_tokens) if cmd_tokens else ""
+        exit_code = bl.get("exit_code", 0)
+        exit_color = "var(--amber)" if exit_code != 0 else "var(--text)"
+        partial_note = (
+            f' <span style="color:{exit_color};font-weight:600;">[exit {exit_code} — partial run]</span>'
+            if exit_code != 0 else ""
+        )
+        bl_obs = prod_bl_counts.get(bl_id, 0)
+        bl_add = prod_bl_additive.get(bl_id, 0)
+        add_note = f" (+{bl_add} unique)" if bl_add > 0 else (" (no unique additions)" if raw_baselines.index(bl) > 0 else "")
+        # pytest counts row (only when the baseline recorded them)
+        py_collected = bl.get("pytest_collected")
+        py_passed = bl.get("pytest_passed")
+        py_failed = bl.get("pytest_failed")
+        pytest_row = ""
+        if py_collected is not None:
+            fail_color = "var(--amber)" if (py_failed or 0) > 0 else "var(--text)"
+            pytest_row = (
+                f'\n    <span class="baseline__key">tests</span>'
+                f'\n    <span class="baseline__val">'
+                f'collected {e(str(py_collected))}, '
+                f'passed {e(str(py_passed or 0))}, '
+                f'<span style="color:{fail_color};">failed {e(str(py_failed or 0))}</span>'
+                f'</span>'
+            )
+        baseline_cards_html.append(f"""
+<div class="baseline" style="margin-bottom:16px;">
+  <div class="label">Baseline &mdash; {e(bl_id)}{partial_note}</div>
+  <div class="baseline__grid">
+    <span class="baseline__key">runner</span>
+    <span class="baseline__val">{e(runner_rel)}</span>
+
+    <span class="baseline__key">package</span>
+    <span class="baseline__val">{e(package_rel)}</span>
+
+    <span class="baseline__key">command</span>
+    <span class="baseline__val baseline__val--cmd">{e(cmd_str)}</span>
+
+    <span class="baseline__key">exit code</span>
+    <span class="baseline__val" style="color:{exit_color};">{e(str(exit_code))}</span>
+{pytest_row}
+    <span class="baseline__key">observed</span>
+    <span class="baseline__val">{e(str(bl_obs))} product-code units{e(add_note)}</span>
+
+    <span class="baseline__key">excluded</span>
+    <span class="baseline__val">{e(excl_str)}</span>
+  </div>
+</div>""")
+    all_baselines_html = "\n".join(baseline_cards_html)
 
     # Map rows HTML
     map_rows_html = []
@@ -992,6 +1224,32 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     if not drivers_html:
         drivers_html = '<p style="color:var(--muted);font-size:13px;">No units confirmed under driver.</p>'
 
+    # Superseded driver cards
+    superseded_cards_html = []
+    for d in superseded_drivers:
+        sup_by = d.get("superseded_by", "")
+        call_raw = d.get("call_site", "")
+        if call_raw:
+            call_display = _re_html.sub(
+                r'([A-Za-z]:[\\/][^\s]+|(?<!\w)/[^\s]+)',
+                lambda m: _rel(m.group(1)),
+                call_raw,
+            )
+        else:
+            call_display = ""
+        call_html = e(call_display) if call_display else "<em>call site not recorded</em>"
+        superseded_cards_html.append(
+            f'<div class="driver-card" style="border-color:#3a3a20;opacity:0.85;">'
+            f'<div class="driver-card__name" style="color:#b8a030;">{e(d["name"])}</div>'
+            f'<div class="driver-card__call">{call_html}</div>'
+            f'<div class="driver-card__lines" style="margin-top:6px;">'
+            f'superseded by baseline: <strong style="color:var(--text);">{e(sup_by)}</strong> — '
+            f'driver is no longer the only evidence for this unit'
+            f'</div>'
+            f'</div>'
+        )
+    superseded_html = "\n".join(superseded_cards_html)
+
     # Attempted-but-not-confirmed driver cards
     attempted_cards_html = []
     for name in attempted_drivers:
@@ -1005,7 +1263,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 
     # Legend: only show driver swatch if driver evidence exists
     driver_legend_item = ""
-    if driver_count > 0:
+    if driver_count > 0 or superseded_count > 0:
         driver_legend_item = (
             '<div class="legend__item">'
             '<span class="swatch swatch--driver"></span>'
@@ -1083,35 +1341,36 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         <span class="scope-block__val">{e(str(total))}</span>
       </div>
     </div>
+    {''.join(f"""
+    <div class="scope-block">
+      <div class="scope-block__label">Baseline: {e(bl["id"])}</div>
+      <div class="scope-block__row">
+        <span class="scope-block__key">observed</span>
+        <span class="scope-block__val">{e(str(prod_bl_counts.get(bl["id"],0)))}</span>
+      </div>
+      <div class="scope-block__row">
+        <span class="scope-block__key">unique addition</span>
+        <span class="scope-block__val">{e(str(prod_bl_additive.get(bl["id"],0)))}</span>
+      </div>
+      <div class="scope-block__row">
+        <span class="scope-block__key">exit code</span>
+        <span class="scope-block__val">{e(str(bl.get("exit_code",0)))}</span>
+      </div>
+    </div>""" for bl in raw_baselines)}
   </div>
 </header>
 
 <hr class="sep">
 
 <!-- ═══════════════════════════════════════════════════════
-     SECTION 2 — BASELINE
+     SECTION 2 — BASELINES
      ═══════════════════════════════════════════════════════ -->
-<section class="baseline">
-  <div class="label">Baseline — exactly what was executed</div>
-  <div class="baseline__grid">
-    <span class="baseline__key">runner</span>
-    <span class="baseline__val">{e(runner)}</span>
-
-    <span class="baseline__key">package</span>
-    <span class="baseline__val">{e(package)}</span>
-
-    <span class="baseline__key">command</span>
-    <span class="baseline__val baseline__val--cmd">{e(cmd_str)}</span>
-
-    <span class="baseline__key">excluded</span>
-    <span class="baseline__val">{e(excl_str)}</span>
-
-    <span class="baseline__key">generated</span>
-    <span class="baseline__val">{e(generated_at)}</span>
-
-    <span class="baseline__key">version</span>
-    <span class="baseline__val">{e(version)}</span>
+<section>
+  <div class="label" style="margin-bottom:12px;">Baselines — exactly what was executed</div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:16px;">
+    generated {e(generated_at)} &nbsp;&middot;&nbsp; First Light v{e(version)}
   </div>
+{all_baselines_html}
 </section>
 
 <!-- ═══════════════════════════════════════════════════════
@@ -1141,8 +1400,9 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
      SECTION 4 — DRIVER RESULTS
      ═══════════════════════════════════════════════════════ -->
 <section class="drivers-section">
-  <div class="section-heading">Driver results ({e(str(len(confirmed_drivers)))} confirmed, {e(str(len(attempted_drivers)))} attempted)</div>
+  <div class="section-heading">Driver results — {e(str(len(confirmed_drivers)))} confirmed, {e(str(len(superseded_drivers)))} superseded by baseline, {e(str(len(attempted_drivers)))} not confirmed</div>
 {drivers_html}
+{f'<div style="margin-top:28px"><div class="section-heading" style="color:#b8a030;">Superseded — baseline now reaches these in situ ({e(str(len(superseded_drivers)))})</div><p style="font-size:12px;color:var(--muted);margin-bottom:12px;">The second baseline made these drivers redundant. The driver is not deleted; this group records that it is no longer the only evidence.</p>' + superseded_html + '</div>' if superseded_drivers else ''}
 {f'<div style="margin-top:20px"><div class="section-heading" style="color:#cc4444;">Attempted — not confirmed ({e(str(len(attempted_drivers)))})</div>' + attempted_html + '</div>' if attempted_drivers else ''}
 </section>
 
@@ -1179,6 +1439,7 @@ def render_report(
     breakdown: dict[str, dict],
     prod_breakdown: dict[str, dict],
     exclude_dirs: set[str],
+    baselines: "list[BaselineInfo] | None" = None,
 ) -> str:
     lines = []
     w = lines.append
@@ -1201,6 +1462,27 @@ def render_report(
         w(f"  {'Total functions':<28} {len(prod_funcs):>6}")
         w(f"  {'Observed (body executed)':<28} {len(prod_obs):>6}  {pct(len(prod_obs), len(prod_funcs))}")
         w(f"  {'Never observed':<28} {len(prod_never):>6}  {pct(len(prod_never), len(prod_funcs))}")
+
+    # ── per-baseline breakdown (product scope) ────────────────────────────
+    if baselines and exclude_dirs:
+        w("")
+        w("  PER-BASELINE BREAKDOWN  (product code)")
+        w(f"  {'Baseline':<18} {'RC':>4}  {'Observed':>8}  {'Unique add':>10}  {'Partial?':>8}")
+        w("  " + "-" * 54)
+
+        # Compute per-baseline observed counts over the product functions.
+        bl_obs_sets: dict[str, set[int]] = {}
+        for bl in baselines:
+            obs_fns, _ = classify_functions(prod_funcs, bl.executed)
+            bl_obs_sets[bl.id] = {id(fn) for fn in obs_fns}
+
+        seen_ids: set[int] = set()
+        for bl in baselines:
+            obs_ids = bl_obs_sets[bl.id]
+            unique_add = len(obs_ids - seen_ids)
+            seen_ids |= obs_ids
+            partial = "yes" if bl.exit_code not in (0, 1) else ("FAIL(tests)" if bl.exit_code == 1 else "no")
+            w(f"  {bl.id:<18} {bl.exit_code:>4}  {len(obs_ids):>8}  {unique_add:>10}  {partial:>8}")
 
     # ── whole-package breakdown ───────────────────────────────────────────
     w("")
@@ -1371,16 +1653,37 @@ def cmd_promote_driver(
             failed += 1
             continue
 
-        # ── skip already promoted ─────────────────────────────────────────
-        if unit.get("provenance") == PROVENANCE_IN_SITU:
+        # ── handle already-promoted or superseded ─────────────────────────
+        current_prov = unit.get("provenance")
+        if current_prov == PROVENANCE_IN_SITU:
+            # The unit is now reached by a baseline: the driver is redundant.
+            # Record it as superseded so it's visible in the report.
+            # Determine which baselines observed it.
+            bl_ids_that_cover = unit.get("observed_in_baseline", [])
+            superseded_by = bl_ids_that_cover[0] if bl_ids_that_cover else "unknown"
+            # Extract call site from driver even though we won't do a full
+            # coverage run — we still want to store the driver metadata.
+            call_site_text, _ = _driver_call_site(driver_path)
+            doc["units"][unit_key]["provenance"]   = PROVENANCE_SUPERSEDED
+            doc["units"][unit_key]["driver"]        = str(driver_path.resolve())
+            doc["units"][unit_key]["call_site"]     = call_site_text
+            doc["units"][unit_key]["superseded_by"] = superseded_by
             print(
-                f"[promote-driver] SKIP  {driver_path.name} — already observed_in_situ",
+                f"[promote-driver] SUPERSEDED  {driver_path.name} — "
+                f"unit now reached by baseline '{superseded_by}'; driver is redundant",
+                file=sys.stderr,
+            )
+            promoted += 1
+            continue
+        if current_prov == PROVENANCE_UNDER_DRIVER:
+            print(
+                f"[promote-driver] SKIP  {driver_path.name} — already observed_under_driver",
                 file=sys.stderr,
             )
             continue
-        if unit.get("provenance") == PROVENANCE_UNDER_DRIVER:
+        if current_prov == PROVENANCE_SUPERSEDED:
             print(
-                f"[promote-driver] SKIP  {driver_path.name} — already observed_under_driver",
+                f"[promote-driver] SKIP  {driver_path.name} — already superseded",
                 file=sys.stderr,
             )
             continue
@@ -1422,92 +1725,192 @@ def cmd_promote_driver(
             continue
 
         # ── extract call site from driver comment ─────────────────────────
-        call_site = _driver_call_site(driver_path)
+        call_site, is_indirect = _driver_call_site(driver_path)
 
-        # ── validate call site: file exists and function name is on that line ─
-        # Parse "some/file.py:N -- funcname(...)" from the call site comment.
-        # Rules:
+        # ── validate call site ────────────────────────────────────────────
+        # Direct call site rules (same as before):
         #   1. The file named before the colon must exist on disk.
-        #   2. The target function's simple name must appear on line N of that file.
-        #   3. The line must NOT fall inside the target function's own body
-        #      (a function cannot be its own caller).
-        # Any failure rejects the promotion rather than storing false data.
+        #   2. The target function's simple name must appear on that line.
+        #   3. The line must NOT fall inside the target function's own body.
+        #
+        # Indirect call site format (two semicolon-separated segments):
+        #   "file:N -- dispatch_line ; file:M -- binding_name"
+        #   Segment 1: the dispatch line (indirect call; the function's name
+        #              does NOT need to appear here — only the file:line is
+        #              checked for existence).
+        #   Segment 2: the binding line (where the function is bound by name).
+        #              The function's simple name MUST appear on this line.
+        #              Rule 3 (not-inside-own-body) applies to both lines.
+        import re as _re
         if call_site:
-            import re as _re
-            # Extract "filepath:lineno" — file portion ends at the last colon
-            # that is immediately followed by digits (handles Windows paths like C:\...).
-            _cs_file_match = _re.match(r"^(.+):(\d+)", call_site)
-            if _cs_file_match:
-                cs_file_raw = _cs_file_match.group(1).strip()
-                cs_line = int(_cs_file_match.group(2))
-
-                # Resolve relative to the repo root (cwd at invocation time).
-                cs_file_path = Path(cs_file_raw)
-                if not cs_file_path.is_absolute():
-                    cs_file_path = Path(".").resolve() / cs_file_raw
-
-                # Rule 1: the file must exist.
-                if not cs_file_path.is_file():
+            if is_indirect:
+                # ── indirect call site: two segments separated by " ; " ──
+                segments = [s.strip() for s in call_site.split(";")]
+                if len(segments) != 2:
                     print(
                         f"[promote-driver] FAIL  {driver_path.name} -- "
-                        f"call site file '{cs_file_raw}' does not exist; "
-                        f"correct the '# call site:' comment in the driver file.",
+                        f"indirect call site must have exactly two segments separated by ';': "
+                        f"'dispatch_file:N -- text ; binding_file:M -- binding_name'. "
+                        f"Correct the '# call site (indirect):' comment.",
                         file=sys.stderr,
                     )
                     failed += 1
                     continue
 
-                # Rule 2: the target function's simple name must appear on that line.
-                # The function simple name is the last dot-separated component of
-                # the qualified name (e.g. "moveListItem" from "visidata.utils.moveListItem").
+                dispatch_seg, binding_seg = segments
+
+                # Validate both segments: file exists, line in range.
+                # For the binding segment, also check that the function's
+                # simple name appears on that line.
                 func_simple_name = unit_key.split("::", 1)[1].rsplit(".", 1)[-1] if "::" in unit_key else unit_key
                 if "#" in func_simple_name:
                     func_simple_name = func_simple_name.rsplit("#", 1)[0]
-                try:
-                    cs_lines = cs_file_path.read_text(encoding="utf-8", errors="replace").splitlines()
-                    # Lines are 1-indexed; guard against out-of-range line numbers.
-                    if cs_line < 1 or cs_line > len(cs_lines):
+
+                cs_ok = True
+                for seg_label, seg_text, check_name in [
+                    ("dispatch", dispatch_seg, False),
+                    ("binding",  binding_seg,  True),
+                ]:
+                    seg_match = _re.match(r"^(.+):(\d+)", seg_text)
+                    if not seg_match:
                         print(
                             f"[promote-driver] FAIL  {driver_path.name} -- "
-                            f"call site line {cs_line} is out of range for "
-                            f"'{cs_file_raw}' ({len(cs_lines)} lines); "
-                            f"correct the '# call site:' comment.",
+                            f"indirect call site {seg_label} segment '{seg_text}' "
+                            f"does not match 'file:N -- ...' format.",
                             file=sys.stderr,
                         )
-                        failed += 1
-                        continue
-                    cs_text = cs_lines[cs_line - 1]
-                    if func_simple_name not in cs_text:
+                        cs_ok = False
+                        break
+                    seg_file_raw = seg_match.group(1).strip()
+                    seg_line = int(seg_match.group(2))
+                    seg_file_path = Path(seg_file_raw)
+                    if not seg_file_path.is_absolute():
+                        seg_file_path = Path(".").resolve() / seg_file_raw
+                    if not seg_file_path.is_file():
                         print(
                             f"[promote-driver] FAIL  {driver_path.name} -- "
-                            f"function name '{func_simple_name}' not found on "
-                            f"line {cs_line} of '{cs_file_raw}'; "
+                            f"indirect call site {seg_label} file '{seg_file_raw}' does not exist.",
+                            file=sys.stderr,
+                        )
+                        cs_ok = False
+                        break
+                    try:
+                        seg_text_lines = seg_file_path.read_text(encoding="utf-8", errors="replace").splitlines()
+                        if seg_line < 1 or seg_line > len(seg_text_lines):
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                                f"indirect call site {seg_label} line {seg_line} is out of range "
+                                f"for '{seg_file_raw}' ({len(seg_text_lines)} lines).",
+                                file=sys.stderr,
+                            )
+                            cs_ok = False
+                            break
+                        seg_line_text = seg_text_lines[seg_line - 1]
+                        if check_name and func_simple_name not in seg_line_text:
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                                f"function name '{func_simple_name}' not found on "
+                                f"{seg_label} line {seg_line} of '{seg_file_raw}': "
+                                f"{seg_line_text.strip()!r}. "
+                                f"Correct the '# call site (indirect):' comment.",
+                                file=sys.stderr,
+                            )
+                            cs_ok = False
+                            break
+                        # Rule 3: neither line may fall inside the function's own body.
+                        if Path(seg_file_raw).resolve() == Path(src_abs).resolve() and body_start <= seg_line <= body_end:
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                                f"indirect call site {seg_label} line {seg_line} falls inside "
+                                f"the target function's own body range ({body_start}-{body_end}).",
+                                file=sys.stderr,
+                            )
+                            cs_ok = False
+                            break
+                    except OSError as _cs_err:
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                            f"could not read indirect call site {seg_label} file "
+                            f"'{seg_file_raw}': {_cs_err}",
+                            file=sys.stderr,
+                        )
+                        cs_ok = False
+                        break
+
+                if not cs_ok:
+                    failed += 1
+                    continue
+
+            else:
+                # ── direct call site: single "file:N -- name(...)" ────────
+                _cs_file_match = _re.match(r"^(.+):(\d+)", call_site)
+                if _cs_file_match:
+                    cs_file_raw = _cs_file_match.group(1).strip()
+                    cs_line = int(_cs_file_match.group(2))
+
+                    cs_file_path = Path(cs_file_raw)
+                    if not cs_file_path.is_absolute():
+                        cs_file_path = Path(".").resolve() / cs_file_raw
+
+                    # Rule 1: the file must exist.
+                    if not cs_file_path.is_file():
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                            f"call site file '{cs_file_raw}' does not exist; "
                             f"correct the '# call site:' comment in the driver file.",
                             file=sys.stderr,
                         )
                         failed += 1
                         continue
-                except OSError as _cs_err:
-                    print(
-                        f"[promote-driver] FAIL  {driver_path.name} -- "
-                        f"could not read call site file '{cs_file_raw}': {_cs_err}",
-                        file=sys.stderr,
-                    )
-                    failed += 1
-                    continue
 
-                # Rule 3: call site must not fall inside the target's own body.
-                if Path(cs_file_raw).resolve() == Path(src_abs).resolve() and body_start <= cs_line <= body_end:
-                    print(
-                        f"[promote-driver] FAIL  {driver_path.name} -- "
-                        f"call site line {cs_line} falls inside the target function's "
-                        f"own body range ({body_start}-{body_end}); a function cannot "
-                        f"be its own caller.  Correct the '# call site:' comment "
-                        f"in the driver file.",
-                        file=sys.stderr,
-                    )
-                    failed += 1
-                    continue
+                    # Rule 2: the target function's simple name must appear on that line.
+                    func_simple_name = unit_key.split("::", 1)[1].rsplit(".", 1)[-1] if "::" in unit_key else unit_key
+                    if "#" in func_simple_name:
+                        func_simple_name = func_simple_name.rsplit("#", 1)[0]
+                    try:
+                        cs_lines = cs_file_path.read_text(encoding="utf-8", errors="replace").splitlines()
+                        if cs_line < 1 or cs_line > len(cs_lines):
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                                f"call site line {cs_line} is out of range for "
+                                f"'{cs_file_raw}' ({len(cs_lines)} lines); "
+                                f"correct the '# call site:' comment.",
+                                file=sys.stderr,
+                            )
+                            failed += 1
+                            continue
+                        cs_text = cs_lines[cs_line - 1]
+                        if func_simple_name not in cs_text:
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                                f"function name '{func_simple_name}' not found on "
+                                f"line {cs_line} of '{cs_file_raw}'; "
+                                f"correct the '# call site:' comment in the driver file.",
+                                file=sys.stderr,
+                            )
+                            failed += 1
+                            continue
+                    except OSError as _cs_err:
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                            f"could not read call site file '{cs_file_raw}': {_cs_err}",
+                            file=sys.stderr,
+                        )
+                        failed += 1
+                        continue
+
+                    # Rule 3: call site must not fall inside the target's own body.
+                    if Path(cs_file_raw).resolve() == Path(src_abs).resolve() and body_start <= cs_line <= body_end:
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                            f"call site line {cs_line} falls inside the target function's "
+                            f"own body range ({body_start}-{body_end}); a function cannot "
+                            f"be its own caller.  Correct the '# call site:' comment "
+                            f"in the driver file.",
+                            file=sys.stderr,
+                        )
+                        failed += 1
+                        continue
 
         # ── record promotion in the in-memory document ────────────────────
         doc["units"][unit_key]["provenance"]               = PROVENANCE_UNDER_DRIVER
@@ -1525,6 +1928,7 @@ def cmd_promote_driver(
     # ── write evidence.json atomically ────────────────────────────────────
     # Write to a temp file adjacent to the target, then rename so readers
     # never see a partially-written file.
+    # Write whenever any mutation was made (full promotions OR superseded markings).
     if promoted > 0:
         tmp_fd, tmp_path = tempfile.mkstemp(
             dir=evidence_path.parent,
@@ -1567,9 +1971,16 @@ def main(argv: list[str] | None = None) -> int:
              "Required unless --report is given.",
     )
     parser.add_argument(
-        "--runner", default=None,
+        "--runner", dest="runners", action="append", default=None, metavar="SCRIPT",
         help="Python script that runs the target application. "
+             "Pass multiple times to collect several baselines in one run. "
              "Required unless --report is given.",
+    )
+    parser.add_argument(
+        "--runner-id", dest="runner_ids", action="append", default=None, metavar="ID",
+        help="Short identifier for the corresponding --runner (e.g. 'cli', 'test_suite'). "
+             "Must appear in the same order as --runner. "
+             "Defaults to 'baseline_0', 'baseline_1', … when omitted.",
     )
     parser.add_argument(
         "--python", default=sys.executable,
@@ -1666,11 +2077,13 @@ def main(argv: list[str] | None = None) -> int:
         else:
             with open(evidence_path, encoding="utf-8") as fh:
                 _ev = json.load(fh)
-            pkg_abs = _ev.get("baseline", {}).get("package", "")
+            # Support both old single-baseline schema (v0.1) and new baselines list (v0.2+).
+            _bl0 = (_ev.get("baselines") or [{}])[0] if _ev.get("baselines") else _ev.get("baseline", {})
+            pkg_abs = _bl0.get("package", "")
             if not pkg_abs:
                 print(
                     "[promote-driver] ERROR: cannot determine package path. "
-                    "Pass --pkg <path> or ensure evidence.json has baseline.package set.",
+                    "Pass --pkg <path> or ensure evidence.json has baselines[0].package set.",
                     file=sys.stderr,
                 )
                 return 1
@@ -1678,10 +2091,11 @@ def main(argv: list[str] | None = None) -> int:
         # Resolve python interpreter: --python takes priority, else read from evidence.json.
         python_interp = args.python
         if python_interp == sys.executable:
-            # user did not explicitly pass --python; check evidence baseline
+            # user did not explicitly pass --python; check evidence first baseline
             with open(evidence_path, encoding="utf-8") as fh:
                 _ev2 = json.load(fh)
-            cmd_list = _ev2.get("baseline", {}).get("command", [])
+            _bl0_2 = (_ev2.get("baselines") or [{}])[0] if _ev2.get("baselines") else _ev2.get("baseline", {})
+            cmd_list = _bl0_2.get("command", [])
             if cmd_list:
                 python_interp = cmd_list[0]
 
@@ -1714,7 +2128,8 @@ def main(argv: list[str] | None = None) -> int:
     if not args.package:
         print("[first_light] ERROR: --package is required when not using --report", file=sys.stderr)
         return 1
-    if not args.runner:
+    runner_list = args.runners or []
+    if not runner_list:
         print("[first_light] ERROR: --runner is required when not using --report", file=sys.stderr)
         return 1
 
@@ -1723,36 +2138,75 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[first_light] ERROR: package path does not exist: {pkg_path}", file=sys.stderr)
         return 1
 
-    runner_path = Path(args.runner).resolve()
-    if not runner_path.is_file():
-        print(f"[first_light] ERROR: runner script does not exist: {runner_path}", file=sys.stderr)
-        return 1
-
     exclude_dirs = set(args.exclude or [])
 
-    # Reconstruct the command that was used to produce this observation.
-    # Stored verbatim in evidence.json so the claim "never observed" is
-    # traceable to exactly what was run.
-    invocation_cmd = [str(Path(args.python).resolve()), str(Path(__file__).resolve())] + (argv or sys.argv[1:])
+    # Assign ids to each runner.  Explicit --runner-id takes priority.
+    runner_ids = list(args.runner_ids or [])
+    while len(runner_ids) < len(runner_list):
+        runner_ids.append(f"baseline_{len(runner_ids)}")
 
-    print(f"[first_light] collecting coverage …", file=sys.stderr)
-    executed = collect_coverage(
-        package_path=str(pkg_path),
-        runner_script=str(runner_path),
-        python=args.python,
-        rcfile=args.rcfile,
-    )
-    n_files_covered = len(executed)
-    print(f"[first_light] coverage collected for {n_files_covered} source file(s)", file=sys.stderr)
+    # Base invocation command (shared prefix; runner-specific part appended per baseline).
+    base_cmd = [str(Path(args.python).resolve()), str(Path(__file__).resolve())] + (argv or sys.argv[1:])
 
-    # ── whole-package enumeration ────────────────────────────────────────
+    # ── collect one baseline per runner ──────────────────────────────────
+    collected_baselines: list[BaselineInfo] = []
+    for runner_script, bl_id in zip(runner_list, runner_ids):
+        runner_path = Path(runner_script).resolve()
+        if not runner_path.is_file():
+            print(f"[first_light] ERROR: runner script does not exist: {runner_path}", file=sys.stderr)
+            return 1
+
+        print(f"[first_light] [{bl_id}] collecting coverage …", file=sys.stderr)
+        executed, exit_code = collect_coverage(
+            package_path=str(pkg_path),
+            runner_script=str(runner_path),
+            python=args.python,
+            rcfile=args.rcfile,
+        )
+        n_files_covered = len(executed)
+        print(
+            f"[first_light] [{bl_id}] coverage collected for {n_files_covered} source file(s) "
+            f"(runner exit code: {exit_code})",
+            file=sys.stderr,
+        )
+        if exit_code not in (0, 1):
+            print(
+                f"[first_light] WARNING: [{bl_id}] runner exited {exit_code} — "
+                f"coverage data may be incomplete.",
+                file=sys.stderr,
+            )
+        elif exit_code == 1:
+            print(
+                f"[first_light] NOTE: [{bl_id}] runner exited 1 — "
+                f"baseline is partial (some tests failed or runner reported warnings). "
+                f"Coverage from passing tests is still recorded.",
+                file=sys.stderr,
+            )
+        collected_baselines.append(BaselineInfo(
+            baseline_id=bl_id,
+            runner_script=str(runner_path),
+            cmd=base_cmd,
+            exit_code=exit_code,
+            executed=executed,
+        ))
+
+    # ── enumerate all functions ───────────────────────────────────────────
     print(f"[first_light] parsing source files …", file=sys.stderr)
     all_py_files = collect_python_files(pkg_path, set())   # no exclusions
     all_funcs: list[FuncInfo] = []
     for py_file in all_py_files:
         all_funcs.extend(iter_functions(py_file, pkg_path))
 
-    all_obs, all_never = classify_functions(all_funcs, executed)
+    # Merge coverage: a function is observed if ANY baseline observed it.
+    merged_executed: dict[str, set[int]] = {}
+    for bl in collected_baselines:
+        for fpath, lines in bl.executed.items():
+            if fpath in merged_executed:
+                merged_executed[fpath] |= lines
+            else:
+                merged_executed[fpath] = set(lines)
+
+    all_obs, all_never = classify_functions(all_funcs, merged_executed)
     all_observed_ids = {id(fn) for fn in all_obs}
 
     # ── product-code enumeration ─────────────────────────────────────────
@@ -1761,7 +2215,7 @@ def main(argv: list[str] | None = None) -> int:
     for py_file in prod_py_files:
         prod_funcs.extend(iter_functions(py_file, pkg_path))
 
-    prod_obs, prod_never = classify_functions(prod_funcs, executed)
+    prod_obs, prod_never = classify_functions(prod_funcs, merged_executed)
     prod_observed_ids = {id(fn) for fn in prod_obs}
 
     # ── breakdowns ───────────────────────────────────────────────────────
@@ -1774,6 +2228,7 @@ def main(argv: list[str] | None = None) -> int:
         prod_funcs, prod_obs, prod_never,
         breakdown, prod_breakdown,
         exclude_dirs,
+        baselines=collected_baselines,
     )
     print(report)
 
@@ -1782,12 +2237,9 @@ def main(argv: list[str] | None = None) -> int:
         write_evidence(
             out_path=args.evidence_out,
             pkg_path=pkg_path,
-            runner_script=str(runner_path),
-            python=args.python,
-            cmd=invocation_cmd,
             exclude_dirs=exclude_dirs,
             all_funcs=all_funcs,
-            all_obs_ids=all_observed_ids,
+            baselines=collected_baselines,
         )
         print(f"[first_light] evidence written to {args.evidence_out}", file=sys.stderr)
 
