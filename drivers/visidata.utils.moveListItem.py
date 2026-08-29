@@ -28,7 +28,7 @@ result_idx2 = moveListItem(cols, 3, 1)
 assert result_idx2 == 1, f"Expected 1, got {result_idx2}"
 assert cols == ["colA", "colD", "colB", "colC", "colE"], f"Unexpected cols: {cols}"
 
-# boundary clamping — toidx beyond list length
+# boundary clamping -- toidx beyond list length
 items = ["x", "y", "z"]
 result_idx3 = moveListItem(items, 0, 99)
 assert result_idx3 == 2, f"Expected clamped 2, got {result_idx3}"

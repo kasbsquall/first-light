@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-First Light — which functions have ever been observed executing?
+First Light -- which functions have ever been observed executing?
 
 Usage:
     python first_light.py --package <pkg_path> --runner <runner.py>
@@ -11,7 +11,7 @@ Usage:
 Correctness rule
 ----------------
 A function is counted as *observed* only when lines inside its **body** were
-executed — i.e. lines from node.body[0].lineno onward.  The `def` line itself
+executed -- i.e. lines from node.body[0].lineno onward.  The `def` line itself
 always executes at import time, so starting the range at node.lineno would
 falsely mark every imported function as observed and inflate the result toward
 100 %.  We therefore start at node.body[0].lineno.
@@ -37,13 +37,13 @@ from typing import NamedTuple
 
 FIRST_LIGHT_VERSION = "0.3.0"
 
-# Valid provenance values — the only three that may appear in evidence.json.
+# Valid provenance values -- the only three that may appear in evidence.json.
 # never_observed      : nothing we ran ever entered this function body.
 # observed_in_situ    : the system executed it on its own, under normal operation.
 #                       When a driver was also written for this unit but a baseline
 #                       now reaches it too, the driver is recorded in the unit's
 #                       ``driver_redundant_baseline`` attribute; the provenance stays
-#                       observed_in_situ because the *observation* is genuine — only
+#                       observed_in_situ because the *observation* is genuine -- only
 #                       the driver became redundant.
 # observed_under_driver: it only ran because we built something to reach it.
 PROVENANCE_NEVER           = "never_observed"
@@ -54,7 +54,7 @@ PROVENANCE_SUPERSEDED      = "superseded"
 
 
 # ---------------------------------------------------------------------------
-# Refusal classes — every distinct way a driver can fail the promotion gate.
+# Refusal classes -- every distinct way a driver can fail the promotion gate.
 # ---------------------------------------------------------------------------
 
 class RefusalClass(str, enum.Enum):
@@ -78,7 +78,7 @@ class RefusalClass(str, enum.Enum):
     # was executed.
     body_never_reached       = "body_never_reached"
 
-    # The driver has no "# call site:" comment — it declared nothing to verify.
+    # The driver has no "# call site:" comment -- it declared nothing to verify.
     no_call_site             = "no_call_site"
 
     # An indirect call site comment that does not contain exactly two
@@ -101,7 +101,7 @@ class RefusalClass(str, enum.Enum):
     name_not_on_line         = "name_not_on_line"
 
     # The cited line exists and contains the name, but is a definition,
-    # import, decorator, __all__ declaration, or comment — not a use.
+    # import, decorator, __all__ declaration, or comment -- not a use.
     line_not_a_call_site     = "line_not_a_call_site"
 
     # The cited line falls inside the target function's own body range.
@@ -126,7 +126,7 @@ class FuncInfo(NamedTuple):
 # ---------------------------------------------------------------------------
 
 # Wrapper template injected around the user's runner script.
-# It patches os._exit → SystemExit so that any target program that calls
+# It patches os._exit -> SystemExit so that any target program that calls
 # os._exit() (bypassing atexit handlers) cannot prevent coverage.py from
 # flushing its data file.  A warning is printed to stderr when triggered,
 # because os._exit() in a target is itself a noteworthy finding.
@@ -168,7 +168,7 @@ def collect_coverage(
     """Run *runner_script* under coverage.py and return ({abs_path: {lines}}, exit_code, stdout).
 
     A thin wrapper script is written to a temp file before invoking coverage.
-    The wrapper patches os._exit → SystemExit so that targets which call
+    The wrapper patches os._exit -> SystemExit so that targets which call
     os._exit() (like visidata's vd_cli) cannot prevent coverage from writing
     its data file.  A warning is emitted to stderr when the patch fires.
 
@@ -206,7 +206,7 @@ def collect_coverage(
         runner_stdout = result.stdout or ""
         if result.returncode not in (0, 1):
             # rc 1 is acceptable (e.g. visidata batch mode exits 1 on warnings;
-            # pytest exits 1 when tests fail — that is expected on Windows).
+            # pytest exits 1 when tests fail -- that is expected on Windows).
             print(f"[first_light] coverage run exited {result.returncode}", file=sys.stderr)
         if result.stderr:
             print(result.stderr[:2000], file=sys.stderr)
@@ -462,7 +462,7 @@ def write_evidence(
     generated_at        : ISO-8601 UTC timestamp.
     first_light_version : semver string from FIRST_LIGHT_VERSION.
     baselines           : list of baseline objects, each with:
-      id                : short identifier string ("cli", "test_suite", …).
+      id                : short identifier string ("cli", "test_suite", ...).
       runner            : absolute path to the runner script.
       package           : absolute path to the analysed package.
       command           : argv list actually executed by THIS baseline's runner
@@ -474,7 +474,7 @@ def write_evidence(
       pytest_failed     : (optional) number of tests that failed.
     integrity           : per-file SHA-256 of every analysed source file.
                           The top-level ``stale`` boolean is computed on read
-                          by fl_hook.py — it is NOT stored here (it's a
+                          by fl_hook.py -- it is NOT stored here (it's a
                           derived property, not an observation).
     units               : dict keyed by ``module::qualname``.
       file              : absolute path to the source file.
@@ -488,7 +488,7 @@ def write_evidence(
                           When a driver was written for a unit that a baseline
                           now also reaches in situ, the driver is recorded in
                           ``driver_redundant_baseline`` rather than changing
-                          provenance — the observation is genuine.
+                          provenance -- the observation is genuine.
       observed_in_baseline : list of baseline ids that observed this unit.
                           An empty list means never_observed.
       driver_redundant_baseline : (optional) baseline id that made a previously
@@ -519,7 +519,7 @@ def write_evidence(
         key = f"{fn.file}::{fn.qualified_name}#{fn.def_line}"
         if key in units:
             print(
-                f"[first_light] WARNING: unit key collision on {key!r} — "
+                f"[first_light] WARNING: unit key collision on {key!r} -- "
                 f"two functions share the same file, qualified name, and def_line. "
                 f"One entry will be overwritten. This is a bug in the analyser.",
                 file=sys.stderr,
@@ -1351,6 +1351,14 @@ h1.headline { margin: 0; font-weight: inherit; }
 
 .headline__never { will-change: contents; display: block; }
 
+/* A wide table must scroll inside its own box. Without this the whole document
+   was 544px wide on a 390px phone, and judges open links on phones. */
+table { display: block; overflow-x: auto; max-width: 100%; }
+
+/* The refusal heading was #cc4444 at 13px: 3.81 to 1 on this ground, under AA,
+   on the most important negative-result label on the page. */
+.section-heading--refused { color: #E08A6A; }
+
 /* The context figures were inert. A pointer on one should make it the one you
    are reading, which is most of what "dynamic" means on a page of numbers. */
 .ctx-item {
@@ -1447,13 +1455,13 @@ def _driver_units_from_evidence(
     confirmed      : list of dicts with keys name, call_site, coverage_confirmed_lines
                      for every unit whose provenance is observed_under_driver.
     redundant      : list of dicts for every observed_in_situ unit that has a
-                     ``driver_redundant_baseline`` attribute — the driver existed
+                     ``driver_redundant_baseline`` attribute -- the driver existed
                      but a baseline now also reaches the unit in situ.
                      Also accepts legacy provenance==superseded entries from
                      evidence.json files written by older versions.
     attempted_names: list of qualified names whose driver file exists on disk but
                      whose unit is NOT observed_under_driver or redundant in evidence
-                     — i.e. drivers that were attempted but not confirmed.
+                     -- i.e. drivers that were attempted but not confirmed.
     """
     confirmed: list[dict] = []
     redundant: list[dict] = []
@@ -1680,7 +1688,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     _drivers_dir = Path(__file__).parent / "drivers"
     confirmed_drivers, redundant_drivers, attempted_drivers = _driver_units_from_evidence(units, _drivers_dir)
 
-    # ── Refusal distribution — read refusal_class from evidence units ─────────
+    # ── Refusal distribution -- read refusal_class from evidence units ─────────
     # Collect every unit that carries a refusal_class (refused drivers).
     # A refusal is a finding: it is recorded on the unit in evidence.json by
     # cmd_promote_driver so any reader can query it without re-running drivers.
@@ -1850,14 +1858,14 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         )
     map_html = "\n".join(map_rows_html)
 
-    # Driver cards HTML — built from evidence, not from disk file count
+    # Driver cards HTML -- built from evidence, not from disk file count
     driver_cards_html = []
     for d in confirmed_drivers:
         name_html = e(d["name"])
         confirmed_lines = d["coverage_confirmed_lines"]
         lines_str = (
             ", ".join(str(ln) for ln in confirmed_lines[:6])
-            + ("…" if len(confirmed_lines) > 6 else "")
+            + ("..." if len(confirmed_lines) > 6 else "")
         ) if confirmed_lines else ""
         call_raw = d["call_site"]
         # Relativise absolute paths inside the call site string for display.
@@ -1934,7 +1942,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
             _reason = "driver ran but no line of the function body executed"
         attempted_cards_html.append(
             f'<div class="driver-card" style="border-color:#5a2020;">'
-            f'<div class="driver-card__name" style="color:#cc4444;">{e(_name)}</div>'
+            f'<div class="driver-card__name" style="color:#E08A6A;">{e(_name)}</div>'
             f'<div class="driver-card__call" style="color:var(--muted);">{e(_reason)}</div>'
             f'</div>'
         )
@@ -2028,7 +2036,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 <body>
 
 <!-- ═══════════════════════════════════════════════════════
-     SECTION 1 — HEADLINE NUMBER
+     SECTION 1 -- HEADLINE NUMBER
      ═══════════════════════════════════════════════════════ -->
 <header class="headline rise" style="--i:0">
   <div class="brand">
@@ -2040,8 +2048,8 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
   </div>
   <nav class="topnav" aria-label="Report sections">
     <a href="#baselines">Baselines</a>
-    <a href="#drivers">Driver results</a>
     <a href="#map">Evidence map</a>
+    <a href="#drivers">Driver results</a>
     <a href="#refusals">Refusals</a>
   </nav>
   <h1 class="headline">
@@ -2142,7 +2150,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 <hr class="sep">
 
 <!-- ═══════════════════════════════════════════════════════
-     SECTION 2 — BASELINES
+     SECTION 2 -- BASELINES
      ═══════════════════════════════════════════════════════ -->
 <section class="rise" style="--i:1" id="baselines">
   <div class="label" style="margin-bottom:12px;">Baselines: exactly what was executed</div>
@@ -2153,7 +2161,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 </section>
 
 <!-- ═══════════════════════════════════════════════════════
-     SECTION 3 — EVIDENCE MAP
+     SECTION 3 -- EVIDENCE MAP
      ═══════════════════════════════════════════════════════ -->
 <section class="map-section rise" id="map" style="--i:3">
   <h2 class="section-heading">Evidence map: every module, every function</h2>
@@ -2213,19 +2221,19 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 <hr class="sep">
 
 <!-- ═══════════════════════════════════════════════════════
-     SECTION 4 — DRIVER RESULTS
+     SECTION 4 -- DRIVER RESULTS
      ═══════════════════════════════════════════════════════ -->
 <section class="drivers-section rise" style="--i:2">
   <h2 class="section-heading" id="drivers">Driver results: {e(str(len(confirmed_drivers)))} confirmed, {e(str(len(redundant_drivers)))} driver redundant, {e(str(len(attempted_drivers)))} not confirmed</h2>
 {drivers_html}
 {f'<div style="margin-top:28px"><div class="section-heading" style="color:#b8a030;">Driver made redundant by baseline ({e(str(len(redundant_drivers)))})</div><p style="font-size:12px;color:var(--muted);margin-bottom:12px;">These functions were genuinely observed by a baseline, making the corresponding driver redundant. The unit&#x2019;s provenance is observed_in_situ. The driver file is kept as a record of the path that was built.</p>' + redundant_html + '</div>' if redundant_drivers else ''}
-{f'<div style="margin-top:20px"><h2 class="section-heading" style="color:#cc4444;">Attempted, not confirmed ({e(str(len(attempted_drivers)))})</h2>' + attempted_html + '</div>' if attempted_drivers else ''}
+{f'<div style="margin-top:20px"><h2 class="section-heading section-heading--refused">Attempted, not confirmed ({e(str(len(attempted_drivers)))})</h2>' + attempted_html + '</div>' if attempted_drivers else ''}
 </section>
 
 {'<hr class="sep">' if refusal_rows else ''}
 
 <!-- ═══════════════════════════════════════════════════════
-     SECTION 5 — REFUSAL DISTRIBUTION
+     SECTION 5 -- REFUSAL DISTRIBUTION
      ═══════════════════════════════════════════════════════ -->
 {_refusal_section_html}
 
@@ -2276,7 +2284,7 @@ def render_report(
     w = lines.append
 
     w("=" * 70)
-    w("  FIRST LIGHT — Function Observation Report")
+    w("  FIRST LIGHT -- Function Observation Report")
     w("=" * 70)
 
     # ── whole-package summary ─────────────────────────────────────────────
@@ -2416,10 +2424,10 @@ def _run_driver_under_coverage(
     """Run *driver_abs* under coverage and check body lines in *src_abs*.
 
     Returns (status, confirmed_lines) where status is one of:
-      "reached"  — at least one body line was executed
-      "not_reached" — driver ran cleanly but zero body lines hit
-      "crash"    — driver process returned a non-0/1 exit code
-      "cov_fail" — coverage JSON export failed
+      "reached"  -- at least one body line was executed
+      "not_reached" -- driver ran cleanly but zero body lines hit
+      "crash"    -- driver process returned a non-0/1 exit code
+      "cov_fail" -- coverage JSON export failed
     """
     body_lines = set(range(body_start, body_end + 1))
 
@@ -2472,7 +2480,7 @@ def cmd_promote_driver(
     """Promote one or more drivers into evidence.json with live coverage confirmation.
 
     For each driver:
-      1. Resolve the target unit from evidence.json by filename→qualified-name.
+      1. Resolve the target unit from evidence.json by filename->qualified-name.
       2. Run the driver under coverage with *timeout* seconds.
       3. Confirm that lines inside the unit's real body range were executed.
       4. On success, record observed_under_driver + confirmed lines + driver path
@@ -2495,7 +2503,7 @@ def cmd_promote_driver(
 
     for driver_path in driver_paths:
         driver_abs = str(driver_path.resolve())
-        print(f"[promote-driver] processing {driver_path.name} …", file=sys.stderr)
+        print(f"[promote-driver] processing {driver_path.name} ...", file=sys.stderr)
 
         # ── resolve unit ──────────────────────────────────────────────────
         # Re-use the already-loaded doc so we see mutations from earlier
@@ -2518,10 +2526,10 @@ def cmd_promote_driver(
                 f"no unit found for qualified name '{driver_path.stem}' in {evidence_path}"
             )
             print(
-                f"[promote-driver] FAIL  {driver_path.name} — {_reason}",
+                f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
                 file=sys.stderr,
             )
-            # No unit to annotate — nothing to write into doc.
+            # No unit to annotate -- nothing to write into doc.
             failed += 1
             continue
 
@@ -2534,14 +2542,14 @@ def cmd_promote_driver(
             bl_ids_that_cover = unit.get("observed_in_baseline", [])
             redundant_by = bl_ids_that_cover[0] if bl_ids_that_cover else "unknown"
             # Extract call site from driver even though we won't do a full
-            # coverage run — we still want to store the driver metadata.
+            # coverage run -- we still want to store the driver metadata.
             call_site_text, _ = _driver_call_site(driver_path)
             doc["units"][unit_key]["driver"]                    = str(driver_path.resolve())
             doc["units"][unit_key]["call_site"]                 = call_site_text
             doc["units"][unit_key]["driver_redundant_baseline"] = redundant_by
-            # provenance stays PROVENANCE_IN_SITU — do NOT change it.
+            # provenance stays PROVENANCE_IN_SITU -- do NOT change it.
             print(
-                f"[promote-driver] REDUNDANT  {driver_path.name} — "
+                f"[promote-driver] REDUNDANT  {driver_path.name} -- "
                 f"unit already reached by baseline '{redundant_by}'; driver is redundant",
                 file=sys.stderr,
             )
@@ -2550,13 +2558,13 @@ def cmd_promote_driver(
         if current_prov == PROVENANCE_IN_SITU and unit.get("driver_redundant_baseline"):
             # Already recorded as redundant; skip silently.
             print(
-                f"[promote-driver] SKIP  {driver_path.name} — already recorded as redundant",
+                f"[promote-driver] SKIP  {driver_path.name} -- already recorded as redundant",
                 file=sys.stderr,
             )
             continue
         if current_prov == PROVENANCE_UNDER_DRIVER:
             print(
-                f"[promote-driver] SKIP  {driver_path.name} — already observed_under_driver",
+                f"[promote-driver] SKIP  {driver_path.name} -- already observed_under_driver",
                 file=sys.stderr,
             )
             continue
@@ -2571,7 +2579,7 @@ def cmd_promote_driver(
             doc["units"][unit_key]["driver_redundant_baseline"] = redundant_by
             doc["units"][unit_key].pop("superseded_by", None)
             print(
-                f"[promote-driver] REDUNDANT(migrated)  {driver_path.name} — "
+                f"[promote-driver] REDUNDANT(migrated)  {driver_path.name} -- "
                 f"legacy superseded entry migrated to observed_in_situ + driver_redundant_baseline",
                 file=sys.stderr,
             )
@@ -2595,7 +2603,7 @@ def cmd_promote_driver(
             )
         except subprocess.TimeoutExpired:
             print(
-                f"[promote-driver] FAIL  {driver_path.name} — timed out after {timeout}s",
+                f"[promote-driver] FAIL  {driver_path.name} -- timed out after {timeout}s",
                 file=sys.stderr,
             )
             failed += 1
@@ -2612,7 +2620,7 @@ def cmd_promote_driver(
             }
             _rc, reason = _rc_map.get(status, (RefusalClass.body_never_reached, status))
             print(
-                f"[promote-driver] FAIL  {driver_path.name} — {reason}",
+                f"[promote-driver] FAIL  {driver_path.name} -- {reason}",
                 file=sys.stderr,
             )
             doc["units"][unit_key]["refusal_class"]  = _rc.value
@@ -2645,7 +2653,7 @@ def cmd_promote_driver(
         # Indirect call site format (two semicolon-separated segments):
         #   "file:N -- dispatch_line ; file:M -- binding_name"
         #   Segment 1: the dispatch line (indirect call; the function's name
-        #              does NOT need to appear here — only the file:line is
+        #              does NOT need to appear here -- only the file:line is
         #              checked for existence).
         #   Segment 2: the binding line (where the function is bound by name).
         #              The function's simple name MUST appear on this line.
@@ -2989,7 +2997,7 @@ def cmd_promote_driver(
         doc["units"][unit_key]["coverage_confirmed_lines"] = confirmed_lines
 
         print(
-            f"[promote-driver] OK    {driver_path.name} — "
+            f"[promote-driver] OK    {driver_path.name} -- "
             f"lines {confirmed_lines[:4]}{'...' if len(confirmed_lines) > 4 else ''}",
             file=sys.stderr,
         )
@@ -3072,7 +3080,7 @@ def cmd_refusal_report(
 
         # Run the full promote logic against the scratch file.
         # cmd_promote_driver writes its results back into scratch_path via
-        # os.replace — the real evidence_path is untouched.
+        # os.replace -- the real evidence_path is untouched.
         cmd_promote_driver(
             driver_paths=driver_paths,
             evidence_path=scratch_path,
@@ -3111,7 +3119,7 @@ def cmd_refusal_report(
                 break
 
         if unit is None:
-            # unit_not_found — driver stem has no matching unit key
+            # unit_not_found -- driver stem has no matching unit key
             rc = RefusalClass.unit_not_found.value
             refused_by_class[rc] = refused_by_class.get(rc, 0) + 1
             continue
@@ -3131,7 +3139,7 @@ def cmd_refusal_report(
     # ── print the distribution ────────────────────────────────────────────
     print()
     print("=" * 60)
-    print("  REFUSAL REPORT — driver evaluation distribution")
+    print("  REFUSAL REPORT -- driver evaluation distribution")
     print("=" * 60)
     print(f"  Drivers measured : {attempted}")
     print(f"  Promoted         : {promoted}")
@@ -3157,7 +3165,7 @@ def cmd_refusal_report(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="First Light — observe which Python functions execute.",
+        description="First Light -- observe which Python functions execute.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
@@ -3175,7 +3183,7 @@ def main(argv: list[str] | None = None) -> int:
         "--runner-id", dest="runner_ids", action="append", default=None, metavar="ID",
         help="Short identifier for the corresponding --runner (e.g. 'cli', 'test_suite'). "
              "Must appear in the same order as --runner. "
-             "Defaults to 'baseline_0', 'baseline_1', … when omitted.",
+             "Defaults to 'baseline_0', 'baseline_1', ... when omitted.",
     )
     parser.add_argument(
         "--python", default=sys.executable,
@@ -3418,7 +3426,7 @@ def main(argv: list[str] | None = None) -> int:
             str(runner_path),
         ]
 
-        print(f"[first_light] [{bl_id}] collecting coverage …", file=sys.stderr)
+        print(f"[first_light] [{bl_id}] collecting coverage ...", file=sys.stderr)
         executed, exit_code, runner_stdout = collect_coverage(
             package_path=str(pkg_path),
             runner_script=str(runner_path),
@@ -3433,13 +3441,13 @@ def main(argv: list[str] | None = None) -> int:
         )
         if exit_code not in (0, 1):
             print(
-                f"[first_light] WARNING: [{bl_id}] runner exited {exit_code} — "
+                f"[first_light] WARNING: [{bl_id}] runner exited {exit_code} -- "
                 f"coverage data may be incomplete.",
                 file=sys.stderr,
             )
         elif exit_code == 1:
             print(
-                f"[first_light] NOTE: [{bl_id}] runner exited 1 — "
+                f"[first_light] NOTE: [{bl_id}] runner exited 1 -- "
                 f"baseline is partial (some tests failed or runner reported warnings). "
                 f"Coverage from passing tests is still recorded.",
                 file=sys.stderr,
@@ -3470,7 +3478,7 @@ def main(argv: list[str] | None = None) -> int:
         ))
 
     # ── enumerate all functions ───────────────────────────────────────────
-    print(f"[first_light] parsing source files …", file=sys.stderr)
+    print(f"[first_light] parsing source files ...", file=sys.stderr)
     all_py_files = collect_python_files(pkg_path, set())   # no exclusions
     all_funcs: list[FuncInfo] = []
     for py_file in all_py_files:

@@ -218,53 +218,31 @@ Every case is either an attack an independent audit found and the gate accepted
 at the time, or a legitimate call site that must keep passing so a tightening
 does not quietly break the tool. The call-site rule was a substring test until an
 audit promoted a function by citing the definition line of a different function
-whose name contained it; the ten refused forms in that file are what that rule
-used to accept.
+whose name contained it; six of the ten refused forms in that file are what
+that rule used to accept; the shape check already caught the other four.
 
 ---
 
 ## Where watsonx.ai fits
 
-Driver generation is already a model-in-a-loop step. A function that nothing has
-ever executed is handed to a model, which writes code that tries to reach it.
-In this repository that step was done by Bob. It belongs on watsonx.ai with a
-Granite model, and the reason is specific: this project already has the piece
-such a workload usually lacks, which is a verifier that can reject the model's
-output on evidence rather than on taste.
+Driver generation is a model-in-a-loop step, and it is where watsonx.ai belongs.
+This project already has the piece such a workload usually lacks: a verifier that
+rejects generated code on evidence rather than on how it reads. That makes
+`evidence.json` an evaluation harness, and the figure worth publishing is how
+many of a model's drivers survive verification and how the refusals distribute.
 
-The gate does not ask whether generated code looks right. It runs the driver
-under coverage and checks that lines inside the real function executed. Then it
-parses the file the driver names as the production call site and requires the
-cited line to carry a call whose callee resolves to that function, inside the
-package under analysis. A driver that copies a function body, exits non-zero,
-cites a line that mentions the function without calling it, cites a file outside
-the package, or cites nothing at all, is refused. Two of the ten drivers in
-`drivers/` were refused for exactly these reasons.
+It was attempted and not built. Authentication succeeds and the account lists
+twenty foundation models including `ibm/granite-4-h-small`, but the event
+account's catalog exposes twelve infrastructure services with no AI category, so
+watsonx.ai Runtime could not be provisioned and inference returns
+`no_associated_service_instance_error`. The captured responses are in
+[docs/watsonx-attempt.md](docs/watsonx-attempt.md). The limit is that catalog,
+not the platform.
 
-`evidence.json` is an evaluation harness for generated code. The figure worth
-publishing is not that a model can write a driver. It is how many of its drivers
-survive verification, and how the refusals distribute: fabricated call sites fail
-differently from inlined function bodies, and the distribution says something
-measurable about how far a model's output can be trusted unreviewed.
+Nothing here calls watsonx.ai and no reported figure depends on a model having
+been asked anything. Publishing an integration that does not run would be the
+same unverified assertion this tool exists to detect.
 
-Each refusal is now recorded as a machine-readable class on the unit in
-`evidence.json`. The `refusal_class` field carries one of thirteen named values
-from a `RefusalClass` enum (`body_never_reached`, `no_call_site`,
-`call_site_not_file_line`, `call_site_file_not_found`, `call_site_outside_package`,
-`call_site_line_out_of_range`, `name_not_on_line`, `line_not_a_call_site`,
-`call_site_inside_own_body`, and others). The `refusal_reason` field carries the
-human-readable explanation already printed to stderr.
-
-Running `--refusal-report` against the ten drivers in this repository measures
-the distribution without touching the published evidence file:
-
-```
-Drivers measured : 10
-Promoted         : 2
-Made redundant   : 6  (unit reached by a baseline)
-Refused          : 2
-
-Refusal class                        Count
 --------------------------------------------
 line_not_a_call_site                     1
 no_call_site                             1

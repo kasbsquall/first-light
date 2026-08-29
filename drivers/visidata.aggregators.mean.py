@@ -5,7 +5,7 @@
 import sys
 sys.path.insert(0, 'target/visidata')
 
-import visidata  # noqa: F401 — required to initialise the package
+import visidata  # noqa: F401 -- required to initialise the package
 from visidata.aggregators import mean  # the REAL function
 
 # 1. List of floats (typical ping latencies in ms)

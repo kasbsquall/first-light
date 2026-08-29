@@ -47,7 +47,7 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Evidence file resolution order
 # ---------------------------------------------------------------------------
-# 1. FIRST_LIGHT_EVIDENCE env var (absolute path) — set this in the hook
+# 1. FIRST_LIGHT_EVIDENCE env var (absolute path) -- set this in the hook
 #    configuration when evidence.json is not adjacent to the target files.
 # 2. Walk up from the target file's directory until evidence.json is found.
 # This order lets the hook work both when evidence lives at the repo root of
@@ -55,7 +55,7 @@ from pathlib import Path
 
 
 # ---------------------------------------------------------------------------
-# Constants — must stay in sync with first_light.py
+# Constants -- must stay in sync with first_light.py
 # ---------------------------------------------------------------------------
 EVIDENCE_FILENAME   = "evidence.json"
 PROVENANCE_NEVER    = "never_observed"
@@ -136,10 +136,10 @@ def _file_integrity(abs_path: str, integrity: dict) -> str:
 
     Three states, deliberately not collapsed into a boolean:
 
-      "unrecorded" — the file is not in the integrity table.  Nothing was ever
+      "unrecorded" -- the file is not in the integrity table.  Nothing was ever
                      recorded about it, so nothing can be said to have changed.
-      "changed"    — a hash was recorded and the file no longer matches it.
-      "unchanged"  — the file still matches the hash recorded with the evidence.
+      "changed"    -- a hash was recorded and the file no longer matches it.
+      "unchanged"  -- the file still matches the hash recorded with the evidence.
 
     Reporting "unrecorded" as if it were "changed" would assert a fact that was
     never observed, which is the failure this whole tool exists to refuse.

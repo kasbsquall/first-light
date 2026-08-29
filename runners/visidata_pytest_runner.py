@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Runner for First Light — second baseline: visidata's own test suite.
+Runner for First Light -- second baseline: visidata's own test suite.
 
 Runs `python -m pytest visidata/tests` from the target repo working directory,
 collecting coverage over the visidata package.
@@ -23,9 +23,9 @@ Design notes
   the evidence says so.
 
 * Exit code semantics:
-    0  — all tests passed
-    1  — some tests failed (expected on Windows; coverage is still valid)
-    2+ — pytest infrastructure error (unexpected)
+    0  -- all tests passed
+    1  -- some tests failed (expected on Windows; coverage is still valid)
+    2+ -- pytest infrastructure error (unexpected)
 
 Environment
 -----------
@@ -59,7 +59,7 @@ if not VISIDATA_PKG.is_dir():
 try:
     import pytest
 except ImportError:
-    sys.exit("runner: pytest not found — install it via: pip install pytest==9.1.1")
+    sys.exit("runner: pytest not found -- install it via: pip install pytest==9.1.1")
 
 # ── change to the target repo root so fixture paths resolve ────────────────
 _orig_cwd = os.getcwd()

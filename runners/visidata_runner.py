@@ -8,7 +8,7 @@ temporary file, then exits.  Designed to be invoked via `coverage run`.
 Strategy: we call main_vd() directly (not vd_cli()) so that coverage.py can
 flush its data file before the process terminates.  vd_cli() wraps main_vd()
 but ends with os._exit(), which kills the process before any atexit/finalizer
-runs — coverage never writes its .coverage file, so zero lines are recorded.
+runs -- coverage never writes its .coverage file, so zero lines are recorded.
 """
 
 import os

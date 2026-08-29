@@ -13,9 +13,9 @@ Usage:
         --body-end   69
 
 Exit codes:
-    0  — body lines confirmed executed (REACHED)
-    1  — driver ran but zero body lines hit (NOT REACHED)
-    2  — driver crashed (NOT REACHED, with error)
+    0  -- body lines confirmed executed (REACHED)
+    1  -- driver ran but zero body lines hit (NOT REACHED)
+    2  -- driver crashed (NOT REACHED, with error)
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ def main(argv: list[str] | None = None) -> int:
             print(run_result.stderr[:1000])
 
         if run_result.returncode not in (0, 1):
-            print(f"[coverage] driver exited {run_result.returncode} — treating as crash")
+            print(f"[coverage] driver exited {run_result.returncode} -- treating as crash")
             return 2
 
         # --- export coverage to JSON ---

@@ -11,7 +11,7 @@ NOTE: windows-curses installed to satisfy curses dependency
 import sys
 sys.path.insert(0, 'target/visidata')
 
-import visidata  # noqa: F401 — ensure full package is initialised
+import visidata  # noqa: F401 -- ensure full package is initialised
 from visidata.utils import getattrdeep  # the REAL function
 
 # call site: target/visidata/visidata/column.py:546 -- getattrdeep(row, col.expr, None)

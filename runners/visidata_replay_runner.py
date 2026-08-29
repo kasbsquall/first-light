@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Runner for First Light — third baseline: visidata session-log replay.
+Runner for First Light -- third baseline: visidata session-log replay.
 
 Replays every *.vdj command log found in target/visidata/tests/ using
 visidata's own ``--play <log> --batch`` mechanism.  Each replay exercises
@@ -11,7 +11,7 @@ Design notes
 ------------
 * We call main_vd() directly (not vd_cli()) so that coverage.py can flush
   its data file before the process terminates.  vd_cli() ends with
-  os._exit(), which kills the process before any atexit/finalizer runs —
+  os._exit(), which kills the process before any atexit/finalizer runs --
   coverage never writes its .coverage file.
 
 * All logs are replayed in one process so a single coverage session
@@ -24,12 +24,12 @@ Design notes
 * A log that fails does not abort the run.  Failures are counted and
   printed to stderr; the runner exits 0 as long as at least one log
   replayed successfully.  A partial run (some logs failed) is still a
-  valid baseline — the evidence file records the failure counts.
+  valid baseline -- the evidence file records the failure counts.
 
 * Exit code semantics:
-    0  — all logs replayed without exception
-    1  — one or more logs failed (partial baseline; coverage is still valid)
-    2  — no logs found at all (configuration error)
+    0  -- all logs replayed without exception
+    1  -- one or more logs failed (partial baseline; coverage is still valid)
+    2  -- no logs found at all (configuration error)
 
 Counts
 ------

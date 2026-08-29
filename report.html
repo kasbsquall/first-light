@@ -626,6 +626,14 @@ h1.headline { margin: 0; font-weight: inherit; }
 
 .headline__never { will-change: contents; display: block; }
 
+/* A wide table must scroll inside its own box. Without this the whole document
+   was 544px wide on a 390px phone, and judges open links on phones. */
+table { display: block; overflow-x: auto; max-width: 100%; }
+
+/* The refusal heading was #cc4444 at 13px: 3.81 to 1 on this ground, under AA,
+   on the most important negative-result label on the page. */
+.section-heading--refused { color: #E08A6A; }
+
 /* The context figures were inert. A pointer on one should make it the one you
    are reading, which is most of what "dynamic" means on a page of numbers. */
 .ctx-item {
@@ -709,7 +717,7 @@ h1.headline { margin: 0; font-weight: inherit; }
 <body>
 
 <!-- ═══════════════════════════════════════════════════════
-     SECTION 1 — HEADLINE NUMBER
+     SECTION 1 -- HEADLINE NUMBER
      ═══════════════════════════════════════════════════════ -->
 <header class="headline rise" style="--i:0">
   <div class="brand">
@@ -721,8 +729,8 @@ h1.headline { margin: 0; font-weight: inherit; }
   </div>
   <nav class="topnav" aria-label="Report sections">
     <a href="#baselines">Baselines</a>
-    <a href="#drivers">Driver results</a>
     <a href="#map">Evidence map</a>
+    <a href="#drivers">Driver results</a>
     <a href="#refusals">Refusals</a>
   </nav>
   <h1 class="headline">
@@ -853,7 +861,7 @@ h1.headline { margin: 0; font-weight: inherit; }
 <hr class="sep">
 
 <!-- ═══════════════════════════════════════════════════════
-     SECTION 2 — BASELINES
+     SECTION 2 -- BASELINES
      ═══════════════════════════════════════════════════════ -->
 <section class="rise" style="--i:1" id="baselines">
   <div class="label" style="margin-bottom:12px;">Baselines: exactly what was executed</div>
@@ -936,7 +944,7 @@ h1.headline { margin: 0; font-weight: inherit; }
 </section>
 
 <!-- ═══════════════════════════════════════════════════════
-     SECTION 3 — EVIDENCE MAP
+     SECTION 3 -- EVIDENCE MAP
      ═══════════════════════════════════════════════════════ -->
 <section class="map-section rise" id="map" style="--i:3">
   <h2 class="section-heading">Evidence map: every module, every function</h2>
@@ -3786,26 +3794,26 @@ h1.headline { margin: 0; font-weight: inherit; }
 <hr class="sep">
 
 <!-- ═══════════════════════════════════════════════════════
-     SECTION 4 — DRIVER RESULTS
+     SECTION 4 -- DRIVER RESULTS
      ═══════════════════════════════════════════════════════ -->
 <section class="drivers-section rise" style="--i:2">
   <h2 class="section-heading" id="drivers">Driver results: 2 confirmed, 6 driver redundant, 2 not confirmed</h2>
-<div class="driver-card"><div class="driver-card__name">visidata.aggregators._percentile</div><div class="driver-card__call">target/visidata/visidata/aggregators.py:198 -- _percentile(sorted(col.getValues(rows)), self.pct/100, key=float)</div><div class="driver-card__lines">confirmed lines: 179, 180, 181, 182, 183, 184…</div></div>
-<div class="driver-card"><div class="driver-card__name">visidata.modify.changestr</div><div class="driver-card__call">target/visidata/visidata/modify.py:345 -- sheet.changestr(adds, mods, deletes)</div><div class="driver-card__lines">confirmed lines: 324, 325, 326, 328, 329, 330…</div></div>
+<div class="driver-card"><div class="driver-card__name">visidata.aggregators._percentile</div><div class="driver-card__call">target/visidata/visidata/aggregators.py:198 -- _percentile(sorted(col.getValues(rows)), self.pct/100, key=float)</div><div class="driver-card__lines">confirmed lines: 179, 180, 181, 182, 183, 184...</div></div>
+<div class="driver-card"><div class="driver-card__name">visidata.modify.changestr</div><div class="driver-card__call">target/visidata/visidata/modify.py:345 -- sheet.changestr(adds, mods, deletes)</div><div class="driver-card__lines">confirmed lines: 324, 325, 326, 328, 329, 330...</div></div>
 <div style="margin-top:28px"><div class="section-heading" style="color:#b8a030;">Driver made redundant by baseline (6)</div><p style="font-size:12px;color:var(--muted);margin-bottom:12px;">These functions were genuinely observed by a baseline, making the corresponding driver redundant. The unit&#x2019;s provenance is observed_in_situ. The driver file is kept as a record of the path that was built.</p><div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.aggregators.mean</div><div class="driver-card__call">target/visidata/visidata/features/ping.py:33 -- mean(r.getValues(col.sheet.source.rows))</div><div class="driver-card__lines" style="margin-top:6px;">driver made redundant by baseline: <strong style="color:var(--text);">replay</strong>. The unit is observed in situ; the driver is no longer the only evidence</div></div>
 <div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.path.modtime</div><div class="driver-card__call">target/visidata/visidata/_urlcache.py:18 -- modtime(p) where p is a visidata Path</div><div class="driver-card__lines" style="margin-top:6px;">driver made redundant by baseline: <strong style="color:var(--text);">test_suite</strong>. The unit is observed in situ; the driver is no longer the only evidence</div></div>
 <div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.utils.colname_letters</div><div class="driver-card__call">target/visidata/visidata/sheets.py:1086 -- colname_letters(self.colname_ctr)</div><div class="driver-card__lines" style="margin-top:6px;">driver made redundant by baseline: <strong style="color:var(--text);">test_suite</strong>. The unit is observed in situ; the driver is no longer the only evidence</div></div>
 <div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.utils.getattrdeep</div><div class="driver-card__call">target/visidata/visidata/column.py:546 -- getattrdeep(row, col.expr, None)</div><div class="driver-card__lines" style="margin-top:6px;">driver made redundant by baseline: <strong style="color:var(--text);">test_suite</strong>. The unit is observed in situ; the driver is no longer the only evidence</div></div>
 <div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.utils.moveListItem</div><div class="driver-card__call">target/visidata/visidata/features/slide.py:22 -- moveListItem(sheet.rows, rowidx, newcolidx)</div><div class="driver-card__lines" style="margin-top:6px;">driver made redundant by baseline: <strong style="color:var(--text);">test_suite</strong>. The unit is observed in situ; the driver is no longer the only evidence</div></div>
 <div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.utils.setattrdeep</div><div class="driver-card__call">target/visidata/visidata/column.py:551 -- setattrdeep(row, self.expr, val)</div><div class="driver-card__lines" style="margin-top:6px;">driver made redundant by baseline: <strong style="color:var(--text);">test_suite</strong>. The unit is observed in situ; the driver is no longer the only evidence</div></div></div>
-<div style="margin-top:20px"><h2 class="section-heading" style="color:#cc4444;">Attempted, not confirmed (2)</h2><div class="driver-card" style="border-color:#5a2020;"><div class="driver-card__name" style="color:#cc4444;">visidata.aggregators.stdev</div><div class="driver-card__call" style="color:var(--muted);">driver ran and coverage confirmed 2 lines of the function body; promotion refused because the declared call site could not be confirmed in the source</div></div>
-<div class="driver-card" style="border-color:#5a2020;"><div class="driver-card__name" style="color:#cc4444;">visidata.path.vstat</div><div class="driver-card__call" style="color:var(--muted);">driver ran and coverage confirmed 4 lines of the function body; promotion refused because no call site was declared, so there was no claim to check</div></div></div>
+<div style="margin-top:20px"><h2 class="section-heading section-heading--refused">Attempted, not confirmed (2)</h2><div class="driver-card" style="border-color:#5a2020;"><div class="driver-card__name" style="color:#E08A6A;">visidata.aggregators.stdev</div><div class="driver-card__call" style="color:var(--muted);">driver ran and coverage confirmed 2 lines of the function body; promotion refused because the declared call site could not be confirmed in the source</div></div>
+<div class="driver-card" style="border-color:#5a2020;"><div class="driver-card__name" style="color:#E08A6A;">visidata.path.vstat</div><div class="driver-card__call" style="color:var(--muted);">driver ran and coverage confirmed 4 lines of the function body; promotion refused because no call site was declared, so there was no claim to check</div></div></div>
 </section>
 
 <hr class="sep">
 
 <!-- ═══════════════════════════════════════════════════════
-     SECTION 5 — REFUSAL DISTRIBUTION
+     SECTION 5 -- REFUSAL DISTRIBUTION
      ═══════════════════════════════════════════════════════ -->
 <section id="refusals" style="margin-bottom:48px;">
   <h2 class="section-heading">Refusal distribution: 10 drivers measured</h2>

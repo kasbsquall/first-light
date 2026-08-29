@@ -52,7 +52,7 @@ AI category, so the runtime could not be provisioned. We would rather say so
 than ship an integration that does not run.
 
 The tool demonstrated this on itself. The test suite made five of our agent's
-ten drivers unnecessary; the session replay made a sixth. Both lowered our own
-count and we published both. The call-site check then rejected two drivers, and
-tightening it cost a promotion we had already counted. It reports the work its
-own agent wasted and refuses its own agent's unverifiable claims.
+ten drivers unnecessary and the replay made a sixth. Two more were refused
+outright. Three promotions we had published did not survive later scrutiny, and
+we published that too. It reports the work its own agent wasted and refuses its
+own agent's unverifiable claims.

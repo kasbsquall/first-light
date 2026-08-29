@@ -2,7 +2,9 @@
 
 This folder holds the full export of every Bob task used to build First Light,
 produced with **Export Task History** from the Bob command palette. It covers
-12 tasks and 1145 messages.
+12 tasks and 1145 messages: 350 from Bob, 19 from the human, 764 tool results
+and 12 system prompts. The message count is mostly machine traffic, which is
+worth saying before the number reads as more conversation than it was.
 
 - `bob-tasks-first-light-2026-08-29.md` is the readable transcript. Start here. It is 647KB.
 - `bob-tasks-first-light-2026-08-29.json` is the same record in full fidelity, including tool results.
@@ -31,9 +33,9 @@ them newest first, so both are the reverse of this table.
 Tasks 1 to 3 build the tool: the observer and evidence model, driver generation
 for functions that had never been observed, and the HTML evidence report.
 
-Tasks 4, 5 and 7 begin with findings from an independent audit of the code Bob
-had just written. Task 6 is a self-review carry-over rather than an audit
-hand-off. Several of these exist because something in the project asserted what
+Tasks 4 and 7 begin with findings from an independent audit of the code Bob had
+just written. Task 5 cites an auditor mid-prompt rather than opening with one,
+and task 6 is a self-review carry-over with no audit in it at all. Several of these exist because something in the project asserted what
 its own evidence did not support, which is the failure the tool was built to
 detect. The prompt that opens task 6 says so in as many words: it notes that
 this was the second time an artifact in this project had asserted something
@@ -49,11 +51,24 @@ Tasks 9, 10 and 11 close gaps in how evidence was recorded and presented. Task
 refusal reasons were being computed, printed and thrown away, and they are now
 recorded as a machine-readable class on the unit.
 
+## Two tasks did not finish
+
+Task 3 ended on `BudgetExceededError` and task 9 on `TrialExpiredError`. Both
+ran out of Bob budget mid-work rather than completing. Task 9 is the worse of
+the two: its last recorded line is Bob part-way through a correction, and it
+never delivers a result. The work both were doing was finished afterwards, and
+the git history shows where.
+
+They appear in the table as ordinary rows because that is what the export
+records. Saying so here is cheaper than letting a reader open the JSON, find
+`"status": "error"` on two of twelve, and wonder what else the index smoothed
+over.
+
 ## What this export does not cover
 
 Commits made between and after the Bob tasks are not in it, and they were not Bob tasks:
 they are direct edits made in response to independent audits of the code Bob had
-written. They include closing two bypasses in the promotion gate, separating the
+written. They include closing three separate bypasses in the promotion gate, separating the
 record of a driver reaching a function from the record of it justifying its
 claim, and the design work on the report.
 
@@ -88,8 +103,9 @@ confirmed promotions from three to two.
 
 ## A limitation of the Markdown
 
-The Markdown transcript records every tool call and its arguments, but almost
-none of the tool results. Bob's narration says a run worked; the output that
+The Markdown transcript records 764 of the 771 tool calls with their arguments,
+and none of the tool results. The seven it omits are aborted calls that carry no
+arguments, so nothing is lost there; the results are a different matter. Bob's narration says a run worked; the output that
 would prove it is in the JSON. For a project whose thesis is that a claim should
 travel with its evidence, that is worth stating plainly rather than leaving a
 reader to find it.

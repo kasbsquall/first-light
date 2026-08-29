@@ -1,4 +1,4 @@
-# fl_hook.py — Bob hook configuration
+# fl_hook.py -- Bob hook configuration
 
 `tools/fl_hook.py` is wired into Bob as a `PreToolUse` hook.  Bob invokes it
 before every file-write operation and the hook prints one advisory line
