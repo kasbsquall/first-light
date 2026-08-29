@@ -3418,6 +3418,45 @@ body {
 <div class="driver-card" style="border-color:#5a2020;"><div class="driver-card__name" style="color:#cc4444;">visidata.path.vstat</div><div class="driver-card__call" style="color:var(--muted);">driver ran and coverage confirmed 4 lines of the function body; promotion refused because no call site was declared, so there was no claim to check</div></div></div>
 </section>
 
+<hr class="sep">
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 5 — REFUSAL DISTRIBUTION
+     ═══════════════════════════════════════════════════════ -->
+<section style="margin-bottom:48px;">
+  <div class="section-heading">Refusal distribution: 10 drivers measured</div>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">
+    10 drivers were measured against this evidence file.
+    3 promoted &nbsp;&middot;&nbsp;
+    5 made redundant by a baseline &nbsp;&middot;&nbsp;
+    2 refused.
+    The table shows only classes that occurred.
+  </p>
+  <table style="border-collapse:collapse;margin-bottom:24px;min-width:320px;">
+    <thead>
+      <tr>
+        <th style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:4px 8px;text-align:left;border-bottom:1px solid var(--border);">Refusal class</th>
+        <th style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:4px 8px;text-align:right;border-bottom:1px solid var(--border);">Count</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="font-family:var(--font-mono);font-size:11px;color:var(--amber);padding:4px 8px;">name_not_on_line</td><td style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--text);padding:4px 8px;text-align:right;">1</td></tr><tr><td style="font-family:var(--font-mono);font-size:11px;color:var(--amber);padding:4px 8px;">no_call_site</td><td style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--text);padding:4px 8px;text-align:right;">1</td></tr>
+    </tbody>
+  </table>
+  <table style="border-collapse:collapse;width:100%;">
+    <thead>
+      <tr>
+        <th style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">Driver</th>
+        <th style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">Refusal class</th>
+        <th style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">Reason</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="font-family:var(--font-mono);font-size:11px;color:var(--text);padding:6px 8px;border-bottom:1px solid var(--border);">visidata.aggregators.stdev</td><td style="font-family:var(--font-mono);font-size:11px;color:var(--amber);padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap;">name_not_on_line</td><td style="font-size:11px;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--border);">function name &#x27;stdev&#x27; not found on line 93 of &#x27;target/visidata/visidata/aggregators.py&#x27;; correct the &#x27;# call site:&#x27; comment in the driver file.</td></tr><tr><td style="font-family:var(--font-mono);font-size:11px;color:var(--text);padding:6px 8px;border-bottom:1px solid var(--border);">visidata.path.vstat</td><td style="font-family:var(--font-mono);font-size:11px;color:var(--amber);padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap;">no_call_site</td><td style="font-size:11px;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--border);">no &#x27;# call site:&#x27; comment; a driver must declare where the function is reached in production so the claim can be checked</td></tr>
+    </tbody>
+  </table>
+</section>
+
 <footer class="footer">
   Made with IBM Bob : First Light v0.3.0 : 2026-08-29T07:58:23.254149+00:00
 </footer>

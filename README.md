@@ -11,6 +11,13 @@ population).
 
 ---
 
+
+**[Read the evidence report](https://kasbsquall.github.io/first-light/)** for the
+current measurement of visidata: which functions have been observed running,
+which were reached only because an agent built something to reach them, and
+which have no execution record at all.
+
+
 ## Quick start from a clean clone
 
 ```

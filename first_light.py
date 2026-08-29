@@ -1259,6 +1259,28 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     _drivers_dir = Path(__file__).parent / "drivers"
     confirmed_drivers, redundant_drivers, attempted_drivers = _driver_units_from_evidence(units, _drivers_dir)
 
+    # ── Refusal distribution — read refusal_class from evidence units ─────────
+    # Collect every unit that carries a refusal_class (refused drivers).
+    # A refusal is a finding: it is recorded on the unit in evidence.json by
+    # cmd_promote_driver so any reader can query it without re-running drivers.
+    refusal_rows: list[tuple[str, str, str]] = []  # (qname, refusal_class, refusal_reason)
+    for key, u in units.items():
+        rc = u.get("refusal_class")
+        if not rc:
+            continue
+        qname_part = key.split("::", 1)[1] if "::" in key else key
+        qname_part = _strip_def_line_suffix(qname_part)
+        refusal_rows.append((qname_part, rc, u.get("refusal_reason", "")))
+    # Count by class (for the summary table).
+    refusal_class_counts: dict[str, int] = {}
+    for _, rc, _ in refusal_rows:
+        refusal_class_counts[rc] = refusal_class_counts.get(rc, 0) + 1
+    total_drivers_attempted = len(confirmed_drivers) + len(redundant_drivers) + len(attempted_drivers)
+    # attempted_drivers (as returned above) only covers not-confirmed; for the
+    # refusal report we also want the total driver count across all outcomes.
+    # We count it from evidence units that have driver_attempted or provenance
+    # markers, but the simplest correct count is the sum of all three buckets.
+
     # ── Relative-path helper ──────────────────────────────────────────────────
     # evidence.json stores absolute paths (needed for hash resolution).  The
     # report displays paths relative to the repository root so it is shareable
@@ -1507,6 +1529,62 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
             '</div>'
         )
 
+    # ── Refusal distribution section HTML ────────────────────────────────────
+    if refusal_rows:
+        total_drivers_count = len(confirmed_drivers) + len(redundant_drivers) + len(attempted_drivers)
+        _ref_rows_html = []
+        for qname, rc, reason in sorted(refusal_rows, key=lambda t: t[0]):
+            _ref_rows_html.append(
+                f'<tr>'
+                f'<td style="font-family:var(--font-mono);font-size:11px;color:var(--text);padding:6px 8px;border-bottom:1px solid var(--border);">{e(qname)}</td>'
+                f'<td style="font-family:var(--font-mono);font-size:11px;color:var(--amber);padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap;">{e(rc)}</td>'
+                f'<td style="font-size:11px;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--border);">{e(reason)}</td>'
+                f'</tr>'
+            )
+        _ref_summary_rows_html = []
+        for rc_val, count in sorted(refusal_class_counts.items(), key=lambda kv: -kv[1]):
+            _ref_summary_rows_html.append(
+                f'<tr>'
+                f'<td style="font-family:var(--font-mono);font-size:11px;color:var(--amber);padding:4px 8px;">{e(rc_val)}</td>'
+                f'<td style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--text);padding:4px 8px;text-align:right;">{count}</td>'
+                f'</tr>'
+            )
+        _refusal_section_html = f"""<section style="margin-bottom:48px;">
+  <div class="section-heading">Refusal distribution: {e(str(total_drivers_count))} drivers measured</div>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">
+    {e(str(total_drivers_count))} drivers were measured against this evidence file.
+    {e(str(len(confirmed_drivers)))} promoted &nbsp;&middot;&nbsp;
+    {e(str(len(redundant_drivers)))} made redundant by a baseline &nbsp;&middot;&nbsp;
+    {e(str(len(refusal_rows)))} refused.
+    The table shows only classes that occurred.
+  </p>
+  <table style="border-collapse:collapse;margin-bottom:24px;min-width:320px;">
+    <thead>
+      <tr>
+        <th style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:4px 8px;text-align:left;border-bottom:1px solid var(--border);">Refusal class</th>
+        <th style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:4px 8px;text-align:right;border-bottom:1px solid var(--border);">Count</th>
+      </tr>
+    </thead>
+    <tbody>
+      {"".join(_ref_summary_rows_html)}
+    </tbody>
+  </table>
+  <table style="border-collapse:collapse;width:100%;">
+    <thead>
+      <tr>
+        <th style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">Driver</th>
+        <th style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">Refusal class</th>
+        <th style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">Reason</th>
+      </tr>
+    </thead>
+    <tbody>
+      {"".join(_ref_rows_html)}
+    </tbody>
+  </table>
+</section>"""
+    else:
+        _refusal_section_html = ""
+
     html_doc = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1662,6 +1740,13 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 {f'<div style="margin-top:28px"><div class="section-heading" style="color:#b8a030;">Driver made redundant by baseline ({e(str(len(redundant_drivers)))})</div><p style="font-size:12px;color:var(--muted);margin-bottom:12px;">These functions were genuinely observed by a baseline, making the corresponding driver redundant. The unit&#x2019;s provenance is observed_in_situ. The driver file is kept as a record of the path that was built.</p>' + redundant_html + '</div>' if redundant_drivers else ''}
 {f'<div style="margin-top:20px"><div class="section-heading" style="color:#cc4444;">Attempted, not confirmed ({e(str(len(attempted_drivers)))})</div>' + attempted_html + '</div>' if attempted_drivers else ''}
 </section>
+
+{'<hr class="sep">' if refusal_rows else ''}
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 5 — REFUSAL DISTRIBUTION
+     ═══════════════════════════════════════════════════════ -->
+{_refusal_section_html}
 
 <footer class="footer">
   Made with IBM Bob : First Light v{e(version)} : {e(generated_at)}
@@ -2083,18 +2168,23 @@ def cmd_promote_driver(
                     func_simple_name = func_simple_name.rsplit("#", 1)[0]
 
                 cs_ok = True
+                _cs_refusal_class: RefusalClass | None = None
+                _cs_refusal_reason: str = ""
                 for seg_label, seg_text, check_name in [
                     ("dispatch", dispatch_seg, False),
                     ("binding",  binding_seg,  True),
                 ]:
                     seg_match = _re.match(r"^(.+):(\d+)", seg_text)
                     if not seg_match:
-                        print(
-                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                        _cs_refusal_reason = (
                             f"indirect call site {seg_label} segment '{seg_text}' "
-                            f"does not match 'file:N -- ...' format.",
+                            f"does not match 'file:N -- ...' format."
+                        )
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
                             file=sys.stderr,
                         )
+                        _cs_refusal_class = RefusalClass.call_site_not_file_line
                         cs_ok = False
                         break
                     seg_file_raw = seg_match.group(1).strip()
@@ -2103,11 +2193,14 @@ def cmd_promote_driver(
                     if not seg_file_path.is_absolute():
                         seg_file_path = Path(".").resolve() / seg_file_raw
                     if not seg_file_path.is_file():
+                        _cs_refusal_reason = (
+                            f"indirect call site {seg_label} file '{seg_file_raw}' does not exist."
+                        )
                         print(
-                            f"[promote-driver] FAIL  {driver_path.name} -- "
-                            f"indirect call site {seg_label} file '{seg_file_raw}' does not exist.",
+                            f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
                             file=sys.stderr,
                         )
+                        _cs_refusal_class = RefusalClass.call_site_file_not_found
                         cs_ok = False
                         break
                     # Same containment rule as the direct form. Without it the
@@ -2119,35 +2212,44 @@ def cmd_promote_driver(
                     except (OSError, ValueError):
                         _seg_inside = False
                     if not _seg_inside:
-                        print(
-                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                        _cs_refusal_reason = (
                             f"indirect call site {seg_label} file '{seg_file_raw}' is "
-                            f"outside the package under analysis.",
+                            f"outside the package under analysis."
+                        )
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
                             file=sys.stderr,
                         )
+                        _cs_refusal_class = RefusalClass.call_site_outside_package
                         cs_ok = False
                         break
                     try:
                         seg_text_lines = seg_file_path.read_text(encoding="utf-8", errors="replace").splitlines()
                         if seg_line < 1 or seg_line > len(seg_text_lines):
-                            print(
-                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                            _cs_refusal_reason = (
                                 f"indirect call site {seg_label} line {seg_line} is out of range "
-                                f"for '{seg_file_raw}' ({len(seg_text_lines)} lines).",
+                                f"for '{seg_file_raw}' ({len(seg_text_lines)} lines)."
+                            )
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
                                 file=sys.stderr,
                             )
+                            _cs_refusal_class = RefusalClass.call_site_line_out_of_range
                             cs_ok = False
                             break
                         seg_line_text = seg_text_lines[seg_line - 1]
                         if check_name and func_simple_name not in seg_line_text:
-                            print(
-                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                            _cs_refusal_reason = (
                                 f"function name '{func_simple_name}' not found on "
                                 f"{seg_label} line {seg_line} of '{seg_file_raw}': "
                                 f"{seg_line_text.strip()!r}. "
-                                f"Correct the '# call site (indirect):' comment.",
+                                f"Correct the '# call site (indirect):' comment."
+                            )
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
                                 file=sys.stderr,
                             )
+                            _cs_refusal_class = RefusalClass.name_not_on_line
                             cs_ok = False
                             break
                         # Rule 2b: the name being present is not enough.  A
@@ -2156,35 +2258,47 @@ def cmd_promote_driver(
                         if check_name:
                             _bad = _is_not_a_call_site(seg_line_text, func_simple_name)
                             if _bad:
-                                print(
-                                    f"[promote-driver] FAIL  {driver_path.name} -- "
+                                _cs_refusal_reason = (
                                     f"{seg_label} line {seg_line} of '{seg_file_raw}' "
-                                    f"cannot be a call site: {_bad}.",
+                                    f"cannot be a call site: {_bad}."
+                                )
+                                print(
+                                    f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
                                     file=sys.stderr,
                                 )
+                                _cs_refusal_class = RefusalClass.line_not_a_call_site
                                 cs_ok = False
                                 break
                         # Rule 3: neither line may fall inside the function's own body.
                         if Path(seg_file_raw).resolve() == Path(src_abs).resolve() and body_start <= seg_line <= body_end:
-                            print(
-                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                            _cs_refusal_reason = (
                                 f"indirect call site {seg_label} line {seg_line} falls inside "
-                                f"the target function's own body range ({body_start}-{body_end}).",
+                                f"the target function's own body range ({body_start}-{body_end})."
+                            )
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
                                 file=sys.stderr,
                             )
+                            _cs_refusal_class = RefusalClass.call_site_inside_own_body
                             cs_ok = False
                             break
                     except OSError as _cs_err:
-                        print(
-                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                        _cs_refusal_reason = (
                             f"could not read indirect call site {seg_label} file "
-                            f"'{seg_file_raw}': {_cs_err}",
+                            f"'{seg_file_raw}': {_cs_err}"
+                        )
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
                             file=sys.stderr,
                         )
+                        _cs_refusal_class = RefusalClass.call_site_file_not_found
                         cs_ok = False
                         break
 
                 if not cs_ok:
+                    if _cs_refusal_class is not None:
+                        doc["units"][unit_key]["refusal_class"]  = _cs_refusal_class.value
+                        doc["units"][unit_key]["refusal_reason"] = _cs_refusal_reason
                     failed += 1
                     continue
 
@@ -2201,12 +2315,16 @@ def cmd_promote_driver(
 
                     # Rule 1: the file must exist.
                     if not cs_file_path.is_file():
-                        print(
-                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                        _reason = (
                             f"call site file '{cs_file_raw}' does not exist; "
-                            f"correct the '# call site:' comment in the driver file.",
+                            f"correct the '# call site:' comment in the driver file."
+                        )
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
                             file=sys.stderr,
                         )
+                        doc["units"][unit_key]["refusal_class"]  = RefusalClass.call_site_file_not_found.value
+                        doc["units"][unit_key]["refusal_reason"] = _reason
                         failed += 1
                         continue
 
@@ -2219,13 +2337,17 @@ def cmd_promote_driver(
                     except (OSError, ValueError):
                         _inside = False
                     if not _inside:
-                        print(
-                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                        _reason = (
                             f"call site '{cs_file_raw}' is outside the package under "
                             f"analysis; a driver cannot cite itself or an unmeasured "
-                            f"file as where the function is reached in production.",
+                            f"file as where the function is reached in production."
+                        )
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
                             file=sys.stderr,
                         )
+                        doc["units"][unit_key]["refusal_class"]  = RefusalClass.call_site_outside_package.value
+                        doc["units"][unit_key]["refusal_reason"] = _reason
                         failed += 1
                         continue
 
@@ -2236,55 +2358,73 @@ def cmd_promote_driver(
                     try:
                         cs_lines = cs_file_path.read_text(encoding="utf-8", errors="replace").splitlines()
                         if cs_line < 1 or cs_line > len(cs_lines):
-                            print(
-                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                            _reason = (
                                 f"call site line {cs_line} is out of range for "
                                 f"'{cs_file_raw}' ({len(cs_lines)} lines); "
-                                f"correct the '# call site:' comment.",
+                                f"correct the '# call site:' comment."
+                            )
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
                                 file=sys.stderr,
                             )
+                            doc["units"][unit_key]["refusal_class"]  = RefusalClass.call_site_line_out_of_range.value
+                            doc["units"][unit_key]["refusal_reason"] = _reason
                             failed += 1
                             continue
                         cs_text = cs_lines[cs_line - 1]
                         if func_simple_name not in cs_text:
-                            print(
-                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                            _reason = (
                                 f"function name '{func_simple_name}' not found on "
                                 f"line {cs_line} of '{cs_file_raw}'; "
-                                f"correct the '# call site:' comment in the driver file.",
+                                f"correct the '# call site:' comment in the driver file."
+                            )
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
                                 file=sys.stderr,
                             )
+                            doc["units"][unit_key]["refusal_class"]  = RefusalClass.name_not_on_line.value
+                            doc["units"][unit_key]["refusal_reason"] = _reason
                             failed += 1
                             continue
                         _bad = _is_not_a_call_site(cs_text, func_simple_name)
                         if _bad:
-                            print(
-                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                            _reason = (
                                 f"line {cs_line} of '{cs_file_raw}' cannot be a "
-                                f"call site: {_bad}.",
+                                f"call site: {_bad}."
+                            )
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
                                 file=sys.stderr,
                             )
+                            doc["units"][unit_key]["refusal_class"]  = RefusalClass.line_not_a_call_site.value
+                            doc["units"][unit_key]["refusal_reason"] = _reason
                             failed += 1
                             continue
                     except OSError as _cs_err:
+                        _reason = f"could not read call site file '{cs_file_raw}': {_cs_err}"
                         print(
-                            f"[promote-driver] FAIL  {driver_path.name} -- "
-                            f"could not read call site file '{cs_file_raw}': {_cs_err}",
+                            f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
                             file=sys.stderr,
                         )
+                        doc["units"][unit_key]["refusal_class"]  = RefusalClass.call_site_file_not_found.value
+                        doc["units"][unit_key]["refusal_reason"] = _reason
                         failed += 1
                         continue
 
                     # Rule 3: call site must not fall inside the target's own body.
                     if Path(cs_file_raw).resolve() == Path(src_abs).resolve() and body_start <= cs_line <= body_end:
-                        print(
-                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                        _reason = (
                             f"call site line {cs_line} falls inside the target function's "
                             f"own body range ({body_start}-{body_end}); a function cannot "
                             f"be its own caller.  Correct the '# call site:' comment "
-                            f"in the driver file.",
+                            f"in the driver file."
+                        )
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
                             file=sys.stderr,
                         )
+                        doc["units"][unit_key]["refusal_class"]  = RefusalClass.call_site_inside_own_body.value
+                        doc["units"][unit_key]["refusal_reason"] = _reason
                         failed += 1
                         continue
                 else:
@@ -2293,12 +2433,16 @@ def cmd_promote_driver(
                     # it would record the function as reached in production on an
                     # assertion nobody can check, which is the failure this gate exists
                     # to prevent.
-                    print(
-                        f"[promote-driver] FAIL  {driver_path.name} -- "
+                    _reason = (
                         f"call site {call_site!r} is not in 'file:line' form, so there "
-                        f"is nothing to open and confirm.",
+                        f"is nothing to open and confirm."
+                    )
+                    print(
+                        f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
                         file=sys.stderr,
                     )
+                    doc["units"][unit_key]["refusal_class"]  = RefusalClass.call_site_not_file_line.value
+                    doc["units"][unit_key]["refusal_reason"] = _reason
                     failed += 1
                     continue
 
@@ -2349,6 +2493,127 @@ def cmd_promote_driver(
         file=sys.stderr,
     )
     return 0 if failed == 0 else 1
+
+
+# ---------------------------------------------------------------------------
+# --refusal-report
+# ---------------------------------------------------------------------------
+
+def cmd_refusal_report(
+    drivers_dir: Path,
+    evidence_path: Path,
+    python: str,
+    pkg_abs: str,
+    timeout: int,
+) -> int:
+    """Run every driver against a scratch copy of evidence.json and print the
+    refusal distribution.  The real evidence file is never written.
+
+    Returns 0 always (this is a reporting command, not a gate).
+    """
+    if not drivers_dir.is_dir():
+        print(f"[refusal-report] ERROR: drivers directory not found: {drivers_dir}", file=sys.stderr)
+        return 1
+
+    driver_paths = sorted(drivers_dir.glob("*.py"))
+    if not driver_paths:
+        print("[refusal-report] no driver files found in", drivers_dir, file=sys.stderr)
+        return 0
+
+    # Deep-copy the evidence document so the real file is never touched.
+    with open(evidence_path, encoding="utf-8") as fh:
+        doc_original = json.load(fh)
+    doc_scratch = copy.deepcopy(doc_original)
+
+    # Write the scratch copy to a temp file so cmd_promote_driver can use its
+    # normal read/write path without touching the real file.
+    import tempfile as _tmp
+    tmp_fd, tmp_path = _tmp.mkstemp(suffix=".json", prefix="fl_refusal_")
+    try:
+        with os.fdopen(tmp_fd, "w", encoding="utf-8") as fh:
+            json.dump(doc_scratch, fh, indent=2)
+
+        scratch_path = Path(tmp_path)
+
+        # Run the full promote logic against the scratch file.
+        # cmd_promote_driver writes its results back into scratch_path via
+        # os.replace — the real evidence_path is untouched.
+        cmd_promote_driver(
+            driver_paths=driver_paths,
+            evidence_path=scratch_path,
+            python=python,
+            pkg_abs=pkg_abs,
+            timeout=timeout,
+        )
+
+        # Read back the annotated scratch document.
+        with open(scratch_path, encoding="utf-8") as fh:
+            doc_after = json.load(fh)
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+    # ── tally outcomes ────────────────────────────────────────────────────
+    attempted   = len(driver_paths)
+    promoted    = 0
+    redundant   = 0
+    refused_by_class: dict[str, int] = {}
+
+    for driver_path in driver_paths:
+        stem = driver_path.stem
+        # Find the matching unit in the annotated document.
+        unit = None
+        for key, u in doc_after.get("units", {}).items():
+            if "::" not in key:
+                continue
+            qname_part = key.split("::", 1)[1]
+            if "#" in qname_part:
+                qname_part = qname_part.rsplit("#", 1)[0]
+            if qname_part == stem:
+                unit = u
+                break
+
+        if unit is None:
+            # unit_not_found — driver stem has no matching unit key
+            rc = RefusalClass.unit_not_found.value
+            refused_by_class[rc] = refused_by_class.get(rc, 0) + 1
+            continue
+
+        prov = unit.get("provenance", PROVENANCE_NEVER)
+        if prov == PROVENANCE_UNDER_DRIVER:
+            promoted += 1
+        elif prov == PROVENANCE_IN_SITU and unit.get("driver_redundant_baseline"):
+            redundant += 1
+        else:
+            # Refused.  Read back the refusal_class that cmd_promote_driver wrote.
+            rc = unit.get("refusal_class", "unknown")
+            refused_by_class[rc] = refused_by_class.get(rc, 0) + 1
+
+    total_refused = sum(refused_by_class.values())
+
+    # ── print the distribution ────────────────────────────────────────────
+    print()
+    print("=" * 60)
+    print("  REFUSAL REPORT — driver evaluation distribution")
+    print("=" * 60)
+    print(f"  Drivers measured : {attempted}")
+    print(f"  Promoted         : {promoted}")
+    print(f"  Made redundant   : {redundant}  (unit reached by a baseline)")
+    print(f"  Refused          : {total_refused}")
+    if refused_by_class:
+        print()
+        print(f"  {'Refusal class':<36} {'Count':>5}")
+        print("  " + "-" * 44)
+        for rc_val, count in sorted(refused_by_class.items(), key=lambda kv: -kv[1]):
+            print(f"  {rc_val:<36} {count:>5}")
+    print("=" * 60)
+    print()
+    print("  NOTE: this report ran drivers against a scratch copy of")
+    print("  evidence.json.  The published evidence file was not changed.")
+    print()
+    return 0
 
 
 # ---------------------------------------------------------------------------
@@ -2437,6 +2702,18 @@ def main(argv: list[str] | None = None) -> int:
         help="Per-driver subprocess timeout in seconds (default: 30).",
     )
 
+    # ── --refusal-report ──────────────────────────────────────────────────
+    parser.add_argument(
+        "--refusal-report", dest="refusal_report", action="store_true",
+        help=(
+            "Run every driver in --drivers-dir against a COPY of the evidence "
+            "file and print the refusal distribution.  The real evidence file is "
+            "never modified.  Requires --evidence pointing at the evidence.json to "
+            "read, and the package path recorded in that file must still be valid.  "
+            "Use --pkg to override the package path."
+        ),
+    )
+
     args = parser.parse_args(argv)
 
     # ── --promote-driver fast-path ────────────────────────────────────────
@@ -2499,6 +2776,52 @@ def main(argv: list[str] | None = None) -> int:
             evidence_path=evidence_path,
             python=python_interp,
             pkg_abs=pkg_abs,
+            timeout=args.driver_timeout,
+        )
+
+    # ── --refusal-report fast-path ────────────────────────────────────────
+    if args.refusal_report:
+        evidence_path_str = args.evidence_out or str(Path(__file__).parent / "evidence.json")
+        evidence_path = Path(evidence_path_str)
+        if not evidence_path.is_file():
+            print(
+                f"[refusal-report] ERROR: evidence file not found: {evidence_path}\n"
+                f"  Pass --evidence <path> to specify the evidence.json to read.",
+                file=sys.stderr,
+            )
+            return 1
+
+        # Resolve pkg_abs.
+        if args.pkg_for_driver:
+            pkg_abs_rr = str(Path(args.pkg_for_driver).resolve())
+        else:
+            with open(evidence_path, encoding="utf-8") as fh:
+                _ev_rr = json.load(fh)
+            _bl0_rr = (_ev_rr.get("baselines") or [{}])[0] if _ev_rr.get("baselines") else _ev_rr.get("baseline", {})
+            pkg_abs_rr = _bl0_rr.get("package", "")
+            if not pkg_abs_rr:
+                print(
+                    "[refusal-report] ERROR: cannot determine package path. "
+                    "Pass --pkg <path> or ensure evidence.json has baselines[0].package set.",
+                    file=sys.stderr,
+                )
+                return 1
+
+        # Resolve python interpreter.
+        python_interp_rr = args.python
+        if python_interp_rr == sys.executable:
+            with open(evidence_path, encoding="utf-8") as fh:
+                _ev_rr2 = json.load(fh)
+            _bl0_rr2 = (_ev_rr2.get("baselines") or [{}])[0] if _ev_rr2.get("baselines") else _ev_rr2.get("baseline", {})
+            cmd_list_rr = _bl0_rr2.get("command", [])
+            if cmd_list_rr:
+                python_interp_rr = cmd_list_rr[0]
+
+        return cmd_refusal_report(
+            drivers_dir=Path(args.drivers_dir),
+            evidence_path=evidence_path,
+            python=python_interp_rr,
+            pkg_abs=pkg_abs_rr,
             timeout=args.driver_timeout,
         )
 

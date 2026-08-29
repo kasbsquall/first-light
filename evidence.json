@@ -1022,7 +1022,9 @@
         162
       ],
       "driver_attempted": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.aggregators.stdev.py",
-      "driver_declared_call_site": "target/visidata/visidata/aggregators.py:93 -- self.funcValues(vals) where funcValues=stdev"
+      "driver_declared_call_site": "target/visidata/visidata/aggregators.py:93 -- self.funcValues(vals) where funcValues=stdev",
+      "refusal_class": "name_not_on_line",
+      "refusal_reason": "function name 'stdev' not found on line 93 of 'target/visidata/visidata/aggregators.py'; correct the '# call site:' comment in the driver file."
     },
     "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\aggregators.py::visidata.aggregators._percentile#169": {
       "file": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\aggregators.py",
@@ -18362,7 +18364,9 @@
         72
       ],
       "driver_attempted": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\drivers\\visidata.path.vstat.py",
-      "driver_declared_call_site": ""
+      "driver_declared_call_site": "",
+      "refusal_class": "no_call_site",
+      "refusal_reason": "no '# call site:' comment; a driver must declare where the function is reached in production so the claim can be checked"
     },
     "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\path.py::visidata.path.filesize#74": {
       "file": "C:\\Users\\User\\Downloads\\proyectos2026\\bobhackathon\\first-light\\target\\visidata\\visidata\\path.py",
