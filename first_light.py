@@ -2431,13 +2431,24 @@ def _cites_the_right_function(cited: str, defining: str, name: str) -> str | Non
 
 
 def _defines_how(defining: str, name: str):
-    """Describe how *name* is defined in *defining*: (is_method, class_name, dynamic).
+    """Describe how *name* is defined in *defining*.
 
-    ``dynamic`` is True when the function is written at module level but carries a
-    decorator that attaches it to a class at import time. visidata does this
+    Returns ``(is_method, class_name, dynamic, nested)``, or ``None`` when the
+    name is not defined in that file at all.
+
+    ``dynamic`` is True when the function is written at module level but carries
+    a decorator that attaches it to a class at import time. visidata does this
     everywhere with ``@Sheet.api``, so ``sheet.changestr(...)`` really does reach
-    the module-level ``changestr``. Returns ``None`` when the name is not defined
-    in that file at all.
+    the module-level ``changestr``.
+
+    ``nested`` is True when the definition sits inside another function. That
+    distinction matters because the first version of this only looked at module
+    level and at class bodies, so a nested ``def`` came back as "not defined
+    here" and the receiver rule switched itself off. An audit found 71 units in
+    that state and one live citation: ``sqlite.py:183`` reads
+    ``for r in adds.values():`` where ``adds`` is a plain dict, and it satisfied
+    a claim about the nested ``def values(row, cols)`` twelve lines above. The
+    same shape as the ``ret.append`` case the rule was written to stop.
     """
     try:
         tree = ast.parse(Path(defining).read_text(encoding="utf-8", errors="replace"))
@@ -2449,7 +2460,7 @@ def _defines_how(defining: str, name: str):
             for child in node.body:
                 if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)) \
                         and child.name == name:
-                    return (True, node.name, False)
+                    return (True, node.name, False, False)
 
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name:
@@ -2459,7 +2470,14 @@ def _defines_how(defining: str, name: str):
                 # @Sheet.api, @VisiData.api, @BaseSheet.class_api and friends
                 if isinstance(d, ast.Attribute) and d.attr.endswith("api"):
                     dynamic = True
-            return (False, None, dynamic)
+            return (False, None, dynamic, False)
+
+    # Anything left is defined somewhere deeper: inside a function, or inside a
+    # class inside a function. Report it as found-but-nested so the caller can
+    # refuse rather than fall through to a pass.
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name:
+            return (False, None, False, True)
     return None
 
 
@@ -2511,7 +2529,14 @@ def _receiver_is_plausible(cited: str, line_no: int, name: str,
     how = _defines_how(defining, name)
     if how is None:
         return None      # not defined there; the import rule owns that case
-    is_method, class_name, dynamic = how
+    is_method, class_name, dynamic, nested = how
+
+    if nested:
+        # A closure's name is not reachable as an attribute of anything, so an
+        # attribute call cannot be a citation for it. Refusing costs nothing a
+        # bare call would not still buy.
+        return ("%s is defined inside another function, so an attribute call "
+                "cannot be reaching it" % name)
 
     if isinstance(receiver, ast.Name):
         who = receiver.id

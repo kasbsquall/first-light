@@ -320,6 +320,20 @@ def test_receiver_rule() -> None:
     check("the receiver rule refuses it",
           FL._receiver_is_plausible(str(src), 34, "append", str(src)) is not None)
 
+    # The same shape, resurrected by a nested def. The first version of the rule
+    # only looked at module level and class bodies, so a closure came back as
+    # "not defined here" and the rule switched itself off for 71 units. An audit
+    # found this one live: adds is a plain dict.
+    sq = base / "loaders" / "sqlite.py"
+    if sq.is_file():
+        nested_line = sq.read_text(encoding="utf-8", errors="replace").splitlines()[182]
+        check("sqlite.py:183 is still for r in adds.values()",
+              "adds.values()" in nested_line, "-> %r" % nested_line.strip())
+        check("a nested def is found, not reported as absent",
+              FL._defines_how(str(sq), "values") is not None)
+        check("the receiver rule refuses an attribute call on a nested def",
+              FL._receiver_is_plausible(str(sq), 183, "values", str(sq)) is not None)
+
     # Every call site this repository actually publishes must survive the rule,
     # including the one attribute call among them.
     real = [

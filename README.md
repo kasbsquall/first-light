@@ -253,7 +253,13 @@ passes none of them.
 
 This resolves the receiver by shape, not by type inference, so it still cannot
 prove a binding. What it removes is the class of citation where the receiver
-obviously could not be the function. It is deliberately willing to refuse a true
+obviously could not be the function, for definitions at module level and in a
+class body. A `def` nested inside another function is refused outright: a
+closure's name is not reachable as an attribute of anything, so an attribute
+call cannot be a citation for it. The first version of this rule reported a
+nested definition as absent and then passed the citation, which left it inert
+for 71 units and let `sqlite.py:183`, `for r in adds.values():` on a plain
+dict, stand as evidence for a nested `def values`. It is deliberately willing to refuse a true
 citation: a refusal costs a promotion, and that is the direction this tool
 should be wrong in.
 
