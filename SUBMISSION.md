@@ -33,9 +33,10 @@ be confirmed, is refused, and the evidence keeps both facts: the driver reached
 the function, and its claim could not be checked.
 
 The evidence file is machine-readable, and a Bob `PreToolUse` hook reads it
-before every edit, so the agent is told what is known about the function it is
-changing. First Light was built with IBM Bob across ten tasks; `bob_sessions/`
-holds that record and an index of what it shows.
+before every edit. When the payload carries a line number the hook names that
+function's provenance; when it does not, it reports the file's tracked state and
+says the edit could not be placed. First Light was built with IBM Bob across
+twelve tasks; `bob_sessions/` holds that record.
 
 ## Who uses it
 

@@ -35,8 +35,9 @@ Tasks 4, 5 and 7 begin with findings from an independent audit of the code Bob
 had just written. Task 6 is a self-review carry-over rather than an audit
 hand-off. Several of these exist because something in the project asserted what
 its own evidence did not support, which is the failure the tool was built to
-detect. Task 6 states it directly: "This is the second time an artifact in this
-project asserted something the evidence did not support."
+detect. The prompt that opens task 6 says so in as many words: it notes that
+this was the second time an artifact in this project had asserted something
+the evidence did not support.
 
 Tasks 8 and 12 each add a baseline. Task 8 adds the project's own test suite.
 Task 12 replays the 52 sessions the project ships as recorded command logs,
@@ -50,7 +51,7 @@ recorded as a machine-readable class on the unit.
 
 ## What this export does not cover
 
-Commits made between the Bob tasks are not in it, and they were not Bob tasks:
+Commits made between and after the Bob tasks are not in it, and they were not Bob tasks:
 they are direct edits made in response to independent audits of the code Bob had
 written. They include closing two bypasses in the promotion gate, separating the
 record of a driver reaching a function from the record of it justifying its
@@ -65,8 +66,10 @@ audit found this project asserting something its own evidence did not support.
 
 The record is not a clean line. Bob's first attempt at drivers copied function
 bodies inline instead of importing the real functions, which marked ten
-functions as observed when nothing had executed. A human caught it. Bob then
-built the coverage gate that rejects that approach and proved the gate works by
+functions as observed on the strength of drivers that never called the real
+code. A human caught it. One of the ten did produce genuine coverage, by
+exec'ing the source file directly, and Bob found that itself while building
+the gate. Bob then built the coverage gate that rejects that approach and proved the gate works by
 writing a deliberately bad inline-copy driver and confirming the real source
 file showed zero hits.
 

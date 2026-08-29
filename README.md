@@ -177,12 +177,12 @@ directories.  Whole package includes them.
 
 ## How this was built
 
-First Light was built with IBM Bob across ten tasks. `bob_sessions/` holds the
-exported record of every one of them, as a readable Markdown transcript and as
+First Light was built with IBM Bob across twelve tasks.
+[`bob_sessions/`](bob_sessions/README.md) holds the exported record of every one of them, as a readable Markdown transcript and as
 JSON, with an index naming each task and what the record shows. That includes
 the parts that do not flatter the process: Bob's first ten drivers copied
 function bodies instead of importing them and marked ten functions as observed
-when nothing had executed, a human caught it, and the coverage gate that now
+on the strength of drivers that never called the real code, a human caught it, and the coverage gate that now
 rejects that approach was built in response.
 
 The index also states what the export does not cover, because commits made
@@ -226,8 +226,8 @@ the distribution without touching the published evidence file:
 
 ```
 Drivers measured : 10
-Promoted         : 3
-Made redundant   : 5  (unit reached by a baseline)
+Promoted         : 2
+Made redundant   : 6  (unit reached by a baseline)
 Refused          : 2
 
 Refusal class                        Count
@@ -240,7 +240,9 @@ no_call_site                             1
 results. The two refused drivers are `visidata.aggregators.stdev` (its declared
 call site names a line where `self.funcValues(vals)` appears rather than
 `stdev`) and `visidata.path.vstat` (no call site declared at all). Both remain
-`never_observed`. The counts are read from the generated output, not estimated.
+`never_observed`. The block above is the output of `--refusal-report` at the
+time of writing. Adding a baseline moves it, so regenerate it whenever one
+changes rather than trusting that it is still current.
 
 This was attempted and not completed in the sense of the original watsonx.ai
 goal. The IBM Cloud account provisioned for this event exposes a catalog of

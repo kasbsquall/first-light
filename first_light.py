@@ -641,33 +641,38 @@ R.classList.add('js-on');
   requestAnimationFrame(frame);
 })();
 
-/* Filtering. The map was 250 rows with no way in; this makes the number
-   in the headline something you can walk to. */
+/* Filtering. The map was 250 rows with no way in; this makes the number in the
+   headline something you can walk to.
+
+   Scope is separate from the content filter on purpose. They are different
+   questions, and presenting them as one row of identical toggles is what made
+   clicking a second chip silently undo the first. */
 (function filters() {
   const search = document.getElementById('fl-search');
-  const chips  = Array.from(document.querySelectorAll('.chip'));
+  const scope  = document.getElementById('fl-scope');
+  const radios = Array.from(document.querySelectorAll('.chipset .chip'));
   const status = document.getElementById('fl-status');
   const rows   = Array.from(document.querySelectorAll('.map-row'));
   if (!rows.length) return;
-  const state = { q: '', only: 'all' };
+  const state = { q: '', show: 'all', productOnly: true };
 
   function apply() {
-    let shown = 0, never = 0;
+    let shown = 0, never = 0, total = 0;
     rows.forEach(row => {
-      const name = (row.dataset.name || '').toLowerCase();
+      const name   = (row.dataset.name || '').toLowerCase();
       const nNever = parseInt(row.dataset.never || '0', 10);
       const nTotal = parseInt(row.dataset.total || '0', 10);
       const inScope = row.dataset.scope === 'product';
       let ok = !state.q || name.indexOf(state.q) !== -1;
-      if (ok && state.only === 'never')   ok = nNever > 0;
-      if (ok && state.only === 'clean')   ok = nNever === 0 && nTotal > 0;
-      if (ok && state.only === 'product') ok = inScope;
+      if (ok && state.productOnly) ok = inScope;
+      if (ok && state.show === 'never') ok = nNever > 0;
+      if (ok && state.show === 'clean') ok = nNever === 0 && nTotal > 0;
       row.hidden = !ok;
-      if (ok) { shown++; never += nNever; }
+      if (ok) { shown++; never += nNever; total += nTotal; }
     });
     if (status) {
-      status.textContent = shown + ' of ' + rows.length + ' modules, '
-                         + never + ' never observed';
+      status.textContent = shown + ' of ' + rows.length + ' modules shown, '
+                         + never + ' of ' + total + ' functions never observed';
     }
   }
 
@@ -677,12 +682,19 @@ R.classList.add('js-on');
       apply();
     });
   }
-  chips.forEach(c => {
+  if (scope) {
+    scope.addEventListener('click', () => {
+      state.productOnly = !state.productOnly;
+      scope.setAttribute('aria-checked', String(state.productOnly));
+      scope.setAttribute('aria-pressed', String(state.productOnly));
+      apply();
+    });
+  }
+  radios.forEach(c => {
     c.addEventListener('click', () => {
-      const v = c.dataset.only;
-      state.only = (state.only === v) ? 'all' : v;
-      chips.forEach(o => o.setAttribute('aria-pressed',
-        String(o.dataset.only === state.only)));
+      state.show = c.dataset.only;
+      radios.forEach(o => o.setAttribute('aria-checked',
+        String(o.dataset.only === state.show)));
       apply();
     });
   });
@@ -997,13 +1009,15 @@ body {
 }
 
 .map-row__count--high { color: #C89C6A; }
-.map-row__count--none { color: #5A5149; }
+.map-row__count--none { color: #8A7F74; }
 
 /* Rows outside the product scope are in the map but not in the headline
    figure. Saying so is cheaper than letting someone count squares and get a
    different number. */
 .map-row--excluded .map-row__name { opacity: 0.55; }
-.map-row--excluded /* The map was 250 rows tall, which pushed the driver results, the refusal
+.map-row--excluded .map-row__cells { opacity: 0.5; }
+
+/* The map was 250 rows tall, which pushed the driver results, the refusal
    distribution and the footer so far down that nobody reached them. It now
    scrolls inside a bounded box: the whole population is still there, and the
    rest of the report is one screen away instead of nine. */
@@ -1043,7 +1057,7 @@ body {
   font-size: 9px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #6B6055;
+  color: #9A8E82;
   flex-shrink: 0;
 }
 
@@ -1226,6 +1240,16 @@ body {
 
 .chip:hover { color: var(--text); border-color: var(--muted); }
 .chip:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
+.chipset {
+  display: inline-flex;
+  gap: 0;
+}
+
+.chipset .chip + .chip { border-left: none; }
+
+.chip--scope { margin-right: 4px; }
+
+.chip[aria-checked="true"],
 .chip[aria-pressed="true"] {
   color: var(--bg);
   background: var(--amber);
@@ -1906,7 +1930,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
                 f'</tr>'
             )
         _refusal_section_html = f"""<section style="margin-bottom:48px;">
-  <div class="section-heading">Refusal distribution: {e(str(total_drivers_count))} drivers measured</div>
+  <h2 class="section-heading">Refusal distribution: {e(str(total_drivers_count))} drivers measured</h2>
   <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">
     {e(str(total_drivers_count))} drivers were measured against this evidence file.
     {e(str(len(confirmed_drivers)))} promoted &nbsp;&middot;&nbsp;
@@ -1969,7 +1993,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     <a href="#drivers">Driver results</a>
     <a href="#map">Evidence map</a>
   </nav>
-  <span class="headline__never">{e(str(prod_never))}</span>
+  <h1 class="headline__never">{e(str(prod_never))}</h1>
   <span class="headline__word">product-code functions never observed</span>
 
   <div class="headline__context">
@@ -2078,21 +2102,36 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
      SECTION 3 — EVIDENCE MAP
      ═══════════════════════════════════════════════════════ -->
 <section class="map-section rise" id="map" style="--i:3">
-  <div class="section-heading">Evidence map: every module, every function</div>
+  <h2 class="section-heading">Evidence map: every module, every function</h2>
 
-  <div class="toolbar" role="group" aria-label="Filter the evidence map">
+  <div class="toolbar">
     <label class="sr-only" for="fl-search">Filter modules by name</label>
     <input id="fl-search" class="toolbar__search" type="search"
            placeholder="filter modules by name" autocomplete="off">
-    <button type="button" class="chip" data-only="never" aria-pressed="false">
-      has unobserved
-    </button>
-    <button type="button" class="chip" data-only="clean" aria-pressed="false">
-      fully observed
-    </button>
-    <button type="button" class="chip" data-only="product" aria-pressed="false">
+
+    <!-- Scope is a switch, not one of the filters. It defaults to on so the
+         map's tally matches the headline: the number this report is about is
+         the product-code figure, and showing the whole-package total under it
+         was the map arguing with the page. -->
+    <button type="button" class="chip chip--scope" id="fl-scope"
+            role="switch" aria-checked="true" aria-pressed="true">
       product scope only
     </button>
+
+    <!-- These two are mutually exclusive and say so, rather than looking like
+         independent toggles and silently clearing each other. -->
+    <span class="chipset" role="radiogroup" aria-label="Show modules that are">
+      <button type="button" class="chip" data-only="never" role="radio" aria-checked="false">
+        with unobserved
+      </button>
+      <button type="button" class="chip" data-only="clean" role="radio" aria-checked="false">
+        fully observed
+      </button>
+      <button type="button" class="chip" data-only="all" role="radio" aria-checked="true">
+        all
+      </button>
+    </span>
+
     <span class="toolbar__status" id="fl-status" role="status" aria-live="polite"></span>
   </div>
   <div class="legend">
@@ -2122,10 +2161,10 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
      SECTION 4 — DRIVER RESULTS
      ═══════════════════════════════════════════════════════ -->
 <section class="drivers-section rise" style="--i:2">
-  <div class="section-heading" id="drivers">Driver results: {e(str(len(confirmed_drivers)))} confirmed, {e(str(len(redundant_drivers)))} driver redundant, {e(str(len(attempted_drivers)))} not confirmed</div>
+  <h2 class="section-heading" id="drivers">Driver results: {e(str(len(confirmed_drivers)))} confirmed, {e(str(len(redundant_drivers)))} driver redundant, {e(str(len(attempted_drivers)))} not confirmed</h2>
 {drivers_html}
 {f'<div style="margin-top:28px"><div class="section-heading" style="color:#b8a030;">Driver made redundant by baseline ({e(str(len(redundant_drivers)))})</div><p style="font-size:12px;color:var(--muted);margin-bottom:12px;">These functions were genuinely observed by a baseline, making the corresponding driver redundant. The unit&#x2019;s provenance is observed_in_situ. The driver file is kept as a record of the path that was built.</p>' + redundant_html + '</div>' if redundant_drivers else ''}
-{f'<div style="margin-top:20px"><div class="section-heading" style="color:#cc4444;">Attempted, not confirmed ({e(str(len(attempted_drivers)))})</div>' + attempted_html + '</div>' if attempted_drivers else ''}
+{f'<div style="margin-top:20px"><h2 class="section-heading" style="color:#cc4444;">Attempted, not confirmed ({e(str(len(attempted_drivers)))})</h2>' + attempted_html + '</div>' if attempted_drivers else ''}
 </section>
 
 {'<hr class="sep">' if refusal_rows else ''}
