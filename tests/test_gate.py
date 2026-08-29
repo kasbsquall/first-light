@@ -161,12 +161,72 @@ def test_refusal_classes() -> None:
           "call_site_outside_package" in values)
 
 
+# ---------------------------------------------------------------------------
+# 5. The hook's --strict mode, which is a second gate.
+#
+# It shipped deciding whether to block by looking for the substring
+# "never observed" in the advisory it had just printed. The not-located message
+# ends "N never observed", so it blocked every edit to any file holding more
+# than one function: 229 of 250 in this target. Same defect as the promotion
+# gate had, opposite direction. A gate decides on a value, never on prose.
+# ---------------------------------------------------------------------------
+def test_strict_gate() -> None:
+    print(chr(10) + "--- the hook's strict mode ---")
+    import json as _json
+    import subprocess as _sub
+
+    hook = str(ROOT / "tools" / "fl_hook.py")
+    ev = ROOT / "evidence.json"
+    if not ev.exists():
+        check("evidence.json is present", False, "-> cannot exercise the hook")
+        return
+    units = _json.loads(ev.read_text(encoding="utf-8"))["units"]
+
+    def first(prov):
+        for u in units.values():
+            if u.get("provenance") == prov:
+                return u
+        return None
+
+    never, seen = first("never_observed"), first("observed_in_situ")
+
+    def run(payload):
+        r = _sub.run([sys.executable, hook, "--strict"],
+                     input=_json.dumps(payload), capture_output=True, text=True)
+        return r.returncode
+
+    cases = [
+        ("an edit with no line number does not block", 0,
+         {"tool_name": "Edit",
+          "tool_input": {"file_path": seen["file"], "old_string": "x"}}),
+        ("a never-observed function blocks", 2,
+         {"tool_input": {"file_path": never["file"], "line": never["body_start"]}}),
+        ("an observed function does not block", 0,
+         {"tool_input": {"file_path": seen["file"], "line": seen["body_start"]}}),
+        ("an untracked file does not block", 0,
+         {"tool_input": {"file_path": "/no/such/file.py", "line": 1}}),
+        ("an empty payload does not block", 0, {}),
+    ]
+    for label, want, payload in cases:
+        got = run(payload)
+        check(label, got == want, "-> exit %d, wanted %d" % (got, want))
+
+    # Without the flag nothing blocks, whatever the provenance.
+    r = _sub.run([sys.executable, hook],
+                 input=_json.dumps({"tool_input": {"file_path": never["file"],
+                                                   "line": never["body_start"]}}),
+                 capture_output=True, text=True)
+    check("without --strict a never-observed edit does not block", r.returncode == 0,
+          "-> exit %d" % r.returncode)
+
+
 def main() -> int:
     print("first_light gate tests")
     test_call_site_rule()
     test_shape_rule()
     test_body_not_def_line()
     test_refusal_classes()
+    test_strict_gate()
     print("\n%d passed, %d failed" % (PASSED, FAILED))
     return 0 if FAILED == 0 else 1
 

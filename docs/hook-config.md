@@ -58,7 +58,20 @@ ran because a driver was built to reach it (not reached by: cli, test_suite,
 replay)
 ```
 
-The hook always exits 0.  It never blocks an edit.
+By default the hook exits 0 and never blocks an edit.
+
+Pass `--strict` in the command (or set `FIRST_LIGHT_STRICT=1`) and an edit to a
+function with no execution record exits 2, which stops the write:
+
+```json
+"command": "python C:/path/to/first-light/tools/fl_hook.py --strict"
+```
+
+Strict mode blocks on the resolved provenance of the unit being edited, never on
+the text of the advisory. When the payload carries no line number the edit
+cannot be placed in one function, and not knowing which function is being edited
+is not evidence that it is unobserved, so nothing is blocked. An internal error
+in the hook does not block either.
 
 ## Selftest
 

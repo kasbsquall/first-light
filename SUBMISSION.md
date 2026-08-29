@@ -37,8 +37,8 @@ placed. Built with IBM Bob across twelve tasks; `bob_sessions/` holds the record
 
 ## Who uses it
 
-Teams pointing coding agents at code nobody has verified. One command produces
-the report and evidence file; the hook is wired once.
+Teams pointing coding agents at code nobody has verified. One pass produces the report
+and the evidence file; the hook is wired once.
 
 ## Why this is new
 

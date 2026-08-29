@@ -226,6 +226,37 @@ def _extract_fields(obj: object) -> tuple[str, int | None]:
 # Core query
 # ---------------------------------------------------------------------------
 
+def provenance_for(file_path: str, start_line: int | None) -> str | None:
+    """Return the provenance of the unit an edit lands in, or None.
+
+    None means the question could not be answered: the edit could not be placed
+    inside a single function, the file is not tracked, or the evidence is
+    missing. A caller deciding whether to block must treat None as "unknown",
+    never as "unobserved". Reading the answer out of the advisory string instead
+    was the bug this exists to remove: the not-located message ends with
+    "N never observed", and a substring test on it blocked every edit to any
+    file holding more than one function.
+    """
+    abs_path = str(Path(file_path).resolve())
+    ev_path = _find_evidence(Path(abs_path))
+    if ev_path is None:
+        return None
+    ev = _load_evidence(ev_path)
+    if not ev:
+        return None
+    units: dict = ev.get("units", {})
+    matching = [
+        u for _k, u in units.items()
+        if u.get("file") == abs_path and _overlaps(u, start_line, None)
+    ]
+    if not matching:
+        return None
+    if start_line is None and len(matching) > 1:
+        return None          # the edit was not placed; nothing is known about it
+    matching.sort(key=lambda u: u["body_end"] - u["body_start"])
+    return matching[0].get("provenance")
+
+
 def query(
     file_path: str,
     start_line: int | None,
@@ -395,13 +426,20 @@ def _hook_main() -> None:
 
     _print(result)
 
-    if strict and _PROVENANCE_LABELS[PROVENANCE_NEVER] in result:
-        _print(
-            "[first_light] blocked by --strict: this function has no execution "
-            "record. Run it, add a driver that declares a verifiable call site, "
-            "or edit it with --strict off and accept that nothing observed it."
-        )
-        sys.exit(2)
+    if strict:
+        prov = provenance_for(file_path, start_line)
+        if prov == PROVENANCE_NEVER:
+            _print(
+                "[first_light] blocked by --strict: this function has no "
+                "execution record. Run it, add a driver that declares a "
+                "verifiable call site, or edit with --strict off and accept "
+                "that nothing observed it."
+            )
+            sys.exit(2)
+        # prov is None when the edit could not be placed in one function. Not
+        # knowing which function is being edited is not evidence that it is
+        # unobserved, and blocking on it would stop every edit to any file with
+        # more than one function in it.
 
     sys.exit(0)
 

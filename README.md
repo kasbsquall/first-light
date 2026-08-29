@@ -289,7 +289,7 @@ the tool provides one.  Edit, Write and MultiEdit do not, so the hook reports
 the file's state and says the edit could not be placed rather than naming a
 function it cannot locate.  The hook
 looks up the function unit that contains that line in `evidence.json` and prints
-one advisory line describing the unit's provenance.  It always exits 0 and never
+one advisory line describing the unit's provenance.  By default it exits 0 and never
 blocks an edit.
 
 To activate the hook, add the entry documented in `docs/hook-config.md` to

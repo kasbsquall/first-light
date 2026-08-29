@@ -362,6 +362,23 @@ body {
 .map-body::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 .map-body { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 
+.map-colhead {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 0 0 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.map-colhead__label { width: 152px; flex-shrink: 0; }
+.map-colhead__count { width: 96px; flex-shrink: 0; }
+
+@media (max-width: 720px) { .map-colhead { display: none; } }
+
 .map-hint {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -382,6 +399,16 @@ body {
 @media (max-width: 720px) {
   .map-row { flex-direction: column; gap: 4px; }
   .map-row__label { width: auto; }
+}
+
+/* The context strip and the legend did not wrap, so on a 375px phone the body
+   itself scrolled sideways. A report that a judge opens on a phone should not
+   need two axes. */
+.headline__context, .legend { flex-wrap: wrap; }
+
+@media (max-width: 420px) {
+  .headline__context { gap: 14px 18px; }
+  .toolbar { gap: 8px; }
 }
 
 .map-row__cells {
@@ -991,6 +1018,11 @@ table { display: block; overflow-x: auto; max-width: 100%; }
     </div>
   </div>
   <div class="map">
+  <div class="map-colhead">
+    <span class="map-colhead__label">module</span>
+    <span class="map-colhead__count">never / total</span>
+    <span class="map-colhead__cells">one square per function, hover for its name</span>
+  </div>
 <div class="map-body">
 <div class="map-row" data-name="visidata\canvas.py" data-never="53" data-total="82" data-scope="product"><span class="map-row__label" title="visidata\canvas.py"><span class="map-row__name">visidata\canvas.py</span><span class="map-row__count map-row__count--high" title="53 of 82 never observed">53/82</span></span><div class="map-row__cells"><span class="cell cell--insitu" title="visidata.canvas.Point.__init__"></span>
 <span class="cell cell--never" title="visidata.canvas.Point.__repr__"></span>
@@ -3784,9 +3816,7 @@ table { display: block; overflow-x: auto; max-width: 100%; }
 <span class="cell cell--insitu" title="visidata.tests.test_shell.test_substitute"></span>
 <span class="cell cell--insitu" title="visidata.tests.test_shell.test_colref_regex"></span></div></div>
 </div>
-  <p class="map-hint">Every square is one function; hover one to see which. The
-     figure beside each module name is <strong>never observed of total</strong>.
-     The map scrolls, and the report continues below it.</p>
+
   </div>
 </section>
 
