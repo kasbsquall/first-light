@@ -57,8 +57,9 @@ def in_temp_file(source: str):
 # 1. The call-site rule must accept a call and nothing else.
 #
 # The rule was a substring test until an audit cited "def _recursive_bezier" to
-# promote "bezier". Six forms mention the name without calling it, and every one
-# of them satisfied the old rule.
+# promote "bezier". All ten forms below mention the name without calling it, so
+# all ten satisfied that rule. The shape check in section 2 already caught four
+# of them; the other six needed the AST rewrite.
 # ---------------------------------------------------------------------------
 NOT_CALLS = [
     ("definition of another function", "def _recursive_bezier(x1, y1):\n    pass\n"),

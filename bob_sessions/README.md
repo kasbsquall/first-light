@@ -68,7 +68,7 @@ over.
 
 Commits made between and after the Bob tasks are not in it, and they were not Bob tasks:
 they are direct edits made in response to independent audits of the code Bob had
-written. They include closing three separate bypasses in the promotion gate, separating the
+written. They include closing four separate bypasses in the promotion gate, separating the
 record of a driver reaching a function from the record of it justifying its
 claim, and the design work on the report.
 
@@ -81,10 +81,12 @@ audit found this project asserting something its own evidence did not support.
 
 The record is not a clean line. Bob's first attempt at drivers copied function
 bodies inline instead of importing the real functions, which marked ten
-functions as observed on the strength of drivers that never called the real
-code. A human caught it. One of the ten did produce genuine coverage, by
-exec'ing the source file directly, and Bob found that itself while building
-the gate. Bob then built the coverage gate that rejects that approach and proved the gate works by
+functions as observed on the strength of drivers that mostly never called the
+real code. A human caught it. One of the ten did produce genuine coverage, by
+exec'ing the source file directly, and Bob found that itself while building the
+gate. That one is the only one of the batch that was measured before the rest
+were rewritten, so the record says the batch was not uniformly bad and does not
+say how many of the others would have passed. Bob then built the coverage gate that rejects that approach and proved the gate works by
 writing a deliberately bad inline-copy driver and confirming the real source
 file showed zero hits.
 
@@ -103,9 +105,11 @@ confirmed promotions from three to two.
 
 ## A limitation of the Markdown
 
-The Markdown transcript records 764 of the 771 tool calls with their arguments,
-and none of the tool results. The seven it omits are aborted calls that carry no
-arguments, so nothing is lost there; the results are a different matter. Bob's narration says a run worked; the output that
+The Markdown transcript records 764 of the 771 tool calls and none of the tool
+results. The seven calls it omits are aborted ones carrying no arguments. It
+also drops some argument values, including file contents and several patch
+bodies, so the code Bob wrote is not always visible there. All of it is in the
+JSON. Bob's narration says a run worked; the output that
 would prove it is in the JSON. For a project whose thesis is that a claim should
 travel with its evidence, that is worth stating plainly rather than leaving a
 reader to find it.

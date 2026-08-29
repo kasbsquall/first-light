@@ -147,7 +147,9 @@ the way a person drove it.
 No baseline is a superset of another.  384 product functions are reached only
 by the test suite, 144 only by the replayed sessions, and 1 only by the batch
 CLI run; 298 by the replay and the suite together, 9 by the replay and the CLI,
-and 252 by all three.  After all three, 1200 product functions have no
+and 252 by all three. Those figures cover the 1088 product functions a baseline
+reached, which is the 1082 counted in situ plus the 6 whose driver a baseline
+made redundant.  After all three, 1200 product functions have no
 execution record at all.
 
 The batch CLI run is now almost entirely subsumed: replaying real sessions
@@ -232,6 +234,46 @@ that rule used to accept; the shape check already caught the other four.
 
 ---
 
+## Refusals are recorded, not printed and dropped
+
+Every way a driver can fail the gate has a name. `RefusalClass` is a closed set
+of thirteen: the body was never reached, the driver exited non-zero, coverage
+export failed, no call site was declared, the declared call site does not parse
+as `file:line`, the cited file does not exist, it lies outside the package, the
+cited line is out of range, the line is not a call, the line is a definition or
+an import or a comment rather than a use, and the line falls inside the
+function's own body.
+
+A refused unit carries `refusal_class` and `refusal_reason` in `evidence.json`,
+so a refusal is as machine-readable as a promotion. `--refusal-report` measures
+the distribution against a scratch copy and leaves the published evidence
+untouched:
+
+```
+Drivers measured : 10
+Promoted         : 2
+Made redundant   : 6  (unit reached by a baseline)
+Refused          : 2
+
+Refusal class                        Count
+--------------------------------------------
+line_not_a_call_site                     1
+no_call_site                             1
+```
+
+`report.html` renders this as its own section. The two refused drivers are
+`visidata.aggregators.stdev`, whose declared call site names a line where
+`self.funcValues(vals)` appears rather than a call to `stdev`, and
+`visidata.path.vstat`, which declares no call site at all. Both remain
+`never_observed`, and both record that a driver did reach them.
+
+Ten drivers and two refusals measure nothing yet. What exists is the harness
+that would, and a named class recorded against every refusal. The block above is
+the output at the time of writing; adding a baseline moves it, so regenerate it
+rather than trusting that it is still current.
+
+---
+
 ## Where watsonx.ai fits
 
 Driver generation is a model-in-a-loop step, and it is where watsonx.ai belongs.
@@ -251,33 +293,6 @@ not the platform.
 Nothing here calls watsonx.ai and no reported figure depends on a model having
 been asked anything. Publishing an integration that does not run would be the
 same unverified assertion this tool exists to detect.
-
---------------------------------------------
-line_not_a_call_site                     1
-no_call_site                             1
-```
-
-`report.html` renders this distribution as its own section, next to the driver
-results. The two refused drivers are `visidata.aggregators.stdev` (its declared
-call site names a line where `self.funcValues(vals)` appears rather than
-`stdev`) and `visidata.path.vstat` (no call site declared at all). Both remain
-`never_observed`. The block above is the output of `--refusal-report` at the
-time of writing. Adding a baseline moves it, so regenerate it whenever one
-changes rather than trusting that it is still current.
-
-This was attempted and not completed in the sense of the original watsonx.ai
-goal. The IBM Cloud account provisioned for this event exposes a catalog of
-twelve infrastructure services with no AI or machine learning category, so
-watsonx.ai Runtime could not be provisioned and the project could not be
-associated with an inference instance. Authentication against IBM Cloud IAM
-succeeds and the account can list twenty foundation models,
-`ibm/granite-4-h-small` among them, but inference returns
-`no_associated_service_instance_error`.
-
-The work is scoped rather than claimed. Nothing in this repository calls
-watsonx.ai, and no part of the reported figures depends on a model having been
-asked anything. Publishing an integration that does not run would be the same
-unverified assertion this tool exists to detect.
 
 ---
 

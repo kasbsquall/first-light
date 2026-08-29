@@ -2,11 +2,10 @@
 
 ## The problem
 
-Agents write code faster than anyone can read it, and treat every function the
+Agents write code faster than anyone can read it and treat every function the
 same. To an editing agent, a function exercised by a passing test and one that
 has never executed look identical. Coverage does not close that gap: it reports
-that a line was touched, not whether anyone watched the function run. Teams read
-a coverage percentage as confidence and let agents edit on that.
+that a line was touched, not whether anyone watched the function run.
 
 We measured visidata, a widely used Python tool. Of its 2290 product functions,
 1200 have never been observed executing. That holds after running the program in
@@ -17,7 +16,7 @@ alone reaches 384, the replay alone 144, the batch run alone 1.
 ## The solution
 
 First Light enumerates every function in a package, runs baselines under
-instrumentation, and assigns each function a provenance it refuses to blur:
+instrumentation, and gives each one a provenance it refuses to blur:
 
 - `never_observed`. No baseline reached it, and no driver has a verified claim.
 - `observed_in_situ`. A baseline executed it during real operation.
@@ -37,8 +36,8 @@ placed. Built with IBM Bob across twelve tasks; `bob_sessions/` holds the record
 
 ## Who uses it
 
-Teams pointing coding agents at code nobody has verified. One pass produces the report
-and the evidence file; the hook is wired once.
+Teams pointing coding agents at code nobody has verified. One pass produces the
+report and the evidence file. The hook is wired once.
 
 ## Why this is new
 
@@ -53,6 +52,6 @@ than ship an integration that does not run.
 
 The tool demonstrated this on itself. The test suite made five of our agent's
 ten drivers unnecessary and the replay made a sixth. Two more were refused
-outright. Three promotions we had published did not survive later scrutiny, and
+outright. Two promotions we had published did not survive later scrutiny, and
 we published that too. It reports the work its own agent wasted and refuses its
 own agent's unverifiable claims.
