@@ -38,13 +38,14 @@ py -m venv target/visidata/.venv
 # Runner-layer dependencies: coverage, pytest, and windows-curses.
 .\target\visidata\.venv\Scripts\python.exe -m pip install -r requirements-runners.txt
 
-# Run the full observation pass.  Both baselines run together: the
-# program alone and the test suite alone reach different functions and
-# neither is a superset of the other, so the figure depends on both.
+# Run the full observation pass.  All three baselines run together: the
+# program alone, the test suite, and the session-log replay each reach
+# different functions; the figure depends on all three.
 .\target\visidata\.venv\Scripts\python.exe first_light.py `
     --package .\target\visidata\visidata `
     --runner  .\runners\visidata_runner.py        --runner-id cli `
     --runner  .\runners\visidata_pytest_runner.py --runner-id test_suite `
+    --runner  .\runners\visidata_replay_runner.py --runner-id replay `
     --python  .\target\visidata\.venv\Scripts\python.exe `
     --evidence evidence.json `
     --report  report.html
