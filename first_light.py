@@ -1103,12 +1103,12 @@ body {
    Every duration is under 300ms. The whole thing is off under
    prefers-reduced-motion, and the page renders complete without it: the
    animation is an enhancement, never a gate on the content. */
-.rise {
+/* The hidden state lives under .js-on and nowhere else. A bare .rise that set
+   opacity to 0 would make the whole page invisible whenever the script did not
+   run, which is the opposite of an enhancement. */
+.js-on .rise {
   opacity: 0;
   transform: translateY(6px);
-}
-
-.js-on .rise {
   animation: rise 240ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
   animation-delay: calc(var(--i, 0) * 60ms);
 }
