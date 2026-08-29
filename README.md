@@ -126,23 +126,30 @@ collisions.
 
 ## Current figures
 
-Measured against visidata 3.x, after two independent baselines: the program
-run through its own CLI, and the project's own pytest suite (256 tests
-collected, 252 passing; the 4 failures are POSIX-specific, and the counts
-and the non-zero exit code are recorded in the evidence file rather than
-filtered out).
+Measured against visidata 3.x, after three independent baselines: the program
+run through its own CLI in batch mode; the project's own pytest suite (256 tests
+collected, 252 passing, the 4 failures POSIX-specific, with the counts and the
+non-zero exit code recorded rather than filtered out); and a replay of the 52
+recorded sessions the project ships as command logs, which exercises the program
+the way a person drove it.
 
 | Scope | Total | Observed in situ | Under driver | Driver redundant | Never observed |
 |-------|------:|------------------:|-------------:|-----------------:|---------------:|
-| Product code | 2290 | 939 | 3 | 5 | 1343 |
-| Whole package | 2791 | 1007 | 3 | 5 | 1776 |
+| Product code | 2290 | 1081 | 2 | 6 | 1201 |
+| Whole package | 2791 | 1150 | 2 | 6 | 1633 |
 
-Neither baseline is a superset of the other.  The test suite reaches 682
-product functions the running program never touches; the running program
-reaches 10 the test suite never touches; 252 are reached by both.  After
-both, 1343 product functions have no execution record at all.
+No baseline is a superset of another.  383 product functions are reached only
+by the test suite, 144 only by the replayed sessions, and 1 only by the batch
+CLI run; 298 by the replay and the suite together, 9 by the replay and the CLI,
+and 252 by all three.  After all three, 1201 product functions have no
+execution record at all.
 
-The 5 counted under 'driver redundant' are functions an agent had written a driver
+The batch CLI run is now almost entirely subsumed: replaying real sessions
+reaches nearly everything it did and 144 functions besides.  That is worth
+stating rather than hiding, because it says the earlier claim to have "run the
+program" rested on a single non-interactive invocation.
+
+The 6 counted under 'driver redundant' are functions an agent had written a driver
 for before the test-suite baseline existed.  The baseline reached them on
 its own, so the driver became redundant.  Those units are marked as such
 rather than deleted, and the report shows them as their own group.
