@@ -375,12 +375,12 @@ body {
      ═══════════════════════════════════════════════════════ -->
 <header class="headline">
   <span class="label">First Light &mdash; Function Observation Report</span>
-  <span class="headline__never">1344</span>
+  <span class="headline__never">1343</span>
   <span class="headline__word">product-code functions never observed</span>
 
   <div class="headline__context">
     <div class="ctx-item ctx-item__amber">
-      <span class="ctx-item__num">946</span>
+      <span class="ctx-item__num">947</span>
       <span class="ctx-item__word">observed (product)</span>
     </div>
     <div class="ctx-item">
@@ -388,7 +388,7 @@ body {
       <span class="ctx-item__word">total (product)</span>
     </div>
     <div class="ctx-item">
-      <span class="ctx-item__num">938</span>
+      <span class="ctx-item__num">939</span>
       <span class="ctx-item__word">in-situ</span>
     </div>
     <div class="ctx-item">
@@ -406,11 +406,11 @@ body {
       <div class="scope-block__label">Product code (excl. apps, experimental, tests, vendor)</div>
       <div class="scope-block__row scope-block__row--highlight">
         <span class="scope-block__key">never observed</span>
-        <span class="scope-block__val">1344</span>
+        <span class="scope-block__val">1343</span>
       </div>
       <div class="scope-block__row">
         <span class="scope-block__key">in-situ</span>
-        <span class="scope-block__val">938</span>
+        <span class="scope-block__val">939</span>
       </div>
       <div class="scope-block__row">
         <span class="scope-block__key">under driver</span>
@@ -429,11 +429,11 @@ body {
       <div class="scope-block__label">Whole package (incl. tests &amp; vendor)</div>
       <div class="scope-block__row">
         <span class="scope-block__key">never observed</span>
-        <span class="scope-block__val">1777</span>
+        <span class="scope-block__val">1776</span>
       </div>
       <div class="scope-block__row">
         <span class="scope-block__key">in-situ</span>
-        <span class="scope-block__val">1006</span>
+        <span class="scope-block__val">1007</span>
       </div>
       <div class="scope-block__row">
         <span class="scope-block__key">under driver</span>
@@ -468,11 +468,11 @@ body {
       <div class="scope-block__label">Baseline: test_suite</div>
       <div class="scope-block__row">
         <span class="scope-block__key">observed</span>
-        <span class="scope-block__val">933</span>
+        <span class="scope-block__val">934</span>
       </div>
       <div class="scope-block__row">
         <span class="scope-block__key">unique addition</span>
-        <span class="scope-block__val">681</span>
+        <span class="scope-block__val">682</span>
       </div>
       <div class="scope-block__row">
         <span class="scope-block__key">exit code</span>
@@ -490,7 +490,7 @@ body {
 <section>
   <div class="label" style="margin-bottom:12px;">Baselines — exactly what was executed</div>
   <div style="font-size:11px;color:var(--muted);margin-bottom:16px;">
-    generated 2026-08-29T05:30:36.754153+00:00 &nbsp;&middot;&nbsp; First Light v0.2.0
+    generated 2026-08-29T07:58:23.254149+00:00 &nbsp;&middot;&nbsp; First Light v0.3.0
   </div>
 
 <div class="baseline" style="margin-bottom:16px;">
@@ -531,8 +531,10 @@ body {
     <span class="baseline__key">exit code</span>
     <span class="baseline__val" style="color:var(--amber);">1</span>
 
+    <span class="baseline__key">tests</span>
+    <span class="baseline__val">collected 256, passed 252, <span style="color:var(--amber);">failed 4</span></span>
     <span class="baseline__key">observed</span>
-    <span class="baseline__val">933 product-code units (+681 unique)</span>
+    <span class="baseline__val">934 product-code units (+682 unique)</span>
 
     <span class="baseline__key">excluded</span>
     <span class="baseline__val">apps, experimental, tests, vendor</span>
@@ -1446,6 +1448,35 @@ body {
 <span class="cell cell--insitu" title="visidata.features.slide.make_tester.t"></span>
 <span class="cell cell--insitu" title="visidata.features.slide.test_slide_keycol_1"></span>
 <span class="cell cell--insitu" title="visidata.features.slide.test_slide_leftmost"></span></div></div>
+<div class="map-row"><span class="map-row__label" title="visidata\shell.py">visidata\shell.py</span><div class="map-row__cells"><span class="cell cell--insitu" title="visidata.shell.bytes_rstrip"></span>
+<span class="cell cell--insitu" title="visidata.shell.popen"></span>
+<span class="cell cell--never" title="visidata.shell.killLeftoverProcesses"></span>
+<span class="cell cell--never" title="visidata.shell.guess_dir"></span>
+<span class="cell cell--insitu" title="visidata.shell.currentDirSheet"></span>
+<span class="cell cell--never" title="visidata.shell.exec_shell"></span>
+<span class="cell cell--never" title="visidata.shell.open_dir"></span>
+<span class="cell cell--never" title="visidata.shell.open_fdir"></span>
+<span class="cell cell--insitu" title="visidata.shell.addShellColumns"></span>
+<span class="cell cell--insitu" title="visidata.shell.ColumnShell.__init__"></span>
+<span class="cell cell--insitu" title="visidata.shell.ColumnShell.calcValue"></span>
+<span class="cell cell--never" title="visidata.shell.DirSheet.colorOwner"></span>
+<span class="cell cell--never" title="visidata.shell.DirSheet.moveFile"></span>
+<span class="cell cell--never" title="visidata.shell.DirSheet.renameFile"></span>
+<span class="cell cell--never" title="visidata.shell.DirSheet.removeFile"></span>
+<span class="cell cell--never" title="visidata.shell.DirSheet.commitDeleteRow"></span>
+<span class="cell cell--never" title="visidata.shell.DirSheet.newRow"></span>
+<span class="cell cell--insitu" title="visidata.shell.DirSheet.iterload"></span>
+<span class="cell cell--insitu" title="visidata.shell.DirSheet.iterload._walkfiles"></span>
+<span class="cell cell--never" title="visidata.shell.DirSheet.preloadHook"></span>
+<span class="cell cell--never" title="visidata.shell.DirSheet.restat"></span>
+<span class="cell cell--never" title="visidata.shell.DirSheet.putChanges"></span>
+<span class="cell cell--never" title="visidata.shell.DirSheet.getDefaultSaveName"></span>
+<span class="cell cell--never" title="visidata.shell.FileListSheet.iterload"></span>
+<span class="cell cell--insitu" title="visidata.shell.inputShell"></span>
+<span class="cell cell--never" title="visidata.shell._openPreview"></span>
+<span class="cell cell--never" title="visidata.shell.previewFile"></span>
+<span class="cell cell--never" title="visidata.shell.checkCursor"></span>
+<span class="cell cell--never" title="visidata.shell.copy_files"></span></div></div>
 <div class="map-row"><span class="map-row__label" title="visidata\expr.py">visidata\expr.py</span><div class="map-row__cells"><span class="cell cell--insitu" title="visidata.expr.ExprColumn.__init__"></span>
 <span class="cell cell--insitu" title="visidata.expr.ExprColumn.calcValue"></span>
 <span class="cell cell--never" title="visidata.expr.ExprColumn.expr"></span>
@@ -1515,35 +1546,6 @@ body {
 <span class="cell cell--never" title="visidata.save.save_zip"></span>
 <span class="cell cell--never" title="visidata.save.save_txt"></span>
 <span class="cell cell--insitu" title="visidata.save.rootSheet"></span></div></div>
-<div class="map-row"><span class="map-row__label" title="visidata\shell.py">visidata\shell.py</span><div class="map-row__cells"><span class="cell cell--never" title="visidata.shell.bytes_rstrip"></span>
-<span class="cell cell--insitu" title="visidata.shell.popen"></span>
-<span class="cell cell--never" title="visidata.shell.killLeftoverProcesses"></span>
-<span class="cell cell--never" title="visidata.shell.guess_dir"></span>
-<span class="cell cell--insitu" title="visidata.shell.currentDirSheet"></span>
-<span class="cell cell--never" title="visidata.shell.exec_shell"></span>
-<span class="cell cell--never" title="visidata.shell.open_dir"></span>
-<span class="cell cell--never" title="visidata.shell.open_fdir"></span>
-<span class="cell cell--insitu" title="visidata.shell.addShellColumns"></span>
-<span class="cell cell--insitu" title="visidata.shell.ColumnShell.__init__"></span>
-<span class="cell cell--insitu" title="visidata.shell.ColumnShell.calcValue"></span>
-<span class="cell cell--never" title="visidata.shell.DirSheet.colorOwner"></span>
-<span class="cell cell--never" title="visidata.shell.DirSheet.moveFile"></span>
-<span class="cell cell--never" title="visidata.shell.DirSheet.renameFile"></span>
-<span class="cell cell--never" title="visidata.shell.DirSheet.removeFile"></span>
-<span class="cell cell--never" title="visidata.shell.DirSheet.commitDeleteRow"></span>
-<span class="cell cell--never" title="visidata.shell.DirSheet.newRow"></span>
-<span class="cell cell--insitu" title="visidata.shell.DirSheet.iterload"></span>
-<span class="cell cell--insitu" title="visidata.shell.DirSheet.iterload._walkfiles"></span>
-<span class="cell cell--never" title="visidata.shell.DirSheet.preloadHook"></span>
-<span class="cell cell--never" title="visidata.shell.DirSheet.restat"></span>
-<span class="cell cell--never" title="visidata.shell.DirSheet.putChanges"></span>
-<span class="cell cell--never" title="visidata.shell.DirSheet.getDefaultSaveName"></span>
-<span class="cell cell--never" title="visidata.shell.FileListSheet.iterload"></span>
-<span class="cell cell--insitu" title="visidata.shell.inputShell"></span>
-<span class="cell cell--never" title="visidata.shell._openPreview"></span>
-<span class="cell cell--never" title="visidata.shell.previewFile"></span>
-<span class="cell cell--never" title="visidata.shell.checkCursor"></span>
-<span class="cell cell--never" title="visidata.shell.copy_files"></span></div></div>
 <div class="map-row"><span class="map-row__label" title="visidata\sidebar.py">visidata\sidebar.py</span><div class="map-row__cells"><span class="cell cell--insitu" title="visidata.sidebar.AddedHelp.__init__"></span>
 <span class="cell cell--insitu" title="visidata.sidebar.AddedHelp.__enter__"></span>
 <span class="cell cell--insitu" title="visidata.sidebar.AddedHelp.__exit__"></span>
@@ -3367,12 +3369,12 @@ body {
 <div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.utils.getattrdeep</div><div class="driver-card__call">target/visidata/visidata/column.py:546 -- getattrdeep(row, col.expr, None)</div><div class="driver-card__lines" style="margin-top:6px;">driver made redundant by baseline: <strong style="color:var(--text);">test_suite</strong> — the unit is observed in situ; the driver is no longer the only evidence</div></div>
 <div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.utils.moveListItem</div><div class="driver-card__call">target/visidata/visidata/features/slide.py:22 -- moveListItem(sheet.rows, rowidx, newcolidx)</div><div class="driver-card__lines" style="margin-top:6px;">driver made redundant by baseline: <strong style="color:var(--text);">test_suite</strong> — the unit is observed in situ; the driver is no longer the only evidence</div></div>
 <div class="driver-card" style="border-color:#3a3a20;opacity:0.85;"><div class="driver-card__name" style="color:#b8a030;">visidata.utils.setattrdeep</div><div class="driver-card__call">target/visidata/visidata/column.py:551 -- setattrdeep(row, self.expr, val)</div><div class="driver-card__lines" style="margin-top:6px;">driver made redundant by baseline: <strong style="color:var(--text);">test_suite</strong> — the unit is observed in situ; the driver is no longer the only evidence</div></div></div>
-<div style="margin-top:20px"><div class="section-heading" style="color:#cc4444;">Attempted — not confirmed (2)</div><div class="driver-card" style="border-color:#5a2020;"><div class="driver-card__name" style="color:#cc4444;">visidata.aggregators.stdev</div><div class="driver-card__call" style="color:var(--muted);">driver file exists — not yet confirmed under coverage</div></div>
-<div class="driver-card" style="border-color:#5a2020;"><div class="driver-card__name" style="color:#cc4444;">visidata.path.vstat</div><div class="driver-card__call" style="color:var(--muted);">driver file exists — not yet confirmed under coverage</div></div></div>
+<div style="margin-top:20px"><div class="section-heading" style="color:#cc4444;">Attempted — not confirmed (2)</div><div class="driver-card" style="border-color:#5a2020;"><div class="driver-card__name" style="color:#cc4444;">visidata.aggregators.stdev</div><div class="driver-card__call" style="color:var(--muted);">driver ran but no line of the function body executed</div></div>
+<div class="driver-card" style="border-color:#5a2020;"><div class="driver-card__name" style="color:#cc4444;">visidata.path.vstat</div><div class="driver-card__call" style="color:var(--muted);">driver ran but no line of the function body executed</div></div></div>
 </section>
 
 <footer class="footer">
-  Made with IBM Bob &mdash; First Light v0.2.0 &mdash; 2026-08-29T05:30:36.754153+00:00
+  Made with IBM Bob &mdash; First Light v0.3.0 &mdash; 2026-08-29T07:58:23.254149+00:00
 </footer>
 
 </body>

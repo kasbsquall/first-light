@@ -17,9 +17,16 @@ population).
 git clone <this-repo>
 cd first-light
 
+# The target is not vendored.  Obtain it at the revision these figures were
+# measured against, or the numbers you get will not be the numbers published
+# here.
+git clone https://github.com/saulpw/visidata.git target/visidata
+git -C target/visidata checkout 1d8a6fcd7f031a140c5662943af868e9108343ed
+py -m venv target/visidata/.venv
+
 # Install coverage.py into the target's own virtual environment.
 # (visidata example; adjust for a different target.)
-.\target\visidata\.venv\Scripts\python.exe -m pip install coverage
+.\target\visidata\.venv\Scripts\python.exe -m pip install -e target\visidata
 
 # Both baselines run in one pass.  The headline figure depends on running
 # both: the program alone and the test suite alone reach different
@@ -114,18 +121,19 @@ collisions.
 
 Measured against visidata 3.x, after two independent baselines: the program
 run through its own CLI, and the project's own pytest suite (256 tests
-collected, 252 passing; the 4 failures are POSIX-specific and are recorded,
-not filtered out).
+collected, 252 passing; the 4 failures are POSIX-specific, and the counts
+and the non-zero exit code are recorded in the evidence file rather than
+filtered out).
 
 | Scope | Total | Observed in situ | Under driver | Driver redundant | Never observed |
 |-------|------:|------------------:|-------------:|-----------------:|---------------:|
-| Product code | 2290 | 938 | 3 | 5 | 1344 |
-| Whole package | 2791 | 1006 | 3 | 5 | 1777 |
+| Product code | 2290 | 939 | 3 | 5 | 1343 |
+| Whole package | 2791 | 1007 | 3 | 5 | 1776 |
 
-Neither baseline is a superset of the other.  The test suite reaches 681
+Neither baseline is a superset of the other.  The test suite reaches 682
 product functions the running program never touches; the running program
 reaches 10 the test suite never touches; 252 are reached by both.  After
-both, 1344 product functions have no execution record at all.
+both, 1343 product functions have no execution record at all.
 
 The 5 counted under 'driver redundant' are functions an agent had written a driver
 for before the test-suite baseline existed.  The baseline reached them on

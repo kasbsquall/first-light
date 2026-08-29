@@ -917,7 +917,7 @@ def _strip_def_line_suffix(qname: str) -> str:
 def _driver_units_from_evidence(
     units: dict,
     drivers_dir: Path | None = None,
-) -> tuple[list[dict], list[dict], list[str]]:
+) -> tuple[list[dict], list[dict], list[dict]]:
     """Return (confirmed, redundant, attempted_names).
 
     confirmed      : list of dicts with keys name, call_site, coverage_confirmed_lines
@@ -967,7 +967,7 @@ def _driver_units_from_evidence(
             confirmed_or_redundant_qnames.add(qname_part)
 
     # Attempted: driver file exists but unit is not observed_under_driver or redundant.
-    attempted_names: list[str] = []
+    attempted_names: list[dict] = []
     if drivers_dir is not None and drivers_dir.is_dir():
         evidence_qnames: dict[str, str] = {}  # qname_suffix -> provenance
         for key, u in units.items():
@@ -979,10 +979,27 @@ def _driver_units_from_evidence(
 
         # A driver is "attempted" when its file exists but its unit has no confirmed
         # or redundant entry (not in confirmed_or_redundant_qnames).
+        # Index the units by their qualified name so an attempted driver can be
+        # reported with what is actually known about it.  "Attempted" is not one
+        # outcome: a driver whose lines coverage confirmed and which was then
+        # refused for an unverifiable call site is a different fact from one that
+        # never reached the function at all, and collapsing them would hide the
+        # more interesting of the two.
+        units_by_qname: dict[str, dict] = {}
+        for key, u in units.items():
+            if "::" not in key:
+                continue
+            units_by_qname[_strip_def_line_suffix(key.split("::", 1)[1])] = u
+
         for driver_file in sorted(drivers_dir.glob("*.py")):
             stem = driver_file.stem
             if stem not in confirmed_or_redundant_qnames:
-                attempted_names.append(stem)
+                u = units_by_qname.get(stem, {})
+                attempted_names.append({
+                    "name": stem,
+                    "coverage_confirmed_lines": u.get("coverage_confirmed_lines", []),
+                    "call_site": u.get("call_site") or "",
+                })
 
     # Sort lists for stable output
     confirmed.sort(key=lambda d: d["name"])
@@ -1301,11 +1318,26 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 
     # Attempted-but-not-confirmed driver cards
     attempted_cards_html = []
-    for name in attempted_drivers:
+    for d in attempted_drivers:
+        _name    = d["name"] if isinstance(d, dict) else str(d)
+        _lines   = d.get("coverage_confirmed_lines", []) if isinstance(d, dict) else []
+        _cs      = d.get("call_site", "") if isinstance(d, dict) else ""
+        if _lines:
+            _n = len(_lines)
+            _why = ("no call site was declared, so there was no claim to check"
+                    if not _cs else
+                    "the declared call site could not be confirmed in the source")
+            _reason = (
+                f"driver ran and coverage confirmed {_n} line"
+                f"{'' if _n == 1 else 's'} of the function body; "
+                f"promotion refused because {_why}"
+            )
+        else:
+            _reason = "driver ran but no line of the function body executed"
         attempted_cards_html.append(
             f'<div class="driver-card" style="border-color:#5a2020;">'
-            f'<div class="driver-card__name" style="color:#cc4444;">{e(name)}</div>'
-            f'<div class="driver-card__call" style="color:var(--muted);">driver file exists — not yet confirmed under coverage</div>'
+            f'<div class="driver-card__name" style="color:#cc4444;">{e(_name)}</div>'
+            f'<div class="driver-card__call" style="color:var(--muted);">{e(_reason)}</div>'
             f'</div>'
         )
     attempted_html = "\n".join(attempted_cards_html)
@@ -1974,6 +2006,25 @@ def cmd_promote_driver(
                         failed += 1
                         continue
 
+                    # Rule 1b: the call site must sit inside the package under analysis.
+                    # Without this a driver can name itself, or any file on disk, as the
+                    # place the function is reached in production. A file outside the
+                    # measured package is not a production call site.
+                    try:
+                        _inside = cs_file_path.resolve().is_relative_to(Path(pkg_abs).resolve())
+                    except (OSError, ValueError):
+                        _inside = False
+                    if not _inside:
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                            f"call site '{cs_file_raw}' is outside the package under "
+                            f"analysis; a driver cannot cite itself or an unmeasured "
+                            f"file as where the function is reached in production.",
+                            file=sys.stderr,
+                        )
+                        failed += 1
+                        continue
+
                     # Rule 2: the target function's simple name must appear on that line.
                     func_simple_name = unit_key.split("::", 1)[1].rsplit(".", 1)[-1] if "::" in unit_key else unit_key
                     if "#" in func_simple_name:
@@ -2022,6 +2073,21 @@ def cmd_promote_driver(
                         )
                         failed += 1
                         continue
+                else:
+                    # A call site that does not parse as 'file:line' states nothing a
+                    # checker can open and confirm. Prose is not a citation: accepting
+                    # it would record the function as reached in production on an
+                    # assertion nobody can check, which is the failure this gate exists
+                    # to prevent.
+                    print(
+                        f"[promote-driver] FAIL  {driver_path.name} -- "
+                        f"call site {call_site!r} is not in 'file:line' form, so there "
+                        f"is nothing to open and confirm.",
+                        file=sys.stderr,
+                    )
+                    failed += 1
+                    continue
+
 
         # ── record promotion in the in-memory document ────────────────────
         doc["units"][unit_key]["provenance"]               = PROVENANCE_UNDER_DRIVER

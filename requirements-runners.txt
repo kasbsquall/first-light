@@ -1,4 +1,14 @@
-# Runner-layer dependencies for First Light
-# Pin the exact pytest version used in the target venv so a clean clone
-# reproduces the same test run and failure counts.
+# Dependencies the runner layer needs inside the TARGET's virtual environment,
+# not First Light's own. Pinned so a clean clone reproduces the same run and the
+# same failure counts.
+
+# First Light measures execution, so it needs coverage in the target venv.
+coverage==7.16.0
+
+# The test-suite baseline runs the target's own pytest suite in-process.
 pytest==9.1.1
+
+# visidata is a curses application. Without this, importing it on Windows fails
+# with a missing _curses, and every driver that imports the package fails with
+# it. Not needed on Linux or macOS, where curses ships with Python.
+windows-curses==2.4.2 ; sys_platform == "win32"

@@ -10,10 +10,10 @@ about whether anyone has ever observed what that function does when it runs.
 Teams read a coverage percentage as confidence and let agents edit on that basis.
 
 We measured visidata, a widely used Python tool. Of 2290 functions in its product
-code, 1344 have never been observed executing by anything. That figure holds
+code, 1343 have never been observed executing by anything. That figure holds
 after running the program through its own interface and after running the
 project's own 256-test suite. Those two are not substitutes for each other: the
-test suite reaches 681 functions the running program never touches, and the
+test suite reaches 682 functions the running program never touches, and the
 running program reaches 10 the tests never touch.
 
 ## The solution
