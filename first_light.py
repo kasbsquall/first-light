@@ -750,7 +750,7 @@ _HTML_CSS = """\
   --text:        #E8E0D5;
   --muted:       #8A7F74;
   --amber:       #C8761A;
-  --amber-dim:   #7A4810;
+  --amber-dim:   #A66A1E;
   --never:       #75695F;
   --never-border:#9A8D82;
   --redundant:   #8A6A1E;
@@ -907,13 +907,6 @@ body {
 
 .scope-block--product {
   border-color: var(--amber-dim);
-}
-
-.scope-note {
-  font-size: 11px;
-  color: var(--muted);
-  margin-top: 8px;
-  margin-left: 4px;
 }
 
 /* ── Separator ──────────────────────────────────────────── */
@@ -1171,7 +1164,7 @@ body {
 /* Dim the rest only while the pointer is on a row. Keying this to the whole
    scroller made all 250 rows fade the moment the cursor entered the area, which
    is movement without information. */
-.map-body:has(.map-row:hover) .map-row { opacity: 0.45; }
+.map-body:has(.map-row:hover) .map-row { opacity: 0.78; }
 .map-body:has(.map-row:hover) .map-row:hover { opacity: 1; }
 .map-row { transition: opacity 120ms linear; }
 
@@ -1334,12 +1327,6 @@ body {
   color: var(--bg);
   background: var(--amber);
   border-color: var(--amber);
-}
-
-.chip__count {
-  font-variant-numeric: tabular-nums lining-nums;
-  opacity: 0.75;
-  margin-left: 6px;
 }
 
 .toolbar__status {
@@ -1861,7 +1848,14 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
                 cls = "cell cell--driver"
             else:
                 cls = "cell cell--never"
-            title = e(fn["qname"])
+            _state = ("never observed" if prov == PROVENANCE_NEVER
+                      else "driver made redundant by a baseline" if is_redundant
+                      else "observed under driver" if prov == PROVENANCE_UNDER_DRIVER
+                      else "observed in situ")
+            # The state has to be in the tooltip. Encoded only as colour, two of
+            # the four categories are 1.06:1 apart in luminance, identical in
+            # greyscale, and unreachable on a touch screen.
+            title = e(fn["qname"] + ", " + _state)
             cells.append(f'<span class="{cls}" title="{title}"></span>')
         cells_html = "\n".join(cells)
         label_html = e(mod_label)
@@ -2381,6 +2375,57 @@ def render_report(
 # --promote-driver
 # ---------------------------------------------------------------------------
 
+def _cites_the_right_function(cited: str, defining: str, name: str) -> str | None:
+    """Return a refusal reason unless *cited* could be calling *defining*'s *name*.
+
+    Matching a call by name is not enough on its own. ``features/ping.py:33``
+    reads ``mean(r.getValues(...))`` and satisfies a claim about
+    ``visidata.aggregators.mean``, but line 6 of that file is
+    ``from statistics import mean``: the call goes to the standard library and
+    the citation is false. One shipped driver made exactly that claim and the
+    gate accepted it.
+
+    So the cited file must either be the file that defines the function, in
+    which case no import is needed, or import the defining module by name. That
+    does not resolve the binding, and it cannot rule out a same-named local, but
+    it removes the whole class of citation where the name obviously belongs to
+    something else.
+    """
+    try:
+        cited_p = Path(cited).resolve()
+        defining_p = Path(defining).resolve()
+    except OSError:
+        return "the cited path could not be resolved"
+
+    if cited_p == defining_p:
+        return None
+
+    mod = defining_p.stem
+    pkg = defining_p.parent.name
+    try:
+        src = cited_p.read_text(encoding="utf-8", errors="replace")
+        tree = ast.parse(src)
+    except (OSError, SyntaxError):
+        return "the cited file could not be parsed"
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for a in node.names:
+                if mod in a.name.split(".") or (a.asname or "").split(".")[0] == mod:
+                    return None
+        elif isinstance(node, ast.ImportFrom):
+            base = (node.module or "").split(".")
+            if mod in base or pkg in base:
+                # from <pkg> import name, or from <pkg>.<mod> import ...
+                if node.module and node.module.split(".")[-1] == mod:
+                    return None
+                for a in node.names:
+                    if a.name == name or a.name == mod:
+                        return None
+    return ("the cited file does not import %s, so the %s it calls is not this one"
+            % (mod, name))
+
+
 def _line_calls(path: str, line_no: int, name: str) -> str | None:
     """Return a refusal reason unless *line_no* of *path* actually calls *name*.
 
@@ -2816,6 +2861,9 @@ def cmd_promote_driver(
                         _no_call = (_line_calls(str(seg_file_path), seg_line,
                                                 func_simple_name)
                                     if check_name else None)
+                        if check_name and not _no_call:
+                            _no_call = _cites_the_right_function(
+                                str(seg_file_path), src_abs, func_simple_name)
                         if check_name and _no_call:
                             _cs_refusal_reason = (
                                 f"{seg_label} line {seg_line} of '{seg_file_raw}' "
@@ -2951,6 +2999,9 @@ def cmd_promote_driver(
                         cs_text = cs_lines[cs_line - 1]
                         _no_call = _line_calls(str(cs_file_path), cs_line,
                                                func_simple_name)
+                        if not _no_call:
+                            _no_call = _cites_the_right_function(
+                                str(cs_file_path), src_abs, func_simple_name)
                         if _no_call:
                             _reason = (
                                 f"line {cs_line} of '{cs_file_raw}' is not a call "

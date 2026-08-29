@@ -1,5 +1,11 @@
 # source: target/visidata/visidata/aggregators.py:147
-# call site: target/visidata/visidata/features/ping.py:33 -- mean(r.getValues(col.sheet.source.rows))
+# NO VERIFIABLE CALL SITE. This driver previously cited features/ping.py:33,
+# which reads mean(r.getValues(...)) and looks right. It is not: line 6 of
+# that file is 'from statistics import mean', so the call goes to the
+# standard library and the citation was false. visidata's own mean is bound
+# by vd.aggregator('mean', mean, ...) and reached through dispatch, and this
+# gate does not accept a registration as a call. The claim is withdrawn
+# rather than restated, so this driver is refused for declaring nothing.
 # NOTE: windows-curses installed to satisfy curses dependency
 
 import sys
@@ -9,7 +15,13 @@ import visidata  # noqa: F401 -- required to initialise the package
 from visidata.aggregators import mean  # the REAL function
 
 # 1. List of floats (typical ping latencies in ms)
-# call site: target/visidata/visidata/features/ping.py:33 -- mean(r.getValues(col.sheet.source.rows))
+# NO VERIFIABLE CALL SITE. This driver previously cited features/ping.py:33,
+# which reads mean(r.getValues(...)) and looks right. It is not: line 6 of
+# that file is 'from statistics import mean', so the call goes to the
+# standard library and the citation was false. visidata's own mean is bound
+# by vd.aggregator('mean', mean, ...) and reached through dispatch, and this
+# gate does not accept a registration as a call. The claim is withdrawn
+# rather than restated, so this driver is refused for declaring nothing.
 result1 = mean([1.2, 5.6, 3.4, 2.1])
 expected1 = (1.2 + 5.6 + 3.4 + 2.1) / 4
 assert result1 == expected1, f"Test 1 failed: {result1} != {expected1}"

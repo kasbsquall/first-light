@@ -146,6 +146,13 @@ def _file_integrity(abs_path: str, integrity: dict) -> str:
     """
     recorded = integrity.get(abs_path, "")
     if not recorded:
+        # Same portability problem as unit lookup: the integrity table is keyed
+        # by the producing machine's absolute paths.
+        for k, v in integrity.items():
+            if _same_file(k, abs_path):
+                recorded = v
+                break
+    if not recorded:
         return "unrecorded"
     return "unchanged" if _sha256(abs_path) == recorded else "changed"
 
@@ -226,6 +233,34 @@ def _extract_fields(obj: object) -> tuple[str, int | None]:
 # Core query
 # ---------------------------------------------------------------------------
 
+def _same_file(recorded: str, edited: str) -> bool:
+    """Return True when *recorded* and *edited* are the same source file.
+
+    evidence.json keys every unit by the absolute path of the machine that
+    produced it. Comparing those strings to the path being edited means the hook
+    matches nothing on any other clone, and --strict then fails open: it finds no
+    unit, decides it knows nothing, and lets every edit through. A gate that is
+    silently disabled everywhere except the author's machine is worse than no
+    gate, because it reports as if it were working.
+
+    Compare the absolute paths first, and fall back to the longest shared tail of
+    the two paths. Two files that agree on package, module and filename are the
+    same file for this purpose, and disagreeing on the directory above the
+    package is exactly what a different checkout looks like.
+    """
+    if not recorded:
+        return False
+    a = Path(recorded).parts
+    b = Path(edited).parts
+    if Path(recorded) == Path(edited):
+        return True
+    # at least the file and its two enclosing directories must agree
+    n = 0
+    while n < min(len(a), len(b)) and a[-1 - n].lower() == b[-1 - n].lower():
+        n += 1
+    return n >= 3
+
+
 def provenance_for(file_path: str, start_line: int | None) -> str | None:
     """Return the provenance of the unit an edit lands in, or None.
 
@@ -247,7 +282,7 @@ def provenance_for(file_path: str, start_line: int | None) -> str | None:
     units: dict = ev.get("units", {})
     matching = [
         u for _k, u in units.items()
-        if u.get("file") == abs_path and _overlaps(u, start_line, None)
+        if _same_file(u.get("file", ""), abs_path) and _overlaps(u, start_line, None)
     ]
     if not matching:
         return None
@@ -292,7 +327,7 @@ def query(
     matching = [
         (key, u)
         for key, u in units.items()
-        if u.get("file") == abs_path and _overlaps(u, start_line, end_line)
+        if _same_file(u.get("file", ""), abs_path) and _overlaps(u, start_line, end_line)
     ]
 
     if not matching:

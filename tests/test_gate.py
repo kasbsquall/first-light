@@ -221,6 +221,70 @@ def test_strict_gate() -> None:
           "-> exit %d" % r.returncode)
 
 
+# ---------------------------------------------------------------------------
+# 6. A call by the right name is not necessarily a call to the right function.
+#
+# A shipped driver cited features/ping.py:33, which reads mean(...) and looks
+# correct. Line 6 of that file is "from statistics import mean", so the call
+# goes to the standard library. The gate accepted it.
+# ---------------------------------------------------------------------------
+def test_citation_belongs_to_the_function() -> None:
+    print(chr(10) + "--- the cited file must be able to see the function ---")
+    base = ROOT / "target" / "visidata" / "visidata"
+    if not base.is_dir():
+        check("the target is present", False, "-> skipping")
+        return
+    cases = [
+        ("a file that imports something else of the same name",
+         base / "features" / "ping.py", base / "aggregators.py", "mean", True),
+        ("the file that defines it",
+         base / "aggregators.py", base / "aggregators.py", "_percentile", False),
+        ("a file that imports the defining module",
+         base / "column.py", base / "utils.py", "getattrdeep", False),
+    ]
+    for label, cited, defining, name, should_refuse in cases:
+        got = FL._cites_the_right_function(str(cited), str(defining), name)
+        check("%s: %s" % ("refused" if should_refuse else "accepted", label),
+              bool(got) == should_refuse, "-> %r" % got)
+
+
+# ---------------------------------------------------------------------------
+# 7. The hook must work on a clone that is not the one that produced the
+#    evidence. It matched absolute paths, so --strict found no unit anywhere
+#    else and failed open: a gate silently disabled on every machine but one.
+# ---------------------------------------------------------------------------
+def test_hook_is_portable() -> None:
+    print(chr(10) + "--- the hook works on another clone ---")
+    import json as _json, shutil as _sh, subprocess as _sub, tempfile as _tf
+
+    ev = ROOT / "evidence.json"
+    if not ev.exists():
+        check("evidence.json is present", False, "-> skipping")
+        return
+    units = _json.loads(ev.read_text(encoding="utf-8"))["units"]
+    never = next((u for u in units.values()
+                  if u.get("provenance") == "never_observed"), None)
+    if not never or not Path(never["file"]).exists():
+        check("a never-observed unit is available", False)
+        return
+
+    root = _tf.mkdtemp(prefix="fl_clone_")
+    try:
+        _sh.copy(str(ev), os.path.join(root, "evidence.json"))
+        tail = never["file"].replace(os.sep, "/").split("/visidata/visidata/")[-1]
+        dst = os.path.join(root, "target", "visidata", "visidata", *tail.split("/"))
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        _sh.copy(never["file"], dst)
+        payload = _json.dumps({"tool_input": {"file_path": dst,
+                                              "line": never["body_start"]}})
+        r = _sub.run([sys.executable, str(ROOT / "tools" / "fl_hook.py"), "--strict"],
+                     input=payload, capture_output=True, text=True, cwd=root)
+        check("a never-observed edit still blocks on another clone",
+              r.returncode == 2, "-> exit %d" % r.returncode)
+    finally:
+        _sh.rmtree(root, ignore_errors=True)
+
+
 def main() -> int:
     print("first_light gate tests")
     test_call_site_rule()
@@ -228,6 +292,8 @@ def main() -> int:
     test_body_not_def_line()
     test_refusal_classes()
     test_strict_gate()
+    test_citation_belongs_to_the_function()
+    test_hook_is_portable()
     print("\n%d passed, %d failed" % (PASSED, FAILED))
     return 0 if FAILED == 0 else 1
 

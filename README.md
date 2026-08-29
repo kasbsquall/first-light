@@ -135,9 +135,11 @@ collisions.
 Measured against visidata 3.x, after three independent baselines: the program
 run through its own CLI in batch mode; the project's own pytest suite (256 tests
 collected, 252 passing, the 4 failures POSIX-specific, with the counts and the
-non-zero exit code recorded rather than filtered out); and a replay of the 52
-recorded sessions the project ships as command logs, which exercises the program
-the way a person drove it.
+non-zero exit code recorded rather than filtered out); and a replay of the 52 `.vdj`
+command logs it ships, which exercises the program the way a person drove it.
+The project also ships 112 `.vd` and 21 `.vdx` logs; this baseline replays the
+`.vdj` set only, so the 144 functions it reaches alone are a floor, not a
+ceiling.
 
 | Scope | Total | Observed in situ | Under driver | Driver redundant | Never observed |
 |-------|------:|------------------:|-------------:|-----------------:|---------------:|
