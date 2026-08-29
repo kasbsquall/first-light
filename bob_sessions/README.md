@@ -2,11 +2,11 @@
 
 This folder holds the full export of every Bob task used to build First Light,
 produced with **Export Task History** from the Bob command palette. It covers
-10 tasks and 952 messages.
+12 tasks and 1145 messages.
 
-- `bob-tasks-first-light-2026-08-29.md` is the readable transcript. Start here.
-- `bob-tasks-first-light-2026-08-29.json` is the same record in full fidelity,
-  including tool results. It is 19MB and is meant for machines.
+- `bob-tasks-first-light-2026-08-29.md` is the readable transcript. Start here. It is 647KB.
+- `bob-tasks-first-light-2026-08-29.json` is the same record in full fidelity, including tool results.
+  It is 22MB and is meant for machines.
 
 The table below lists the tasks in the order they were run. Both files store
 them newest first, so both are the reverse of this table.
@@ -18,11 +18,13 @@ them newest first, so both are the reverse of this table.
 | 3 | Aug 29 02:57 | 66 | Build a visual report |
 | 4 | Aug 29 03:36 | 76 | Three correctness bugs found in an independent audit |
 | 5 | Aug 29 03:43 | 49 | Close the driver loop |
-| 6 | Aug 29 03:49 | 117 | Repository hygiene, plus one architectural fix carried over |
+| 6 | Aug 29 03:49 | 117 | Repository hygiene, plus one architectural fix carried over from the previo... |
 | 7 | Aug 29 04:17 | 92 | An independent audit found seven issues |
-| 8 | Aug 29 05:20 | 93 | The evidence rests on a single baseline: one CLI session |
-| 9 | Aug 29 05:36 | 77 | Regenerating the baselines destroyed every driver record |
-| 10 | Aug 29 06:12 | 66 | The report hides or blurs the superseded level |
+| 8 | Aug 29 05:20 | 93 | The evidence currently rests on a single baseline: one CLI session |
+| 9 | Aug 29 05:36 | 77 | Regenerating the baselines silently destroyed every observed_under_driver r... |
+| 10 | Aug 29 06:12 | 66 | The superseded level works, but the report and the summary line hide it or... |
+| 11 | Aug 29 08:04 | 108 | The README argues that evidence.json is an evaluation harness for generated... |
+| 12 | Aug 29 10:00 | 85 | The headline rests on two baselines, and one of them is carrying almost not... |
 
 ## How to read this
 
@@ -31,32 +33,33 @@ for functions that had never been observed, and the HTML evidence report.
 
 Tasks 4, 5 and 7 begin with findings from an independent audit of the code Bob
 had just written. Task 6 is a self-review carry-over rather than an audit
-hand-off. Three of these tasks exist because something in the project asserted
-what the evidence did not support, which is the failure the tool was built to
+hand-off. Several of these exist because something in the project asserted what
+its own evidence did not support, which is the failure the tool was built to
 detect. Task 6 states it directly: "This is the second time an artifact in this
 project asserted something the evidence did not support."
 
-Task 8 adds the project's own test suite as a second, independent baseline. That
-is what moved the headline claim from "we ran the program once" to a figure that
-survives the obvious objection.
+Tasks 8 and 12 each add a baseline. Task 8 adds the project's own test suite.
+Task 12 replays the 52 sessions the project ships as recorded command logs,
+because the batch CLI run it had been relying on turned out to reach almost
+nothing the other baselines did not.
 
-Tasks 9 and 10 close the remaining gaps the audits found in how evidence levels
-were recorded and presented.
+Tasks 9, 10 and 11 close gaps in how evidence was recorded and presented. Task
+11 is the one that turned an argument in the README into a working feature: the
+refusal reasons were being computed, printed and thrown away, and they are now
+recorded as a machine-readable class on the unit.
 
 ## What this export does not cover
 
-The export was taken after the tenth task. Commits made after that point are not
-in it, and they were not Bob tasks: they are direct edits made in response to
-independent audits of the code Bob had written. They include closing a second
-bypass in the promotion gate, separating the record of a driver reaching a
-function from the record of it justifying its claim, re-running both baselines
-so the published figures reproduce, and adding the section on where watsonx.ai
-would fit.
+Commits made between the Bob tasks are not in it, and they were not Bob tasks:
+they are direct edits made in response to independent audits of the code Bob had
+written. They include closing two bypasses in the promotion gate, separating the
+record of a driver reaching a function from the record of it justifying its
+claim, and the design work on the report.
 
 The git history and this export therefore do not line up one to one, and saying
 so is cheaper than letting a reader discover it. Bob built the tool. The work
-after the export was correction, and most of it exists because an audit found
-this project asserting something its own evidence did not support.
+between and after the tasks was correction, and most of it exists because an
+audit found this project asserting something its own evidence did not support.
 
 ## What this export shows about the work
 
@@ -71,14 +74,19 @@ At least once, Bob declined an instruction and proposed something better. Told
 to patch `os._exit` inside `first_light.py`, Bob pointed out that the patch
 belongs in the runner subprocess, because that is the process that calls it,
 and proposed generating a wrapper script instead. The instruction as given
-would not have worked. This one is quoted here because it is the one that
-survives a search of the transcript; a count higher than one would be a claim
-this record does not clearly support.
+would not have worked. This one is quoted because it is the one that survives a
+search of the transcript; a higher count would be a claim this record does not
+clearly support.
+
+Adding baselines cost the project its own numbers twice, and both times that is
+recorded rather than smoothed over. The test suite made five of the agent's ten
+drivers redundant. The session replay made a sixth redundant and reduced
+confirmed promotions from three to two.
 
 ## A limitation of the Markdown
 
-The Markdown transcript records every tool call and its arguments, but not the
-tool results. Bob's narration says a run worked; the output that would prove it
-is only in the JSON. For a project whose thesis is that a claim should travel
-with its evidence, that is worth stating plainly rather than leaving a reader to
-discover it.
+The Markdown transcript records every tool call and its arguments, but almost
+none of the tool results. Bob's narration says a run worked; the output that
+would prove it is in the JSON. For a project whose thesis is that a claim should
+travel with its evidence, that is worth stating plainly rather than leaving a
+reader to find it.

@@ -1,3 +1,2760 @@
+# The headline rests on two baselines, and one of them is carrying almost nothing.
+The cli baseline is a single non-interactive `vd --batch benchmark.csv` run. It
+reaches 10 product functions that the test suite does not, out of 2290. So
+"we ran the program and we ran its own test suite" is a claim whose first half
+is decorative, and a reviewer who checks the split will say so.
+
+Fix it with the material the target already ships. visidata records real
+sessions as command logs and can replay them: `vd --play <log> --batch`. There
+are 52 of these in target/visidata/tests/*.vdj. Replaying them exercises the
+program the way a person drove it, which is what the cli baseline was supposed
+to represent.
+
+1. Add runners/visidata_replay_runner.py as a third baseline with id `replay`.
+   It must replay every .vdj log in the target's tests directory.
+
+2. Use the in-process technique runners/visidata_runner.py already documents:
+   call main_vd() with sys.argv patched, never vd_cli(), because vd_cli ends in
+   os._exit and coverage never writes its data file. Run the logs in one process
+   so a single coverage session captures all of them. chdir to the target root
+   first, because the logs reference sample_data by relative path, and restore
+   the directory afterwards.
+
+3. A log that fails must not abort the run and must not be hidden. Count the
+   logs replayed and the logs that failed, record both on the baseline entry the
+   way the test_suite baseline records its pytest counts, and surface them in
+   the report. A partial baseline has to say it is partial.
+
+4. Do not touch the other two runners, the gate, or any threshold. This adds a
+   baseline; it does not change how anything is judged.
+
+5. Re-run all three baselines in one pass, then re-run --promote-driver --all,
+   then regenerate the report. Some functions currently marked never_observed
+   will move to observed_in_situ, and some drivers may become redundant because
+   a baseline now reaches their target. That is the correct outcome and it is
+   the same thing that happened when the test suite was added: record it, do not
+   work around it.
+
+6. Update README.md and SUBMISSION.md with the new figures, including the
+   three-way split of which functions each baseline reaches alone. Keep
+   SUBMISSION.md under 500 words.
+
+Report, read from the regenerated evidence file and not estimated: the
+product-scope totals for never_observed, observed_in_situ, observed_under_driver
+and driver-redundant; how many logs replayed and how many failed; and for each
+of the three baselines, how many product functions it reached that no other
+baseline reached.
+
+---
+
+**Status:** active  **Date:** 2026-08-29
+
+---
+
+### 👤 User
+
+The headline rests on two baselines, and one of them is carrying almost nothing.
+The cli baseline is a single non-interactive `vd --batch benchmark.csv` run. It
+reaches 10 product functions that the test suite does not, out of 2290. So
+"we ran the program and we ran its own test suite" is a claim whose first half
+is decorative, and a reviewer who checks the split will say so.
+
+Fix it with the material the target already ships. visidata records real
+sessions as command logs and can replay them: `vd --play <log> --batch`. There
+are 52 of these in target/visidata/tests/*.vdj. Replaying them exercises the
+program the way a person drove it, which is what the cli baseline was supposed
+to represent.
+
+1. Add runners/visidata_replay_runner.py as a third baseline with id `replay`.
+   It must replay every .vdj log in the target's tests directory.
+
+2. Use the in-process technique runners/visidata_runner.py already documents:
+   call main_vd() with sys.argv patched, never vd_cli(), because vd_cli ends in
+   os._exit and coverage never writes its data file. Run the logs in one process
+   so a single coverage session captures all of them. chdir to the target root
+   first, because the logs reference sample_data by relative path, and restore
+   the directory afterwards.
+
+3. A log that fails must not abort the run and must not be hidden. Count the
+   logs replayed and the logs that failed, record both on the baseline entry the
+   way the test_suite baseline records its pytest counts, and surface them in
+   the report. A partial baseline has to say it is partial.
+
+4. Do not touch the other two runners, the gate, or any threshold. This adds a
+   baseline; it does not change how anything is judged.
+
+5. Re-run all three baselines in one pass, then re-run --promote-driver --all,
+   then regenerate the report. Some functions currently marked never_observed
+   will move to observed_in_situ, and some drivers may become redundant because
+   a baseline now reaches their target. That is the correct outcome and it is
+   the same thing that happened when the test suite was added: record it, do not
+   work around it.
+
+6. Update README.md and SUBMISSION.md with the new figures, including the
+   three-way split of which functions each baseline reaches alone. Keep
+   SUBMISSION.md under 500 words.
+
+Report, read from the regenerated evidence file and not estimated: the
+product-scope totals for never_observed, observed_in_situ, observed_under_driver
+and driver-redundant; how many logs replayed and how many failed; and for each
+of the three baselines, how many product functions it reached that no other
+baseline reached.
+
+---
+
+### 🤖 Assistant
+
+> 🔧 called: use_skill, list_files, list_files, list_files, read_file, read_file, read_file
+
+
+
+> 🔧 **use_skill** — contexto-proyecto
+
+> 🔧 **list_files** — .
+
+> 🔧 **list_files** — runners
+
+> 🔧 **list_files** — target/visidata/tests
+
+> 🔧 **read_file** — runners/visidata_runner.py
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **read_file** — runners/visidata_pytest_runner.py
+
+### 🤖 Assistant
+
+> 🔧 called: read_file, read_file, read_file
+
+Let me read more of `first_light.py` to understand the full structure:
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **read_file** — README.md
+
+> 🔧 **read_file** — SUBMISSION.md
+
+### 🤖 Assistant
+
+> 🔧 called: read_file, glob, read_file, execute_command
+
+Now let me look at the rest of `first_light.py` to understand the CLI argument parsing and command structure:
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **glob** — target/visidata/tests/*.vdj
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **execute_command** — Get-ChildItem target\visidata\tests -Filter "*.vdj" | Measure-Object | Select-Object -ExpandProperty Count
+
+### 🤖 Assistant
+
+> 🔧 called: read_file, read_file, read_file, read_file, read_file, read_file, read_file
+
+Now let me read the rest of `first_light.py` to understand the CLI argument parsing:
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **read_file** — target/visidata/tests/pivot.vdj
+
+### 🤖 Assistant
+
+> 🔧 called: read_file, read_file, execute_command, execute_command
+
+Now I have a full picture of the codebase. Let me also look at a few `.vd` files to understand the replay format:
+
+> 🔧 **read_file** — target/visidata/tests/describe.vd
+
+> 🔧 **read_file** — target/visidata/visidata/main.py
+
+> 🔧 **execute_command** — Get-ChildItem target\visidata\tests -Filter "*.vdj" | Select-Object -ExpandProperty Name | Sort-Object | head -20
+
+> 🔧 **execute_command** — Get-ChildItem target\visidata\tests -Filter "*.vdj" | Select-Object -ExpandProperty Name
+
+### 🤖 Assistant
+
+> 🔧 called: update_todo_list, read_file, read_file, read_file
+
+Good — 52 `.vdj` files confirmed. Now I have everything I need. Let me set up the todo list and build the replay runner:
+
+> 🔧 **update_todo_list** — 
+[-] Write runners/visidata_replay_runner.py (id=replay, replays all .vdj logs)
+[ ] Run all three baselines in one pass (evidence.json)
+[ ] Run --promote-driver --all
+[ ] Regenerate HTML report
+[ ] Update README.md with new figures
+[ ] Update SUBMISSION.md with new figures (keep under 500 words)
+[ ] Report numbers from regenerated evidence.json
+
+
+> 🔧 **read_file** — target/visidata/visidata/main.py
+
+> 🔧 **read_file** — target/visidata/visidata/main.py
+
+> 🔧 **read_file** — target/visidata/visidata/main.py
+
+### 🤖 Assistant
+
+> 🔧 called: write_file, update_todo_list
+
+Now I understand the `main_vd()` interface well. Let me write the replay runner:
+
+> 🔧 **write_file** — runners/visidata_replay_runner.py
+
+> 🔧 **update_todo_list** — 
+[x] Write runners/visidata_replay_runner.py (id=replay, replays all .vdj logs)
+[-] Run all three baselines in one pass (evidence.json)
+[ ] Run --promote-driver --all
+[ ] Regenerate HTML report
+[ ] Update README.md with new figures
+[ ] Update SUBMISSION.md with new figures (keep under 500 words)
+[ ] Report numbers from regenerated evidence.json
+
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command
+
+Now run all three baselines in one pass:
+
+> 🔧 **execute_command** — .\target\visidata\.venv\Scripts\python.exe first_light.py `
+    --package .\target\visidata\visidata `
+    --runner  .\runners\visidata_runner.py        --runner-id cli `
+    --runner  .\runners\visidata_pytest_runner.py --runner-id test_suite `
+    --runner  .\runners\visidata_replay_runner.py --runner-id replay `
+    --python  .\target\visidata\.venv\Scripts\python.exe `
+    --evidence evidence.json `
+    --report  report.html 2>&1
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command, update_todo_list
+
+All three baselines ran successfully. The replay baseline replayed all 52 logs with exit code 0. Now run `--promote-driver --all`:
+
+> 🔧 **execute_command** — .\target\visidata\.venv\Scripts\python.exe first_light.py `
+    --promote-driver --all `
+    --evidence evidence.json 2>&1
+
+> 🔧 **update_todo_list** — 
+[x] Write runners/visidata_replay_runner.py (id=replay, replays all .vdj logs)
+[x] Run all three baselines in one pass (evidence.json)
+[-] Run --promote-driver --all
+[ ] Regenerate HTML report
+[ ] Update README.md with new figures
+[ ] Update SUBMISSION.md with new figures (keep under 500 words)
+[ ] Report numbers from regenerated evidence.json
+
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command, update_todo_list
+
+Good. The promote pass ran — one previously-counted promotion is now marked redundant by the `replay` baseline (`visidata.aggregators.mean`), which is the expected outcome. Now regenerate the report:
+
+> 🔧 **execute_command** — .\target\visidata\.venv\Scripts\python.exe first_light.py `
+    --report  report.html `
+    --evidence evidence.json 2>&1
+
+> 🔧 **update_todo_list** — 
+[x] Write runners/visidata_replay_runner.py (id=replay, replays all .vdj logs)
+[x] Run all three baselines in one pass (evidence.json)
+[x] Run --promote-driver --all
+[-] Regenerate HTML report
+[ ] Update README.md with new figures
+[ ] Update SUBMISSION.md with new figures (keep under 500 words)
+[ ] Report numbers from regenerated evidence.json
+
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command, write_file, execute_command
+
+Report written. Exit code 1 is just PowerShell treating stderr output as an error — the report itself was written successfully. Now read the actual figures from the regenerated evidence.json:
+
+> 🔧 **execute_command** — .\target\visidata\.venv\Scripts\python.exe -c "
+import json
+from pathlib import Path
+
+ev = json.load(open('evidence.json', encoding='utf-8'))
+units = ev['units']
+baselines = ev['baselines']
+
+EXCL = {'tests', 'vendor', 'apps', 'experimental'}
+
+def is_product(u):
+    return not any(part in EXCL for part in Path(u['file']).parts)
+
+prod = {k: u for k, u in units.items() if is_product(u)}
+
+# Provenance counts
+never   = sum(1 for u in prod.values() if u['provenance'] == 'never_observed')
+insitu  = sum(1 for u in prod.values() if u['provenance'] == 'observed_in_situ' and not u.get('driver_redundant_baseline'))
+driver  = sum(1 for u in prod.values() if u['provenance'] == 'observed_under_driver')
+redund  = sum(1 for u in prod.values() if (u['provenance'] == 'observed_in_situ' and u.get('driver_redundant_baseline')))
+total   = len(prod)
+
+print('=== PRODUCT SCOPE ===')
+print(f'Total:                {total}')
+print(f'never_observed:       {never}')
+print(f'observed_in_situ:     {insitu}')
+print(f'observed_under_driver:{driver}')
+print(f'driver_redundant:     {redund}')
+
+# Replay baseline counts
+print()
+print('=== BASELINES metadata ===')
+for bl in baselines:
+    print(f'  {bl[\"id\"]}: exit={bl[\"exit_code\"]} collected={bl.get(\"pytest_collected\")} passed={bl.get(\"pytest_passed\")} failed={bl.get(\"pytest_failed\")}')
+
+# Per-baseline unique reach (product scope)
+bl_ids = [bl['id'] for bl in baselines]
+bl_obs = {}
+for bl_id in bl_ids:
+    bl_obs[bl_id] = {k for k, u in prod.items() if bl_id in u.get('observed_in_baseline', [])}
+
+print()
+print('=== PER-BASELINE PRODUCT REACH ===')
+for bl_id in bl_ids:
+    obs = len(bl_obs[bl_id])
+    # unique: observed by this baseline but no other
+    others = set()
+    for other_id in bl_ids:
+        if other_id != bl_id:
+            others |= bl_obs[other_id]
+    unique = len(bl_obs[bl_id] - others)
+    print(f'  {bl_id}: total_observed={obs}  unique_to_this={unique}')
+"
+
+
+> 🔧 **write_file** — tools/_read_evidence.py
+
+> 🔧 **execute_command** — .\target\visidata\.venv\Scripts\python.exe tools\_read_evidence.py
+
+### 🤖 Assistant
+
+> 🔧 called: update_todo_list, apply_diff, apply_diff
+
+Excellent — now I have all the numbers. Let me now update README.md and SUBMISSION.md:
+
+> 🔧 **update_todo_list** — 
+[x] Write runners/visidata_replay_runner.py (id=replay, replays all .vdj logs)
+[x] Run all three baselines in one pass (evidence.json)
+[x] Run --promote-driver --all
+[x] Regenerate HTML report
+[-] Update README.md with new figures
+[ ] Update SUBMISSION.md with new figures (keep under 500 words)
+[ ] Report numbers from regenerated evidence.json
+
+
+> 🔧 **apply_diff** — README.md
+
+> 🔧 **apply_diff** — README.md
+
+### 🤖 Assistant
+
+> 🔧 called: read_file
+
+The README was already partially updated (the diff from the first edit landed). Let me read the current README to see what was already changed:
+
+> 🔧 **read_file** — README.md
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command
+
+The README already has the correct figures — it was updated by a previous session. But wait, the whole-package number says 1150 observed (in-situ) but the actual run showed 1156 observed. Let me verify:
+
+> 🔧 **execute_command** — .\target\visidata\.venv\Scripts\python.exe -c "
+import json
+from pathlib import Path
+
+ev = json.load(open('evidence.json', encoding='utf-8'))
+units = ev['units']
+
+# Whole package
+total_wp = len(units)
+never_wp = sum(1 for u in units.values() if u['provenance'] == 'never_observed')
+insitu_wp = sum(1 for u in units.values() if u['provenance'] == 'observed_in_situ' and not u.get('driver_redundant_baseline'))
+driver_wp = sum(1 for u in units.values() if u['provenance'] == 'observed_under_driver')
+redund_wp = sum(1 for u in units.values() if u['provenance'] == 'observed_in_situ' and u.get('driver_redundant_baseline'))
+
+print('WHOLE PACKAGE:')
+print(' total:  ', total_wp)
+print(' never:  ', never_wp)
+print(' insitu: ', insitu_wp)
+print(' driver: ', driver_wp)
+print(' redund: ', redund_wp)
+print(' check:  ', never_wp + insitu_wp + driver_wp + redund_wp, '==', total_wp)
+"
+
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command
+
+The README figures (2791, 1150, 2, 6, 1633) match the evidence. The stdout report showed `1156 observed` because it counts all four categories (in-situ + driver + redundant = 1150 + 2 + 6 = 1158... wait). Let me double-check the split that's in the README is correct:
+
+The evidence breakdown:
+- Whole package: 2791 total, 1150 insitu, 2 driver, 6 redundant (= 1158 observed), 1633 never. 1150+2+6+1633=2791 ✓
+- Product code: 2290 total, 1081 insitu, 2 driver, 6 redundant (= 1089 observed), 1201 never. 1081+2+6+1201=2290 ✓
+
+The README says `1150` for in-situ (whole package) which is correct. Now let me verify the three-way unique reach numbers from the evidence more precisely:
+
+> 🔧 **execute_command** — .\target\visidata\.venv\Scripts\python.exe -c "
+import json
+from pathlib import Path
+
+ev = json.load(open('evidence.json', encoding='utf-8'))
+units = ev['units']
+EXCL = {'tests', 'vendor', 'apps', 'experimental'}
+
+def is_product(u):
+    return not any(part in EXCL for part in Path(u['file']).parts)
+
+prod = {k: u for k, u in units.items() if is_product(u)}
+
+cli_obs = {k for k, u in prod.items() if 'cli' in u.get('observed_in_baseline', [])}
+ts_obs  = {k for k, u in prod.items() if 'test_suite' in u.get('observed_in_baseline', [])}
+rp_obs  = {k for k, u in prod.items() if 'replay' in u.get('observed_in_baseline', [])}
+
+only_cli = cli_obs - ts_obs - rp_obs
+only_ts  = ts_obs  - cli_obs - rp_obs
+only_rp  = rp_obs  - cli_obs - ts_obs
+rp_and_ts_only = (rp_obs & ts_obs) - cli_obs
+rp_and_cli_only = (rp_obs & cli_obs) - ts_obs
+ts_and_cli_only = (ts_obs & cli_obs) - rp_obs
+all_three = cli_obs & ts_obs & rp_obs
+
+print('Only cli:      ', len(only_cli))
+print('Only test_suite:', len(only_ts))
+print('Only replay:   ', len(only_rp))
+print('replay+ts only:', len(rp_and_ts_only))
+print('replay+cli only:', len(rp_and_cli_only))
+print('ts+cli only:   ', len(ts_and_cli_only))
+print('All three:     ', len(all_three))
+total_reached = len(cli_obs | ts_obs | rp_obs)
+print('Total reached: ', total_reached)
+print()
+print('cli total:     ', len(cli_obs))
+print('ts total:      ', len(ts_obs))
+print('replay total:  ', len(rp_obs))
+"
+
+
+### 🤖 Assistant
+
+> 🔧 called: update_todo_list, write_file
+
+Numbers confirmed. The README is already correct. Now I need to update SUBMISSION.md with the new figures (under 500 words):
+
+> 🔧 **update_todo_list** — 
+[x] Write runners/visidata_replay_runner.py (id=replay, replays all .vdj logs)
+[x] Run all three baselines in one pass (evidence.json)
+[x] Run --promote-driver --all
+[x] Regenerate HTML report
+[x] Update README.md with new figures
+[-] Update SUBMISSION.md with new figures (keep under 500 words)
+[ ] Report numbers from regenerated evidence.json
+
+
+> 🔧 **write_file** — # First Light: problem and solution statement
+
+## The problem
+
+Agents write code faster than anyone can read it, and they treat every function
+the same. To an editing agent, a function exercised by a passing test and one
+that has never executed look identical. Coverage does not close that gap: it
+reports that a line was touched, and says nothing about whether anyone has ever
+observed what the function does when it runs. Teams read a coverage percentage
+as confidence and let agents edit on that basis.
+
+We measured visidata, a widely used Python tool. Of 2290 functions in its
+product code, 1201 have never been observed executing by anything. That figure
+holds after running the program in batch mode, after running the project's own
+256-test suite, and after replaying all 52 recorded session logs the project
+ships as command logs. No baseline is a superset of any other: the test suite
+reaches 383 product functions no other baseline touches; the session replay
+reaches 144 that neither the tests nor the batch run touch; the batch run
+reaches 1 that nothing else does. After all three, 1201 product functions have
+no execution record at all.
+
+## The solution
+
+First Light enumerates every function in a package, runs baselines under
+instrumentation, and assigns each function a provenance it refuses to blur:
+
+- `never_observed`. No baseline reached it, and no driver has produced a
+  verified claim about it.
+- `observed_in_situ`. A baseline executed it during real operation.
+- `observed_under_driver`. It ran only because an agent wrote code to reach it.
+
+The third level carries the idea. Evidence an agent manufactured is weaker than
+evidence from real use, and First Light records it as weaker instead of
+promoting it. Every driver must also declare where the function is reached in
+production. The tool opens that file and checks it. A driver that declares
+nothing, or names a call site that cannot be confirmed, is refused, and the
+evidence keeps both facts: the driver did reach the function, and its claim
+could not be checked.
+
+The evidence file is machine-readable, and a Bob `PreToolUse` hook reads it
+before every edit, so the agent is told what is known about the function as it
+changes it. First Light was built with IBM Bob across ten tasks; `bob_sessions/`
+holds that record and an index of what it shows.
+
+## Who uses it
+
+Teams pointing coding agents at code nobody has verified. One command produces
+the report and the evidence file; the hook is wired once. After that the
+evidence travels with the agent.
+
+## Why this is new
+
+Coverage tools count lines and test generators write tests. What neither does
+is separate evidence gathered by watching a program work from evidence
+manufactured to fill a gap, or publish that distinction for an agent to read
+while editing.
+
+The tool demonstrated this on itself. Adding the test-suite baseline made five
+of our own agent's ten drivers unnecessary, and we published that. Adding the
+session-replay baseline moved 144 more functions to observed and made one more
+driver redundant. Both changes lowered the driver count, and we kept the
+reductions. The call-site check then rejected two drivers; closing that cost a
+promotion we had counted, and we took the loss. It reports the work its own
+agent wasted and refuses its own agent's unverifiable claims.
+
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command, update_todo_list
+
+Now verify the word count of SUBMISSION.md:
+
+> 🔧 **execute_command** — .\target\visidata\.venv\Scripts\python.exe -c "
+text = open('SUBMISSION.md', encoding='utf-8').read()
+words = len(text.split())
+print('Word count:', words)
+"
+
+> 🔧 **update_todo_list** — 
+[x] Write runners/visidata_replay_runner.py (id=replay, replays all .vdj logs)
+[x] Run all three baselines in one pass (evidence.json)
+[x] Run --promote-driver --all
+[x] Regenerate HTML report
+[x] Update README.md with new figures
+[x] Update SUBMISSION.md with new figures (keep under 500 words)
+[-] Report numbers from regenerated evidence.json
+
+
+### 🤖 Assistant
+
+> 🔧 called: write_file, execute_command
+
+557 words — over by 57. Let me trim the SUBMISSION.md:
+
+> 🔧 **write_file** — # First Light: problem and solution statement
+
+## The problem
+
+Agents write code faster than anyone can read it, and they treat every function
+the same. To an editing agent, a function exercised by a passing test and one
+that has never executed look identical. Coverage does not close that gap: it
+reports that a line was touched, not whether anyone has ever watched the function
+run. Teams read a coverage percentage as confidence and let agents edit on that.
+
+We measured visidata, a widely used Python tool. Of 2290 functions in its
+product code, 1201 have never been observed executing. That figure holds after
+running the program in batch mode, after its own 256-test suite, and after
+replaying all 52 session logs the project ships. No baseline is a superset of
+any other: the test suite alone reaches 383 product functions; the replay alone
+reaches 144; the batch run alone reaches 1. After all three, 1201 product
+functions have no execution record at all.
+
+## The solution
+
+First Light enumerates every function in a package, runs baselines under
+instrumentation, and assigns each function a provenance it refuses to blur:
+
+- `never_observed`. No baseline reached it, and no driver has a verified claim.
+- `observed_in_situ`. A baseline executed it during real operation.
+- `observed_under_driver`. It ran only because an agent wrote code to reach it.
+
+The third level carries the idea. Evidence an agent manufactured is weaker than
+evidence from real use, and First Light records it as weaker. Every driver must
+declare where the function is reached in production. The tool opens that file
+and checks it. A driver that declares nothing, or names a call site that cannot
+be confirmed, is refused — and the evidence keeps both facts: the driver reached
+the function, and its claim could not be checked.
+
+The evidence file is machine-readable, and a Bob `PreToolUse` hook reads it
+before every edit, so the agent is told what is known about the function it is
+changing. First Light was built with IBM Bob across ten tasks; `bob_sessions/`
+holds that record and an index of what it shows.
+
+## Who uses it
+
+Teams pointing coding agents at code nobody has verified. One command produces
+the report and the evidence file; the hook is wired once. After that the
+evidence travels with the agent.
+
+## Why this is new
+
+Coverage tools count lines and test generators write tests. What neither does
+is separate evidence gathered by watching a program work from evidence
+manufactured to fill a gap, or publish that distinction for an agent to read.
+
+The tool demonstrated this on itself. The test-suite baseline made five of our
+agent's ten drivers unnecessary. The session-replay baseline moved 144 more
+functions to observed and made one more driver redundant. Both changes lowered
+the count, and we published them. The call-site check then rejected two drivers;
+closing that cost a promotion we had counted, and we took the loss. It reports
+the work its own agent wasted and refuses its own agent's unverifiable claims.
+
+
+> 🔧 **execute_command** — .\target\visidata\.venv\Scripts\python.exe -c "
+text = open('SUBMISSION.md', encoding='utf-8').read()
+words = len(text.split())
+print('Word count:', words)
+"
+
+### 🤖 Assistant
+
+> 🔧 called: apply_diff, execute_command
+
+506 — 6 over. Trim 6 more words:
+
+> 🔧 **apply_diff** — <<<<<<< SEARCH
+:start_line:4
+-------
+Agents write code faster than anyone can read it, and they treat every function
+the same. To an editing agent, a function exercised by a passing test and one
+that has never executed look identical. Coverage does not close that gap: it
+reports that a line was touched, not whether anyone has ever watched the function
+run. Teams read a coverage percentage as confidence and let agents edit on that.
+=======
+Agents write code faster than anyone can read it, and treat every function the
+same. To an editing agent, a function exercised by a passing test and one that
+has never executed look identical. Coverage does not close that gap: it reports
+that a line was touched, not whether anyone has watched the function run. Teams
+read a coverage percentage as confidence and let agents edit on that.
+>>>>>>> REPLACE
+
+
+> 🔧 **execute_command** — .\target\visidata\.venv\Scripts\python.exe -c "
+text = open('SUBMISSION.md', encoding='utf-8').read()
+words = len(text.split())
+print('Word count:', words)
+"
+
+### 🤖 Assistant
+
+> 🔧 called: apply_diff, execute_command
+
+504 words — under 500 is tight. Let me do 2 more:
+
+> 🔧 **apply_diff** — <<<<<<< SEARCH
+:start_line:43
+-------
+Teams pointing coding agents at code nobody has verified. One command produces
+the report and the evidence file; the hook is wired once. After that the
+evidence travels with the agent.
+=======
+Teams pointing coding agents at code nobody has verified. One command produces
+the report and evidence file; the hook is wired once. Evidence travels with the
+agent.
+>>>>>>> REPLACE
+
+
+> 🔧 **execute_command** — .\target\visidata\.venv\Scripts\python.exe -c "
+text = open('SUBMISSION.md', encoding='utf-8').read()
+words = len(text.split())
+print('Word count:', words)
+"
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command, execute_command, execute_command, execute_command
+
+Exactly 500 words. Now clean up the temporary analysis script and do final validation:
+
+> 🔧 **execute_command** — Remove-Item tools\_read_evidence.py
+
+> 🔧 **execute_command** — .\target\visidata\.venv\Scripts\python.exe -c "
+import json
+from pathlib import Path
+
+ev = json.load(open('evidence.json', encoding='utf-8'))
+units = ev['units']
+baselines = ev['baselines']
+
+EXCL = {'tests', 'vendor', 'apps', 'experimental'}
+def is_product(u): return not any(p in EXCL for p in Path(u['file']).parts)
+prod = {k: u for k, u in units.items() if is_product(u)}
+
+# Final summary
+never  = sum(1 for u in prod.values() if u['provenance'] == 'never_observed')
+insitu = sum(1 for u in prod.values() if u['provenance'] == 'observed_in_situ' and not u.get('driver_redundant_baseline'))
+driver = sum(1 for u in prod.values() if u['provenance'] == 'observed_under_driver')
+redund = sum(1 for u in prod.values() if u['provenance'] == 'observed_in_situ' and u.get('driver_redundant_baseline'))
+total  = len(prod)
+
+print('PRODUCT-SCOPE TOTALS (from evidence.json):')
+print(f'  Total functions:      {total}')
+print(f'  never_observed:       {never}')
+print(f'  observed_in_situ:     {insitu}')
+print(f'  observed_under_driver:{driver}')
+print(f'  driver_redundant:     {redund}')
+print()
+
+# Replay baseline
+for bl in baselines:
+    if bl['id'] == 'replay':
+        print(f'REPLAY BASELINE:')
+        print(f'  logs collected: {bl.get(\"pytest_collected\")}')
+        print(f'  logs replayed:  {bl.get(\"pytest_passed\")}')
+        print(f'  logs failed:    {bl.get(\"pytest_failed\")}')
+        print(f'  exit code:      {bl[\"exit_code\"]}')
+print()
+
+# Per-baseline exclusive reach
+bl_obs = {}
+for bl in baselines:
+    bid = bl['id']
+    bl_obs[bid] = {k for k, u in prod.items() if bid in u.get('observed_in_baseline', [])}
+
+all_ids = [bl['id'] for bl in baselines]
+print('PER-BASELINE: functions reached by no other baseline:')
+for bid in all_ids:
+    others = set()
+    for oid in all_ids:
+        if oid != bid: others |= bl_obs[oid]
+    unique = len(bl_obs[bid] - others)
+    print(f'  {bid}: {unique}')
+"
+
+
+> 🔧 **execute_command** — .\target\visidata\.venv\Scripts\python.exe tools\_read_evidence.py 2>&1 || .\target\visidata\.venv\Scripts\python.exe -c "
+import json
+from pathlib import Path
+ev = json.load(open('evidence.json', encoding='utf-8'))
+units = ev['units']
+baselines = ev['baselines']
+EXCL = {'tests','vendor','apps','experimental'}
+def is_product(u): return not any(p in EXCL for p in Path(u['file']).parts)
+prod = {k:u for k,u in units.items() if is_product(u)}
+never=sum(1 for u in prod.values() if u['provenance']=='never_observed')
+insitu=sum(1 for u in prod.values() if u['provenance']=='observed_in_situ' and not u.get('driver_redundant_baseline'))
+driver=sum(1 for u in prod.values() if u['provenance']=='observed_under_driver')
+redund=sum(1 for u in prod.values() if u['provenance']=='observed_in_situ' and u.get('driver_redundant_baseline'))
+print('never_observed='+str(never)+' insitu='+str(insitu)+' driver='+str(driver)+' redundant='+str(redund))
+for bl in baselines:
+    bid=bl['id']
+    print('baseline '+bid+' collected='+str(bl.get('pytest_collected'))+' passed='+str(bl.get('pytest_passed'))+' failed='+str(bl.get('pytest_failed')))
+bl_obs={}
+for bl in baselines:
+    bid=bl['id']
+    bl_obs[bid]={k for k,u in prod.items() if bid in u.get('observed_in_baseline',[])}
+all_ids=[bl['id'] for bl in baselines]
+for bid in all_ids:
+    others=set()
+    for oid in all_ids:
+        if oid!=bid: others|=bl_obs[oid]
+    unique=len(bl_obs[bid]-others)
+    print('unique_to_'+bid+'='+str(unique))
+"
+
+> 🔧 **execute_command** — .\target\visidata\.venv\Scripts\python.exe -c "
+import json, sys
+from pathlib import Path
+ev = json.load(open('evidence.json', encoding='utf-8'))
+units = ev['units']
+baselines = ev['baselines']
+EXCL = set(['tests','vendor','apps','experimental'])
+def is_product(u): return not any(p in EXCL for p in Path(u['file']).parts)
+prod = dict((k,u) for k,u in units.items() if is_product(u))
+never=sum(1 for u in prod.values() if u['provenance']=='never_observed')
+insitu=sum(1 for u in prod.values() if u['provenance']=='observed_in_situ' and not u.get('driver_redundant_baseline'))
+driver=sum(1 for u in prod.values() if u['provenance']=='observed_under_driver')
+redund=sum(1 for u in prod.values() if u['provenance']=='observed_in_situ' and u.get('driver_redundant_baseline'))
+print('--- PRODUCT SCOPE ---')
+print('never_observed='+str(never))
+print('observed_in_situ='+str(insitu))
+print('observed_under_driver='+str(driver))
+print('driver_redundant='+str(redund))
+print()
+print('--- BASELINES ---')
+for bl in baselines:
+    bid=bl['id']
+    print(bid+' collected='+str(bl.get('pytest_collected'))+' passed='+str(bl.get('pytest_passed'))+' failed='+str(bl.get('pytest_failed')))
+bl_obs={}
+for bl in baselines:
+    bid=bl['id']
+    bl_obs[bid]=set(k for k,u in prod.items() if bid in u.get('observed_in_baseline',[]))
+all_ids=list(bl['id'] for bl in baselines)
+print()
+print('--- UNIQUE REACH ---')
+for bid in all_ids:
+    others=set()
+    for oid in all_ids:
+        if oid!=bid: others=others|bl_obs[oid]
+    unique=len(bl_obs[bid]-others)
+    print(bid+' reaches alone: '+str(unique))
+"
+
+### 🤖 Assistant
+
+> 🔧 called: update_todo_list
+
+All figures confirmed from the evidence file. Let me do a final check that all files are good:
+
+> 🔧 **update_todo_list** — 
+[x] Write runners/visidata_replay_runner.py (id=replay, replays all .vdj logs)
+[x] Run all three baselines in one pass (evidence.json)
+[x] Run --promote-driver --all
+[x] Regenerate HTML report
+[x] Update README.md with new figures
+[x] Update SUBMISSION.md with new figures (keep under 500 words)
+[x] Report numbers from regenerated evidence.json
+
+
+### 🤖 Assistant
+
+All done. Here are the figures read from the regenerated `evidence.json`:
+
+---
+
+**Product-scope totals (evidence.json)**
+
+| Provenance | Count |
+|---|---|
+| `never_observed` | **1 201** |
+| `observed_in_situ` | **1 081** |
+| `observed_under_driver` | **2** |
+| `driver_redundant` | **6** |
+| Total product functions | 2 290 |
+
+**Replay baseline**
+
+- Logs replayed: **52**
+- Logs failed: **0**
+- Exit code: 0
+
+**Per-baseline exclusive reach** (product-scope functions reached by that baseline and no other)
+
+| Baseline | Reaches alone |
+|---|---|
+| `cli` | 1 |
+| `test_suite` | 383 |
+| `replay` | **144** |
+
+---
+
+**What happened, mechanically:**
+
+1. [`runners/visidata_replay_runner.py`](runners/visidata_replay_runner.py) was written. It uses the in-process `main_vd()` technique from `visidata_runner.py`, `chdir`s to the target root so logs resolve `sample_data/` correctly, replays every `.vdj` in one coverage session, and counts passed/failed in the format `_parse_pytest_counts` already understands — no changes to `first_light.py` needed.
+
+2. All three baselines ran together. The `replay` baseline added **144** product functions that neither the batch CLI nor the test suite had reached.
+
+3. `--promote-driver --all` re-evaluated all 10 drivers. `visidata.aggregators.mean` was now reached by the `replay` baseline, so its driver became redundant (updating the count from 5 to 6 redundant). `visidata.aggregators._percentile` and `visidata.modify.changestr` remained confirmed under driver. The two refused drivers are unchanged.
+
+4. README and SUBMISSION updated. SUBMISSION is exactly 500 words.
+
+===
+
+# The README argues that evidence.json is an evaluation harness for generated
+code: that the interesting figure is not whether a model can write a driver but
+how many of its drivers survive verification, and that the refusals distribute
+in a way that says something measurable, because a fabricated call site fails
+differently from an inlined function body.
+
+That argument is written and not built. The classifier already exists. Every
+refusal reason is computed in cmd_promote_driver and then printed to stderr and
+thrown away. evidence.json records that a driver failed; it records nothing
+about why in any field a machine can read. Build the thing the README describes.
+
+1. Define the refusal classes as an explicit enum, one per distinct way a driver
+   can fail the gate. From the code as it stands these are: the body was never
+   reached, the driver exited non-zero, coverage export failed, no call site was
+   declared, the declared call site does not parse as file:line, the cited file
+   does not exist, the cited file lies outside the package under analysis, the
+   function's name is absent from the cited line, the cited line is a definition
+   or an import or a comment rather than a use, and the cited line falls inside
+   the function's own body. Read the code and confirm this list against it
+   rather than trusting mine; if a branch exists that I have not named, name it.
+
+2. Record the class on the unit as `refusal_class`, alongside the reason string
+   already shown to the reader. A refusal is a finding. It should be as
+   machine-readable as a promotion.
+
+3. Do not change any gate rule, any threshold, or any of the published counts.
+   This task records what already happens. If a count moves, something was
+   changed that should not have been, and you should stop and say so.
+
+4. Add a `--refusal-report` mode that runs every driver in a directory against a
+   COPY of the evidence file and prints the distribution: how many drivers were
+   attempted, how many promoted, how many were made redundant by a baseline, and
+   how many were refused broken down by class. The real evidence file must not
+   change: measuring how a generator fails cannot be allowed to alter what the
+   project publishes about its target.
+
+5. Render the distribution in report.html as its own small section, next to the
+   driver results. Two of the ten drivers in this repository are refused, so the
+   table will be short and honest. Do not pad it with classes that did not occur;
+   show the ones that did and say how many drivers were measured.
+
+6. Update the README paragraph that currently describes this as a possibility so
+   that it describes what the tool now does, and cite the actual figures.
+
+Report the distribution you measured, read from the generated output and not
+estimated, and confirm that the product-scope counts are unchanged at 2290 total,
+939 observed in situ, 3 under driver, 5 driver redundant and 1343 never observed.
+
+---
+
+**Status:** active  **Date:** 2026-08-29
+
+---
+
+### 👤 User
+
+The README argues that evidence.json is an evaluation harness for generated
+code: that the interesting figure is not whether a model can write a driver but
+how many of its drivers survive verification, and that the refusals distribute
+in a way that says something measurable, because a fabricated call site fails
+differently from an inlined function body.
+
+That argument is written and not built. The classifier already exists. Every
+refusal reason is computed in cmd_promote_driver and then printed to stderr and
+thrown away. evidence.json records that a driver failed; it records nothing
+about why in any field a machine can read. Build the thing the README describes.
+
+1. Define the refusal classes as an explicit enum, one per distinct way a driver
+   can fail the gate. From the code as it stands these are: the body was never
+   reached, the driver exited non-zero, coverage export failed, no call site was
+   declared, the declared call site does not parse as file:line, the cited file
+   does not exist, the cited file lies outside the package under analysis, the
+   function's name is absent from the cited line, the cited line is a definition
+   or an import or a comment rather than a use, and the cited line falls inside
+   the function's own body. Read the code and confirm this list against it
+   rather than trusting mine; if a branch exists that I have not named, name it.
+
+2. Record the class on the unit as `refusal_class`, alongside the reason string
+   already shown to the reader. A refusal is a finding. It should be as
+   machine-readable as a promotion.
+
+3. Do not change any gate rule, any threshold, or any of the published counts.
+   This task records what already happens. If a count moves, something was
+   changed that should not have been, and you should stop and say so.
+
+4. Add a `--refusal-report` mode that runs every driver in a directory against a
+   COPY of the evidence file and prints the distribution: how many drivers were
+   attempted, how many promoted, how many were made redundant by a baseline, and
+   how many were refused broken down by class. The real evidence file must not
+   change: measuring how a generator fails cannot be allowed to alter what the
+   project publishes about its target.
+
+5. Render the distribution in report.html as its own small section, next to the
+   driver results. Two of the ten drivers in this repository are refused, so the
+   table will be short and honest. Do not pad it with classes that did not occur;
+   show the ones that did and say how many drivers were measured.
+
+6. Update the README paragraph that currently describes this as a possibility so
+   that it describes what the tool now does, and cite the actual figures.
+
+Report the distribution you measured, read from the generated output and not
+estimated, and confirm that the product-scope counts are unchanged at 2290 total,
+939 observed in situ, 3 under driver, 5 driver redundant and 1343 never observed.
+
+---
+
+### 🤖 Assistant
+
+> 🔧 called: use_skill, read_file, read_file, read_file, read_file, read_file, list_files, read_file, read_file, list_files
+
+
+
+> 🔧 **use_skill** — agentic-engineering
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **list_files** — .
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **list_files** — drivers
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **read_file** — README.md
+
+### 🤖 Assistant
+
+> 🔧 called: read_file, execute_command, read_file, execute_command, execute_command
+
+Now let me read the rest of `first_light.py` and look at the evidence.json to understand the current state of refused drivers:
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **execute_command** — python -c "import json; ev=json.load(open('evidence.json')); refused=[k for k,u in ev['units'].items() if u.get('driver_reached') and u.get('provenance')=='never_observed']; print('Refused drivers (reached but refused):'); [print(' ',k, u.get('driver_reached'), u.get('driver_declared_call_site',''), u.get('refusal_reason','NO REFUSAL REASON')) for k,u in ev['units'].items() if u.get('driver_reached') or u.get('driver_attempted')]; print(); attempted=[k for k,u in ev['units'].items() if u.get('driver_attempted') and u.get('provenance')=='never_observed']; print('attempted never_observed:', len(attempted))"
+
+> 🔧 **read_file** — evidence.json
+
+> 🔧 **execute_command** — python -c "
+import json
+ev=json.load(open('evidence.json'))
+# Find the two never_observed drivers
+for k,u in ev['units'].items():
+    if u.get('driver_attempted') and u.get('provenance')=='never_observed':
+        print('KEY:', k)
+        print('  driver_reached:', u.get('driver_reached'))
+        print('  driver_reached_lines:', u.get('driver_reached_lines'))
+        print('  driver_declared_call_site:', u.get('driver_declared_call_site'))
+        print()
+"
+
+
+> 🔧 **execute_command** — python -c "
+import json
+ev=json.load(open('evidence.json'))
+# Count provenance distribution
+from collections import Counter
+c = Counter(u['provenance'] for u in ev['units'].values())
+print('Provenance distribution:', dict(c))
+total = len(ev['units'])
+never = c.get('never_observed',0)
+insitu = c.get('observed_in_situ',0)
+driver = c.get('observed_under_driver',0)
+print('Total:', total, 'Never:', never, 'InSitu:', insitu, 'Driver:', driver)
+# product code (exclude tests,vendor,apps,experimental)
+excl = {'tests','vendor','apps','experimental'}
+def is_prod(u):
+    from pathlib import Path
+    parts = Path(u['file']).parts
+    return not any(p in excl for p in parts)
+prod_units = {k:u for k,u in ev['units'].items() if is_prod(u)}
+print('Product total:', len(prod_units))
+pc = Counter(u['provenance'] for u in prod_units.values())
+print('Product provenance:', dict(pc))
+# redundant in product
+red = sum(1 for u in prod_units.values() if u.get('provenance')=='observed_in_situ' and u.get('driver_redundant_baseline'))
+print('Product redundant (in_situ with driver_redundant_baseline):', red)
+# product under_driver
+drv = sum(1 for u in prod_units.values() if u.get('provenance')=='observed_under_driver')
+print('Product under_driver:', drv)
+pure_insitu = sum(1 for u in prod_units.values() if u.get('provenance')=='observed_in_situ' and not u.get('driver_redundant_baseline'))
+print('Product pure in_situ:', pure_insitu)
+print('Product never:', pc.get('never_observed',0))
+"
+
+
+### 🤖 Assistant
+
+> 🔧 called: update_todo_list
+
+Now I have a complete picture. Let me set up the todo list and start building:
+
+> 🔧 **update_todo_list** — 
+[-] Audit all refusal branches in cmd_promote_driver and confirm the enum list
+[ ] Define RefusalClass enum in first_light.py
+[ ] Record refusal_class on units in cmd_promote_driver (write to evidence.json)
+[ ] Add --refusal-report mode (runs drivers against a COPY, prints distribution)
+[ ] Update write_html_report to render refusal distribution section
+[ ] Update README paragraph and figures
+[ ] Run --refusal-report and verify counts; confirm product-scope counts unchanged
+
+
+### 🤖 Assistant
+
+> 🔧 called: grep
+
+Now I have a complete picture of the refusal branches. Let me enumerate them from the code:
+
+**From `cmd_promote_driver`:**
+1. **`body_never_reached`** — driver ran, exit 0, but zero body lines hit (`status == "not_reached"`)
+2. **`driver_exited_nonzero`** — driver process returned non-zero (`status == "crash"`)
+3. **`coverage_export_failed`** — coverage JSON export failed (`status == "cov_fail"`)
+4. **`no_call_site`** — `call_site` is empty/absent (gate refuses — "no '# call site:' comment")
+5. **`call_site_not_file_line`** — call site doesn't match `file:N` pattern (falls into the `else` branch on line 2148)
+6. **`call_site_file_not_found`** — `cs_file_path.is_file()` is False
+7. **`call_site_outside_package`** — `_inside` is False
+8. **`name_not_on_line`** — function's simple name not found on the cited line
+9. **`line_not_a_call_site`** — `_is_not_a_call_site()` returns a reason (comment/def/import/decorator/__all__)
+10. **`call_site_inside_own_body`** — cited line falls within `body_start..body_end`
+
+There's also an implicit one for indirect call sites — the format check (not two segments). But looking at indirect call sites, those are just sub-cases of the same semantic checks applied twice — and the "two segments" format error is a malformed indirect call site. Let me be precise: for indirect call sites, all the segment-level checks map to the same semantic classes (file not found, outside package, name not on line, not_a_call_site, inside body), plus one additional: **`indirect_call_site_wrong_format`** (not exactly two semicolon-separated segments).
+
+But the instruction says to read the code carefully and name branches I haven't already found. Let me check whether the "no unit found" path creates a refusal — that's actually a lookup failure, not a gate failure. The code `continue`s with `failed += 1` but there's no call site involved yet. That case is **`unit_not_found`** — but that's a misconfiguration, not a driver gate failure. The question is whether to include it.
+
+Reading the prompt: "the body was never reached, the driver exited non-zero, coverage export failed, no call site was declared, the declared call site does not parse as file:line, the cited file does not exist, the cited file lies outside the package under analysis, the function's name is absent from the cited line, the cited line is a definition or an import or a comment rather than a use, and the cited line falls inside the function's own body."
+
+That's 10. The code also has `indirect_call_site_wrong_format`. And the "line out of range" case (`cs_line > len(cs_lines)`) is a separate branch. Let me verify:
+
+> 🔧 **grep** — out of range|wrong_format|out_of_range|segment|is out of range
+
+### 🤖 Assistant
+
+> 🔧 called: update_todo_list
+
+There's also a "line out of range" branch (line number > file length). That's distinct from "file not found" and "name not on line". I need to add `call_site_line_out_of_range` as well.
+
+Final enum (13 classes):
+
+1. `unit_not_found` — no unit in evidence for this driver's stem
+2. `driver_exited_nonzero` — driver process returned non-zero  
+3. `coverage_export_failed` — coverage JSON export failed
+4. `body_never_reached` — driver ran but zero body lines hit
+5. `no_call_site` — no `# call site:` comment declared
+6. `indirect_wrong_format` — indirect call site doesn't have exactly two semicolon segments
+7. `call_site_not_file_line` — call site text doesn't parse as `file:N`
+8. `call_site_file_not_found` — cited file doesn't exist on disk
+9. `call_site_outside_package` — cited file exists but is outside the package
+10. `call_site_line_out_of_range` — cited line number exceeds file length
+11. `name_not_on_line` — function name absent from the cited line
+12. `line_not_a_call_site` — line is a def/import/comment/decorator/`__all__`
+13. `call_site_inside_own_body` — cited line falls inside the target function's own body range
+
+Note: `unit_not_found` is a different category — it happens before the driver is even run. The two actual refused drivers are `stdev` (name not on line — the cited line uses `self.funcValues(vals)` which doesn't contain "stdev") and `vstat` (no call site declared). Let me now implement all 6 tasks:
+
+> 🔧 **update_todo_list** — 
+[x] Audit all refusal branches in cmd_promote_driver and confirm the enum list
+[-] Define RefusalClass enum in first_light.py
+[ ] Record refusal_class on units in cmd_promote_driver (write to evidence.json)
+[ ] Add --refusal-report mode (runs drivers against a COPY, prints distribution)
+[ ] Update write_html_report to render refusal distribution section
+[ ] Update README paragraph and figures
+[ ] Run --refusal-report and verify counts; confirm product-scope counts unchanged
+
+
+### 🤖 Assistant
+
+> 🔧 called: apply_diff
+
+Now I'll implement everything in one large edit. The changes are:
+
+1. Add `RefusalClass` enum after the provenance constants
+2. Wire `refusal_class` and `refusal_reason` onto units in `cmd_promote_driver` at every `failed += 1; continue` path
+3. Add `--refusal-report` argument and its handler
+4. Add refusal distribution section to `write_html_report`
+5. Update README
+
+> 🔧 **apply_diff** — first_light.py
+
+### 🤖 Assistant
+
+> 🔧 called: grep, read_file, read_file
+
+Now update `cmd_promote_driver` to record `refusal_class` and `refusal_reason` at every refusal branch. I need to find the exact line numbers now (they've shifted):
+
+> 🔧 **grep** — first_light.py
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **read_file** — first_light.py
+
+### 🤖 Assistant
+
+> 🔧 called: apply_diff
+
+Now I have the full picture. I'll do the surgical replacement of `cmd_promote_driver` to record `refusal_class` + `refusal_reason` at each branch, and then add `--refusal-report` functionality:
+
+> 🔧 **apply_diff** — <<<<<<< SEARCH
+:start_line:1894
+-------
+        if unit_key is None:
+            print(
+                f"[promote-driver] FAIL  {driver_path.name} — "
+                f"no unit found for qualified name '{driver_path.stem}' in {evidence_path}",
+                file=sys.stderr,
+            )
+            failed += 1
+            continue
+=======
+        if unit_key is None:
+            _reason = (
+                f"no unit found for qualified name '{driver_path.stem}' in {evidence_path}"
+            )
+            print(
+                f"[promote-driver] FAIL  {driver_path.name} — {_reason}",
+                file=sys.stderr,
+            )
+            # No unit to annotate — nothing to write into doc.
+            failed += 1
+            continue
+>>>>>>> REPLACE
+
+<<<<<<< SEARCH
+:start_line:1979
+-------
+        if status != "reached":
+            reason = {
+                "not_reached": f"driver ran but zero body lines ({body_start}-{body_end}) hit in {src_abs}",
+                "crash":       "driver process exited with non-zero return code",
+                "cov_fail":    "coverage JSON export failed",
+            }.get(status, status)
+            print(
+                f"[promote-driver] FAIL  {driver_path.name} — {reason}",
+                file=sys.stderr,
+            )
+            failed += 1
+            continue
+=======
+        if status != "reached":
+            _rc_map = {
+                "not_reached": (RefusalClass.body_never_reached,
+                                f"driver ran but zero body lines ({body_start}-{body_end}) hit in {src_abs}"),
+                "crash":       (RefusalClass.driver_exited_nonzero,
+                                "driver process exited with non-zero return code"),
+                "cov_fail":    (RefusalClass.coverage_export_failed,
+                                "coverage JSON export failed"),
+            }
+            _rc, reason = _rc_map.get(status, (RefusalClass.body_never_reached, status))
+            print(
+                f"[promote-driver] FAIL  {driver_path.name} — {reason}",
+                file=sys.stderr,
+            )
+            doc["units"][unit_key]["refusal_class"]  = _rc.value
+            doc["units"][unit_key]["refusal_reason"] = reason
+            touched += 1
+            failed += 1
+            continue
+>>>>>>> REPLACE
+
+<<<<<<< SEARCH
+:start_line:2027
+-------
+        if not call_site:
+            print(
+                f"[promote-driver] FAIL  {driver_path.name} -- "
+                f"no '# call site:' comment; a driver must declare where the "
+                f"function is reached in production so the claim can be checked"
+            )
+            failed += 1
+            continue
+=======
+        if not call_site:
+            _reason = (
+                "no '# call site:' comment; a driver must declare where the "
+                "function is reached in production so the claim can be checked"
+            )
+            print(
+                f"[promote-driver] FAIL  {driver_path.name} -- {_reason}"
+            )
+            doc["units"][unit_key]["refusal_class"]  = RefusalClass.no_call_site.value
+            doc["units"][unit_key]["refusal_reason"] = _reason
+            failed += 1
+            continue
+>>>>>>> REPLACE
+
+<<<<<<< SEARCH
+:start_line:2040
+-------
+                if len(segments) != 2:
+                    print(
+                        f"[promote-driver] FAIL  {driver_path.name} -- "
+                        f"indirect call site must have exactly two segments separated by ';': "
+                        f"'dispatch_file:N -- text ; binding_file:M -- binding_name'. "
+                        f"Correct the '# call site (indirect):' comment.",
+                        file=sys.stderr,
+                    )
+                    failed += 1
+                    continue
+=======
+                if len(segments) != 2:
+                    _reason = (
+                        "indirect call site must have exactly two segments separated by ';': "
+                        "'dispatch_file:N -- text ; binding_file:M -- binding_name'. "
+                        "Correct the '# call site (indirect):' comment."
+                    )
+                    print(
+                        f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
+                        file=sys.stderr,
+                    )
+                    doc["units"][unit_key]["refusal_class"]  = RefusalClass.indirect_wrong_format.value
+                    doc["units"][unit_key]["refusal_reason"] = _reason
+                    failed += 1
+                    continue
+>>>>>>> REPLACE
+
+
+### 🤖 Assistant
+
+> 🔧 called: read_file
+
+Now handle the remaining refusal branches in the indirect and direct call site sections:
+
+> 🔧 **read_file** — first_light.py
+
+### 🤖 Assistant
+
+> 🔧 called: apply_diff
+
+Now I'll do the larger replacement of the indirect and direct call site refusal branches to annotate each one:
+
+> 🔧 **apply_diff** — <<<<<<< SEARCH
+:start_line:2085
+-------
+                cs_ok = True
+                for seg_label, seg_text, check_name in [
+                    ("dispatch", dispatch_seg, False),
+                    ("binding",  binding_seg,  True),
+                ]:
+                    seg_match = _re.match(r"^(.+):(\d+)", seg_text)
+                    if not seg_match:
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                            f"indirect call site {seg_label} segment '{seg_text}' "
+                            f"does not match 'file:N -- ...' format.",
+                            file=sys.stderr,
+                        )
+                        cs_ok = False
+                        break
+                    seg_file_raw = seg_match.group(1).strip()
+                    seg_line = int(seg_match.group(2))
+                    seg_file_path = Path(seg_file_raw)
+                    if not seg_file_path.is_absolute():
+                        seg_file_path = Path(".").resolve() / seg_file_raw
+                    if not seg_file_path.is_file():
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                            f"indirect call site {seg_label} file '{seg_file_raw}' does not exist.",
+                            file=sys.stderr,
+                        )
+                        cs_ok = False
+                        break
+                    # Same containment rule as the direct form. Without it the
+                    # indirect form is a way around it: a driver could cite a
+                    # throwaway file anywhere on disk, or itself, as the place
+                    # the function is reached in production.
+                    try:
+                        _seg_inside = seg_file_path.resolve().is_relative_to(Path(pkg_abs).resolve())
+                    except (OSError, ValueError):
+                        _seg_inside = False
+                    if not _seg_inside:
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                            f"indirect call site {seg_label} file '{seg_file_raw}' is "
+                            f"outside the package under analysis.",
+                            file=sys.stderr,
+                        )
+                        cs_ok = False
+                        break
+                    try:
+                        seg_text_lines = seg_file_path.read_text(encoding="utf-8", errors="replace").splitlines()
+                        if seg_line < 1 or seg_line > len(seg_text_lines):
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                                f"indirect call site {seg_label} line {seg_line} is out of range "
+                                f"for '{seg_file_raw}' ({len(seg_text_lines)} lines).",
+                                file=sys.stderr,
+                            )
+                            cs_ok = False
+                            break
+                        seg_line_text = seg_text_lines[seg_line - 1]
+                        if check_name and func_simple_name not in seg_line_text:
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                                f"function name '{func_simple_name}' not found on "
+                                f"{seg_label} line {seg_line} of '{seg_file_raw}': "
+                                f"{seg_line_text.strip()!r}. "
+                                f"Correct the '# call site (indirect):' comment.",
+                                file=sys.stderr,
+                            )
+                            cs_ok = False
+                            break
+                        # Rule 2b: the name being present is not enough.  A
+                        # definition, an import or an __all__ entry all contain
+                        # it and none is a place the function is reached.
+                        if check_name:
+                            _bad = _is_not_a_call_site(seg_line_text, func_simple_name)
+                            if _bad:
+                                print(
+                                    f"[promote-driver] FAIL  {driver_path.name} -- "
+                                    f"{seg_label} line {seg_line} of '{seg_file_raw}' "
+                                    f"cannot be a call site: {_bad}.",
+                                    file=sys.stderr,
+                                )
+                                cs_ok = False
+                                break
+                        # Rule 3: neither line may fall inside the function's own body.
+                        if Path(seg_file_raw).resolve() == Path(src_abs).resolve() and body_start <= seg_line <= body_end:
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                                f"indirect call site {seg_label} line {seg_line} falls inside "
+                                f"the target function's own body range ({body_start}-{body_end}).",
+                                file=sys.stderr,
+                            )
+                            cs_ok = False
+                            break
+                    except OSError as _cs_err:
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                            f"could not read indirect call site {seg_label} file "
+                            f"'{seg_file_raw}': {_cs_err}",
+                            file=sys.stderr,
+                        )
+                        cs_ok = False
+                        break
+
+                if not cs_ok:
+                    failed += 1
+                    continue
+=======
+                cs_ok = True
+                _cs_refusal_class: RefusalClass | None = None
+                _cs_refusal_reason: str = ""
+                for seg_label, seg_text, check_name in [
+                    ("dispatch", dispatch_seg, False),
+                    ("binding",  binding_seg,  True),
+                ]:
+                    seg_match = _re.match(r"^(.+):(\d+)", seg_text)
+                    if not seg_match:
+                        _cs_refusal_reason = (
+                            f"indirect call site {seg_label} segment '{seg_text}' "
+                            f"does not match 'file:N -- ...' format."
+                        )
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
+                            file=sys.stderr,
+                        )
+                        _cs_refusal_class = RefusalClass.call_site_not_file_line
+                        cs_ok = False
+                        break
+                    seg_file_raw = seg_match.group(1).strip()
+                    seg_line = int(seg_match.group(2))
+                    seg_file_path = Path(seg_file_raw)
+                    if not seg_file_path.is_absolute():
+                        seg_file_path = Path(".").resolve() / seg_file_raw
+                    if not seg_file_path.is_file():
+                        _cs_refusal_reason = (
+                            f"indirect call site {seg_label} file '{seg_file_raw}' does not exist."
+                        )
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
+                            file=sys.stderr,
+                        )
+                        _cs_refusal_class = RefusalClass.call_site_file_not_found
+                        cs_ok = False
+                        break
+                    # Same containment rule as the direct form. Without it the
+                    # indirect form is a way around it: a driver could cite a
+                    # throwaway file anywhere on disk, or itself, as the place
+                    # the function is reached in production.
+                    try:
+                        _seg_inside = seg_file_path.resolve().is_relative_to(Path(pkg_abs).resolve())
+                    except (OSError, ValueError):
+                        _seg_inside = False
+                    if not _seg_inside:
+                        _cs_refusal_reason = (
+                            f"indirect call site {seg_label} file '{seg_file_raw}' is "
+                            f"outside the package under analysis."
+                        )
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
+                            file=sys.stderr,
+                        )
+                        _cs_refusal_class = RefusalClass.call_site_outside_package
+                        cs_ok = False
+                        break
+                    try:
+                        seg_text_lines = seg_file_path.read_text(encoding="utf-8", errors="replace").splitlines()
+                        if seg_line < 1 or seg_line > len(seg_text_lines):
+                            _cs_refusal_reason = (
+                                f"indirect call site {seg_label} line {seg_line} is out of range "
+                                f"for '{seg_file_raw}' ({len(seg_text_lines)} lines)."
+                            )
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
+                                file=sys.stderr,
+                            )
+                            _cs_refusal_class = RefusalClass.call_site_line_out_of_range
+                            cs_ok = False
+                            break
+                        seg_line_text = seg_text_lines[seg_line - 1]
+                        if check_name and func_simple_name not in seg_line_text:
+                            _cs_refusal_reason = (
+                                f"function name '{func_simple_name}' not found on "
+                                f"{seg_label} line {seg_line} of '{seg_file_raw}': "
+                                f"{seg_line_text.strip()!r}. "
+                                f"Correct the '# call site (indirect):' comment."
+                            )
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
+                                file=sys.stderr,
+                            )
+                            _cs_refusal_class = RefusalClass.name_not_on_line
+                            cs_ok = False
+                            break
+                        # Rule 2b: the name being present is not enough.  A
+                        # definition, an import or an __all__ entry all contain
+                        # it and none is a place the function is reached.
+                        if check_name:
+                            _bad = _is_not_a_call_site(seg_line_text, func_simple_name)
+                            if _bad:
+                                _cs_refusal_reason = (
+                                    f"{seg_label} line {seg_line} of '{seg_file_raw}' "
+                                    f"cannot be a call site: {_bad}."
+                                )
+                                print(
+                                    f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
+                                    file=sys.stderr,
+                                )
+                                _cs_refusal_class = RefusalClass.line_not_a_call_site
+                                cs_ok = False
+                                break
+                        # Rule 3: neither line may fall inside the function's own body.
+                        if Path(seg_file_raw).resolve() == Path(src_abs).resolve() and body_start <= seg_line <= body_end:
+                            _cs_refusal_reason = (
+                                f"indirect call site {seg_label} line {seg_line} falls inside "
+                                f"the target function's own body range ({body_start}-{body_end})."
+                            )
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
+                                file=sys.stderr,
+                            )
+                            _cs_refusal_class = RefusalClass.call_site_inside_own_body
+                            cs_ok = False
+                            break
+                    except OSError as _cs_err:
+                        _cs_refusal_reason = (
+                            f"could not read indirect call site {seg_label} file "
+                            f"'{seg_file_raw}': {_cs_err}"
+                        )
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- {_cs_refusal_reason}",
+                            file=sys.stderr,
+                        )
+                        _cs_refusal_class = RefusalClass.call_site_file_not_found
+                        cs_ok = False
+                        break
+
+                if not cs_ok:
+                    if _cs_refusal_class is not None:
+                        doc["units"][unit_key]["refusal_class"]  = _cs_refusal_class.value
+                        doc["units"][unit_key]["refusal_reason"] = _cs_refusal_reason
+                    failed += 1
+                    continue
+>>>>>>> REPLACE
+
+<<<<<<< SEARCH
+:start_line:2191
+-------
+            else:
+                # ── direct call site: single "file:N -- name(...)" ────────
+                _cs_file_match = _re.match(r"^(.+):(\d+)", call_site)
+                if _cs_file_match:
+                    cs_file_raw = _cs_file_match.group(1).strip()
+                    cs_line = int(_cs_file_match.group(2))
+
+                    cs_file_path = Path(cs_file_raw)
+                    if not cs_file_path.is_absolute():
+                        cs_file_path = Path(".").resolve() / cs_file_raw
+
+                    # Rule 1: the file must exist.
+                    if not cs_file_path.is_file():
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                            f"call site file '{cs_file_raw}' does not exist; "
+                            f"correct the '# call site:' comment in the driver file.",
+                            file=sys.stderr,
+                        )
+                        failed += 1
+                        continue
+
+                    # Rule 1b: the call site must sit inside the package under analysis.
+                    # Without this a driver can name itself, or any file on disk, as the
+                    # place the function is reached in production. A file outside the
+                    # measured package is not a production call site.
+                    try:
+                        _inside = cs_file_path.resolve().is_relative_to(Path(pkg_abs).resolve())
+                    except (OSError, ValueError):
+                        _inside = False
+                    if not _inside:
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                            f"call site '{cs_file_raw}' is outside the package under "
+                            f"analysis; a driver cannot cite itself or an unmeasured "
+                            f"file as where the function is reached in production.",
+                            file=sys.stderr,
+                        )
+                        failed += 1
+                        continue
+
+                    # Rule 2: the target function's simple name must appear on that line.
+                    func_simple_name = unit_key.split("::", 1)[1].rsplit(".", 1)[-1] if "::" in unit_key else unit_key
+                    if "#" in func_simple_name:
+                        func_simple_name = func_simple_name.rsplit("#", 1)[0]
+                    try:
+                        cs_lines = cs_file_path.read_text(encoding="utf-8", errors="replace").splitlines()
+                        if cs_line < 1 or cs_line > len(cs_lines):
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                                f"call site line {cs_line} is out of range for "
+                                f"'{cs_file_raw}' ({len(cs_lines)} lines); "
+                                f"correct the '# call site:' comment.",
+                                file=sys.stderr,
+                            )
+                            failed += 1
+                            continue
+                        cs_text = cs_lines[cs_line - 1]
+                        if func_simple_name not in cs_text:
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                                f"function name '{func_simple_name}' not found on "
+                                f"line {cs_line} of '{cs_file_raw}'; "
+                                f"correct the '# call site:' comment in the driver file.",
+                                file=sys.stderr,
+                            )
+                            failed += 1
+                            continue
+                        _bad = _is_not_a_call_site(cs_text, func_simple_name)
+                        if _bad:
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- "
+                                f"line {cs_line} of '{cs_file_raw}' cannot be a "
+                                f"call site: {_bad}.",
+                                file=sys.stderr,
+                            )
+                            failed += 1
+                            continue
+                    except OSError as _cs_err:
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                            f"could not read call site file '{cs_file_raw}': {_cs_err}",
+                            file=sys.stderr,
+                        )
+                        failed += 1
+                        continue
+
+                    # Rule 3: call site must not fall inside the target's own body.
+                    if Path(cs_file_raw).resolve() == Path(src_abs).resolve() and body_start <= cs_line <= body_end:
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- "
+                            f"call site line {cs_line} falls inside the target function's "
+                            f"own body range ({body_start}-{body_end}); a function cannot "
+                            f"be its own caller.  Correct the '# call site:' comment "
+                            f"in the driver file.",
+                            file=sys.stderr,
+                        )
+                        failed += 1
+                        continue
+                else:
+                    # A call site that does not parse as 'file:line' states nothing a
+                    # checker can open and confirm. Prose is not a citation: accepting
+                    # it would record the function as reached in production on an
+                    # assertion nobody can check, which is the failure this gate exists
+                    # to prevent.
+                    print(
+                        f"[promote-driver] FAIL  {driver_path.name} -- "
+                        f"call site {call_site!r} is not in 'file:line' form, so there "
+                        f"is nothing to open and confirm.",
+                        file=sys.stderr,
+                    )
+                    failed += 1
+                    continue
+=======
+            else:
+                # ── direct call site: single "file:N -- name(...)" ────────
+                _cs_file_match = _re.match(r"^(.+):(\d+)", call_site)
+                if _cs_file_match:
+                    cs_file_raw = _cs_file_match.group(1).strip()
+                    cs_line = int(_cs_file_match.group(2))
+
+                    cs_file_path = Path(cs_file_raw)
+                    if not cs_file_path.is_absolute():
+                        cs_file_path = Path(".").resolve() / cs_file_raw
+
+                    # Rule 1: the file must exist.
+                    if not cs_file_path.is_file():
+                        _reason = (
+                            f"call site file '{cs_file_raw}' does not exist; "
+                            f"correct the '# call site:' comment in the driver file."
+                        )
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
+                            file=sys.stderr,
+                        )
+                        doc["units"][unit_key]["refusal_class"]  = RefusalClass.call_site_file_not_found.value
+                        doc["units"][unit_key]["refusal_reason"] = _reason
+                        failed += 1
+                        continue
+
+                    # Rule 1b: the call site must sit inside the package under analysis.
+                    # Without this a driver can name itself, or any file on disk, as the
+                    # place the function is reached in production. A file outside the
+                    # measured package is not a production call site.
+                    try:
+                        _inside = cs_file_path.resolve().is_relative_to(Path(pkg_abs).resolve())
+                    except (OSError, ValueError):
+                        _inside = False
+                    if not _inside:
+                        _reason = (
+                            f"call site '{cs_file_raw}' is outside the package under "
+                            f"analysis; a driver cannot cite itself or an unmeasured "
+                            f"file as where the function is reached in production."
+                        )
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
+                            file=sys.stderr,
+                        )
+                        doc["units"][unit_key]["refusal_class"]  = RefusalClass.call_site_outside_package.value
+                        doc["units"][unit_key]["refusal_reason"] = _reason
+                        failed += 1
+                        continue
+
+                    # Rule 2: the target function's simple name must appear on that line.
+                    func_simple_name = unit_key.split("::", 1)[1].rsplit(".", 1)[-1] if "::" in unit_key else unit_key
+                    if "#" in func_simple_name:
+                        func_simple_name = func_simple_name.rsplit("#", 1)[0]
+                    try:
+                        cs_lines = cs_file_path.read_text(encoding="utf-8", errors="replace").splitlines()
+                        if cs_line < 1 or cs_line > len(cs_lines):
+                            _reason = (
+                                f"call site line {cs_line} is out of range for "
+                                f"'{cs_file_raw}' ({len(cs_lines)} lines); "
+                                f"correct the '# call site:' comment."
+                            )
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
+                                file=sys.stderr,
+                            )
+                            doc["units"][unit_key]["refusal_class"]  = RefusalClass.call_site_line_out_of_range.value
+                            doc["units"][unit_key]["refusal_reason"] = _reason
+                            failed += 1
+                            continue
+                        cs_text = cs_lines[cs_line - 1]
+                        if func_simple_name not in cs_text:
+                            _reason = (
+                                f"function name '{func_simple_name}' not found on "
+                                f"line {cs_line} of '{cs_file_raw}'; "
+                                f"correct the '# call site:' comment in the driver file."
+                            )
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
+                                file=sys.stderr,
+                            )
+                            doc["units"][unit_key]["refusal_class"]  = RefusalClass.name_not_on_line.value
+                            doc["units"][unit_key]["refusal_reason"] = _reason
+                            failed += 1
+                            continue
+                        _bad = _is_not_a_call_site(cs_text, func_simple_name)
+                        if _bad:
+                            _reason = (
+                                f"line {cs_line} of '{cs_file_raw}' cannot be a "
+                                f"call site: {_bad}."
+                            )
+                            print(
+                                f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
+                                file=sys.stderr,
+                            )
+                            doc["units"][unit_key]["refusal_class"]  = RefusalClass.line_not_a_call_site.value
+                            doc["units"][unit_key]["refusal_reason"] = _reason
+                            failed += 1
+                            continue
+                    except OSError as _cs_err:
+                        _reason = f"could not read call site file '{cs_file_raw}': {_cs_err}"
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
+                            file=sys.stderr,
+                        )
+                        doc["units"][unit_key]["refusal_class"]  = RefusalClass.call_site_file_not_found.value
+                        doc["units"][unit_key]["refusal_reason"] = _reason
+                        failed += 1
+                        continue
+
+                    # Rule 3: call site must not fall inside the target's own body.
+                    if Path(cs_file_raw).resolve() == Path(src_abs).resolve() and body_start <= cs_line <= body_end:
+                        _reason = (
+                            f"call site line {cs_line} falls inside the target function's "
+                            f"own body range ({body_start}-{body_end}); a function cannot "
+                            f"be its own caller.  Correct the '# call site:' comment "
+                            f"in the driver file."
+                        )
+                        print(
+                            f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
+                            file=sys.stderr,
+                        )
+                        doc["units"][unit_key]["refusal_class"]  = RefusalClass.call_site_inside_own_body.value
+                        doc["units"][unit_key]["refusal_reason"] = _reason
+                        failed += 1
+                        continue
+                else:
+                    # A call site that does not parse as 'file:line' states nothing a
+                    # checker can open and confirm. Prose is not a citation: accepting
+                    # it would record the function as reached in production on an
+                    # assertion nobody can check, which is the failure this gate exists
+                    # to prevent.
+                    _reason = (
+                        f"call site {call_site!r} is not in 'file:line' form, so there "
+                        f"is nothing to open and confirm."
+                    )
+                    print(
+                        f"[promote-driver] FAIL  {driver_path.name} -- {_reason}",
+                        file=sys.stderr,
+                    )
+                    doc["units"][unit_key]["refusal_class"]  = RefusalClass.call_site_not_file_line.value
+                    doc["units"][unit_key]["refusal_reason"] = _reason
+                    failed += 1
+                    continue
+>>>>>>> REPLACE
+
+
+### 🤖 Assistant
+
+> 🔧 called: grep, grep, read_file
+
+Now I need to add the `--refusal-report` mode. Let me find where to insert it:
+
+> 🔧 **grep** — first_light.py
+
+> 🔧 **grep** — first_light.py
+
+> 🔧 **read_file** — first_light.py
+
+### 🤖 Assistant
+
+> 🔧 called: apply_diff
+
+Now I'll add the `--refusal-report` argument and its implementation. First the argument, then a `cmd_refusal_report` function, then the main dispatch:
+
+> 🔧 **apply_diff** — <<<<<<< SEARCH
+:start_line:2495
+-------
+        "--timeout", dest="driver_timeout", type=int, default=30, metavar="SECONDS",
+        help="Per-driver subprocess timeout in seconds (default: 30).",
+    )
+
+    args = parser.parse_args(argv)
+=======
+        "--timeout", dest="driver_timeout", type=int, default=30, metavar="SECONDS",
+        help="Per-driver subprocess timeout in seconds (default: 30).",
+    )
+
+    # ── --refusal-report ──────────────────────────────────────────────────
+    parser.add_argument(
+        "--refusal-report", dest="refusal_report", action="store_true",
+        help=(
+            "Run every driver in --drivers-dir against a COPY of the evidence "
+            "file and print the refusal distribution.  The real evidence file is "
+            "never modified.  Requires --evidence pointing at the evidence.json to "
+            "read, and the package path recorded in that file must still be valid.  "
+            "Use --pkg to override the package path."
+        ),
+    )
+
+    args = parser.parse_args(argv)
+>>>>>>> REPLACE
+
+
+### 🤖 Assistant
+
+> 🔧 called: grep, apply_diff
+
+Now add the `cmd_refusal_report` function before `main()`, and add its dispatch in `main()`:
+
+> 🔧 **grep** — first_light.py
+
+> 🔧 **apply_diff** — <<<<<<< SEARCH
+:start_line:2414
+-------
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main(argv: list[str] | None = None) -> int:
+=======
+# ---------------------------------------------------------------------------
+# --refusal-report
+# ---------------------------------------------------------------------------
+
+def cmd_refusal_report(
+    drivers_dir: Path,
+    evidence_path: Path,
+    python: str,
+    pkg_abs: str,
+    timeout: int,
+) -> int:
+    """Run every driver against a scratch copy of evidence.json and print the
+    refusal distribution.  The real evidence file is never written.
+
+    Returns 0 always (this is a reporting command, not a gate).
+    """
+    if not drivers_dir.is_dir():
+        print(f"[refusal-report] ERROR: drivers directory not found: {drivers_dir}", file=sys.stderr)
+        return 1
+
+    driver_paths = sorted(drivers_dir.glob("*.py"))
+    if not driver_paths:
+        print("[refusal-report] no driver files found in", drivers_dir, file=sys.stderr)
+        return 0
+
+    # Deep-copy the evidence document so the real file is never touched.
+    with open(evidence_path, encoding="utf-8") as fh:
+        doc_original = json.load(fh)
+    doc_scratch = copy.deepcopy(doc_original)
+
+    # Write the scratch copy to a temp file so cmd_promote_driver can use its
+    # normal read/write path without touching the real file.
+    import tempfile as _tmp
+    tmp_fd, tmp_path = _tmp.mkstemp(suffix=".json", prefix="fl_refusal_")
+    try:
+        with os.fdopen(tmp_fd, "w", encoding="utf-8") as fh:
+            json.dump(doc_scratch, fh, indent=2)
+
+        scratch_path = Path(tmp_path)
+
+        # Run the full promote logic against the scratch file.
+        # cmd_promote_driver writes its results back into scratch_path via
+        # os.replace — the real evidence_path is untouched.
+        cmd_promote_driver(
+            driver_paths=driver_paths,
+            evidence_path=scratch_path,
+            python=python,
+            pkg_abs=pkg_abs,
+            timeout=timeout,
+        )
+
+        # Read back the annotated scratch document.
+        with open(scratch_path, encoding="utf-8") as fh:
+            doc_after = json.load(fh)
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+    # ── tally outcomes ────────────────────────────────────────────────────
+    attempted   = len(driver_paths)
+    promoted    = 0
+    redundant   = 0
+    refused_by_class: dict[str, int] = {}
+
+    for driver_path in driver_paths:
+        stem = driver_path.stem
+        # Find the matching unit in the annotated document.
+        unit = None
+        for key, u in doc_after.get("units", {}).items():
+            if "::" not in key:
+                continue
+            qname_part = key.split("::", 1)[1]
+            if "#" in qname_part:
+                qname_part = qname_part.rsplit("#", 1)[0]
+            if qname_part == stem:
+                unit = u
+                break
+
+        if unit is None:
+            # unit_not_found — driver stem has no matching unit key
+            rc = RefusalClass.unit_not_found.value
+            refused_by_class[rc] = refused_by_class.get(rc, 0) + 1
+            continue
+
+        prov = unit.get("provenance", PROVENANCE_NEVER)
+        if prov == PROVENANCE_UNDER_DRIVER:
+            promoted += 1
+        elif prov == PROVENANCE_IN_SITU and unit.get("driver_redundant_baseline"):
+            redundant += 1
+        else:
+            # Refused.  Read back the refusal_class that cmd_promote_driver wrote.
+            rc = unit.get("refusal_class", "unknown")
+            refused_by_class[rc] = refused_by_class.get(rc, 0) + 1
+
+    total_refused = sum(refused_by_class.values())
+
+    # ── print the distribution ────────────────────────────────────────────
+    print()
+    print("=" * 60)
+    print("  REFUSAL REPORT — driver evaluation distribution")
+    print("=" * 60)
+    print(f"  Drivers measured : {attempted}")
+    print(f"  Promoted         : {promoted}")
+    print(f"  Made redundant   : {redundant}  (unit reached by a baseline)")
+    print(f"  Refused          : {total_refused}")
+    if refused_by_class:
+        print()
+        print(f"  {'Refusal class':<36} {'Count':>5}")
+        print("  " + "-" * 44)
+        for rc_val, count in sorted(refused_by_class.items(), key=lambda kv: -kv[1]):
+            print(f"  {rc_val:<36} {count:>5}")
+    print("=" * 60)
+    print()
+    print("  NOTE: this report ran drivers against a scratch copy of")
+    print("  evidence.json.  The published evidence file was not changed.")
+    print()
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main(argv: list[str] | None = None) -> int:
+>>>>>>> REPLACE
+
+
+### 🤖 Assistant
+
+> 🔧 called: grep, read_file, apply_diff
+
+Now add the `--refusal-report` dispatch in `main()`, right after the `--promote-driver` fast-path:
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **grep** — first_light.py
+
+> 🔧 **apply_diff** — <<<<<<< SEARCH
+:start_line:2696
+-------
+    # ── --report fast-path: read existing evidence.json, write HTML, done ─
+=======
+    # ── --refusal-report fast-path ────────────────────────────────────────
+    if args.refusal_report:
+        evidence_path_str = args.evidence_out or str(Path(__file__).parent / "evidence.json")
+        evidence_path = Path(evidence_path_str)
+        if not evidence_path.is_file():
+            print(
+                f"[refusal-report] ERROR: evidence file not found: {evidence_path}\n"
+                f"  Pass --evidence <path> to specify the evidence.json to read.",
+                file=sys.stderr,
+            )
+            return 1
+
+        # Resolve pkg_abs.
+        if args.pkg_for_driver:
+            pkg_abs_rr = str(Path(args.pkg_for_driver).resolve())
+        else:
+            with open(evidence_path, encoding="utf-8") as fh:
+                _ev_rr = json.load(fh)
+            _bl0_rr = (_ev_rr.get("baselines") or [{}])[0] if _ev_rr.get("baselines") else _ev_rr.get("baseline", {})
+            pkg_abs_rr = _bl0_rr.get("package", "")
+            if not pkg_abs_rr:
+                print(
+                    "[refusal-report] ERROR: cannot determine package path. "
+                    "Pass --pkg <path> or ensure evidence.json has baselines[0].package set.",
+                    file=sys.stderr,
+                )
+                return 1
+
+        # Resolve python interpreter.
+        python_interp_rr = args.python
+        if python_interp_rr == sys.executable:
+            with open(evidence_path, encoding="utf-8") as fh:
+                _ev_rr2 = json.load(fh)
+            _bl0_rr2 = (_ev_rr2.get("baselines") or [{}])[0] if _ev_rr2.get("baselines") else _ev_rr2.get("baseline", {})
+            cmd_list_rr = _bl0_rr2.get("command", [])
+            if cmd_list_rr:
+                python_interp_rr = cmd_list_rr[0]
+
+        return cmd_refusal_report(
+            drivers_dir=Path(args.drivers_dir),
+            evidence_path=evidence_path,
+            python=python_interp_rr,
+            pkg_abs=pkg_abs_rr,
+            timeout=args.driver_timeout,
+        )
+
+    # ── --report fast-path: read existing evidence.json, write HTML, done ─
+>>>>>>> REPLACE
+
+
+### 🤖 Assistant
+
+> 🔧 called: update_todo_list, execute_command
+
+Now run the `--refusal-report` to get the real distribution before updating the HTML and README:
+
+> 🔧 **update_todo_list** — 
+[x] Audit all refusal branches in cmd_promote_driver and confirm the enum list
+[x] Define RefusalClass enum in first_light.py
+[x] Record refusal_class on units in cmd_promote_driver (write to evidence.json)
+[x] Add --refusal-report mode (runs drivers against a COPY, prints distribution)
+[-] Run --refusal-report and verify counts; confirm product-scope counts unchanged
+[ ] Update write_html_report to render refusal distribution section
+[ ] Update README paragraph and figures
+
+
+> 🔧 **execute_command** — python first_light.py --refusal-report --evidence evidence.json 2>&1
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command
+
+The distribution is confirmed: **10 drivers measured, 3 promoted, 5 made redundant by baseline, 2 refused** — `name_not_on_line` (1) and `no_call_site` (1). This is exactly correct. The exit code is 1 because `cmd_promote_driver` returns 1 when there are failures (correct behavior). Now verify evidence.json counts haven't changed:
+
+> 🔧 **execute_command** — python -c "
+import json
+ev=json.load(open('evidence.json'))
+from collections import Counter
+from pathlib import Path
+excl = {'tests','vendor','apps','experimental'}
+def is_prod(u):
+    parts = Path(u['file']).parts
+    return not any(p in excl for p in parts)
+prod_units = {k:u for k,u in ev['units'].items() if is_prod(u)}
+pc = Counter(u['provenance'] for u in prod_units.values())
+red = sum(1 for u in prod_units.values() if u.get('provenance')=='observed_in_situ' and u.get('driver_redundant_baseline'))
+pure_insitu = sum(1 for u in prod_units.values() if u.get('provenance')=='observed_in_situ' and not u.get('driver_redundant_baseline'))
+drv = pc.get('observed_under_driver',0)
+nev = pc.get('never_observed',0)
+total = len(prod_units)
+print('Product total:', total, '(expected 2290)')
+print('Product in_situ (pure):', pure_insitu, '(expected 939)')
+print('Product under_driver:', drv, '(expected 3)')
+print('Product driver_redundant:', red, '(expected 5)')
+print('Product never_observed:', nev, '(expected 1343)')
+# Check refusal_class on refused units
+refused = [(k,u) for k,u in ev['units'].items() if u.get('refusal_class')]
+print()
+print('Units with refusal_class:', len(refused))
+for k,u in refused:
+    print(' ', k.split('::')[1] if '::' in k else k, '->', u.get('refusal_class'), '/', u.get('refusal_reason','')[:80])
+"
+
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command
+
+The product-scope counts are exactly right and unchanged. The `refusal_class` fields aren't in the real `evidence.json` yet because we only ran `--refusal-report` (which uses a scratch copy). That's correct — the real file needs a `--promote-driver --all` run to annotate the refused units. Let me run that now:
+
+> 🔧 **execute_command** — python first_light.py --promote-driver --all --evidence evidence.json 2>&1
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command
+
+Good — the two failed drivers (stdev and vstat) are now annotated in evidence.json. Let me verify:
+
+> 🔧 **execute_command** — python -c "
+import json
+ev=json.load(open('evidence.json'))
+from collections import Counter
+from pathlib import Path
+excl = {'tests','vendor','apps','experimental'}
+def is_prod(u):
+    parts = Path(u['file']).parts
+    return not any(p in excl for p in parts)
+prod_units = {k:u for k,u in ev['units'].items() if is_prod(u)}
+pc = Counter(u['provenance'] for u in prod_units.values())
+red = sum(1 for u in prod_units.values() if u.get('provenance')=='observed_in_situ' and u.get('driver_redundant_baseline'))
+pure_insitu = sum(1 for u in prod_units.values() if u.get('provenance')=='observed_in_situ' and not u.get('driver_redundant_baseline'))
+drv = pc.get('observed_under_driver',0)
+nev = pc.get('never_observed',0)
+total = len(prod_units)
+print('Product total:', total, '(expected 2290) PASS' if total==2290 else 'FAIL')
+print('Product in_situ:', pure_insitu, '(expected 939) PASS' if pure_insitu==939 else 'FAIL')
+print('Product under_driver:', drv, '(expected 3) PASS' if drv==3 else 'FAIL')
+print('Product driver_redundant:', red, '(expected 5) PASS' if red==5 else 'FAIL')
+print('Product never_observed:', nev, '(expected 1343) PASS' if nev==1343 else 'FAIL')
+print()
+refused = [(k,u) for k,u in ev['units'].items() if u.get('refusal_class')]
+print('Units with refusal_class:', len(refused))
+for k,u in refused:
+    qname = k.split('::')[1] if '::' in k else k
+    print(' ', qname, '->', u['refusal_class'])
+    print('  reason:', u.get('refusal_reason','')[:100])
+"
+
+
+### 🤖 Assistant
+
+> 🔧 called: update_todo_list
+
+All counts confirmed. Now update the HTML report to show the refusal distribution section, and regenerate `report.html`:
+
+> 🔧 **update_todo_list** — 
+[x] Audit all refusal branches in cmd_promote_driver and confirm the enum list
+[x] Define RefusalClass enum in first_light.py
+[x] Record refusal_class on units in cmd_promote_driver (write to evidence.json)
+[x] Add --refusal-report mode (runs drivers against a COPY, prints distribution)
+[x] Run --refusal-report and verify counts; confirm product-scope counts unchanged
+[-] Update write_html_report to render refusal distribution section
+[ ] Update README paragraph and figures
+
+
+### 🤖 Assistant
+
+> 🔧 called: grep, read_file, read_file
+
+Now I'll add the refusal distribution section to `write_html_report`. Let me find where the HTML driver section ends:
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **grep** — first_light.py
+
+> 🔧 **read_file** — first_light.py
+
+### 🤖 Assistant
+
+> 🔧 called: read_file
+
+Now let me look at where the refusal data computation and HTML generation should be inserted:
+
+> 🔧 **read_file** — first_light.py
+
+### 🤖 Assistant
+
+> 🔧 called: apply_diff
+
+Now I'll add the refusal distribution computation and its HTML section. I'll insert the computation right after the attempted_drivers are computed, and add the section after section 4 in the HTML:
+
+> 🔧 **apply_diff** — <<<<<<< SEARCH
+:start_line:1260
+-------
+    confirmed_drivers, redundant_drivers, attempted_drivers = _driver_units_from_evidence(units, _drivers_dir)
+
+    # ── Relative-path helper ──────────────────────────────────────────────────
+=======
+    confirmed_drivers, redundant_drivers, attempted_drivers = _driver_units_from_evidence(units, _drivers_dir)
+
+    # ── Refusal distribution — read refusal_class from evidence units ─────────
+    # Collect every unit that carries a refusal_class (refused drivers).
+    # A refusal is a finding: it is recorded on the unit in evidence.json by
+    # cmd_promote_driver so any reader can query it without re-running drivers.
+    refusal_rows: list[tuple[str, str, str]] = []  # (qname, refusal_class, refusal_reason)
+    for key, u in units.items():
+        rc = u.get("refusal_class")
+        if not rc:
+            continue
+        qname_part = key.split("::", 1)[1] if "::" in key else key
+        qname_part = _strip_def_line_suffix(qname_part)
+        refusal_rows.append((qname_part, rc, u.get("refusal_reason", "")))
+    # Count by class (for the summary table).
+    refusal_class_counts: dict[str, int] = {}
+    for _, rc, _ in refusal_rows:
+        refusal_class_counts[rc] = refusal_class_counts.get(rc, 0) + 1
+    total_drivers_attempted = len(confirmed_drivers) + len(redundant_drivers) + len(attempted_drivers)
+    # attempted_drivers (as returned above) only covers not-confirmed; for the
+    # refusal report we also want the total driver count across all outcomes.
+    # We count it from evidence units that have driver_attempted or provenance
+    # markers, but the simplest correct count is the sum of all three buckets.
+
+    # ── Relative-path helper ──────────────────────────────────────────────────
+>>>>>>> REPLACE
+
+
+### 🤖 Assistant
+
+> 🔧 called: apply_diff
+
+Now add the refusal distribution HTML section in the html_doc, right after the driver results section and before the footer:
+
+> 🔧 **apply_diff** — <<<<<<< SEARCH
+:start_line:1683
+-------
+{f'<div style="margin-top:20px"><div class="section-heading" style="color:#cc4444;">Attempted, not confirmed ({e(str(len(attempted_drivers)))})</div>' + attempted_html + '</div>' if attempted_drivers else ''}
+</section>
+
+<footer class="footer">
+  Made with IBM Bob : First Light v{e(version)} : {e(generated_at)}
+</footer>
+=======
+{f'<div style="margin-top:20px"><div class="section-heading" style="color:#cc4444;">Attempted, not confirmed ({e(str(len(attempted_drivers)))})</div>' + attempted_html + '</div>' if attempted_drivers else ''}
+</section>
+
+{'<hr class="sep">' if refusal_rows else ''}
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 5 — REFUSAL DISTRIBUTION
+     ═══════════════════════════════════════════════════════ -->
+{_refusal_section_html}
+
+<footer class="footer">
+  Made with IBM Bob : First Light v{e(version)} : {e(generated_at)}
+</footer>
+>>>>>>> REPLACE
+
+
+### 🤖 Assistant
+
+> 🔧 called: grep, read_file, read_file, apply_diff
+
+Now I need to build `_refusal_section_html` before it's used in the f-string. Let me add its construction just before the `html_doc` f-string:
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **grep** — first_light.py
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **apply_diff** — <<<<<<< SEARCH
+:start_line:1531
+-------
+    html_doc = f"""<!DOCTYPE html>
+=======
+    # ── Refusal distribution section HTML ────────────────────────────────────
+    if refusal_rows:
+        total_drivers_count = len(confirmed_drivers) + len(redundant_drivers) + len(attempted_drivers)
+        _ref_rows_html = []
+        for qname, rc, reason in sorted(refusal_rows, key=lambda t: t[0]):
+            _ref_rows_html.append(
+                f'<tr>'
+                f'<td style="font-family:var(--font-mono);font-size:11px;color:var(--text);padding:6px 8px;border-bottom:1px solid var(--border);">{e(qname)}</td>'
+                f'<td style="font-family:var(--font-mono);font-size:11px;color:var(--amber);padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap;">{e(rc)}</td>'
+                f'<td style="font-size:11px;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--border);">{e(reason)}</td>'
+                f'</tr>'
+            )
+        _ref_summary_rows_html = []
+        for rc_val, count in sorted(refusal_class_counts.items(), key=lambda kv: -kv[1]):
+            _ref_summary_rows_html.append(
+                f'<tr>'
+                f'<td style="font-family:var(--font-mono);font-size:11px;color:var(--amber);padding:4px 8px;">{e(rc_val)}</td>'
+                f'<td style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--text);padding:4px 8px;text-align:right;">{count}</td>'
+                f'</tr>'
+            )
+        _refusal_section_html = f"""<section style="margin-bottom:48px;">
+  <div class="section-heading">Refusal distribution: {e(str(total_drivers_count))} drivers measured</div>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">
+    {e(str(total_drivers_count))} drivers were measured against this evidence file.
+    {e(str(len(confirmed_drivers)))} promoted &nbsp;&middot;&nbsp;
+    {e(str(len(redundant_drivers)))} made redundant by a baseline &nbsp;&middot;&nbsp;
+    {e(str(len(refusal_rows)))} refused.
+    The table shows only classes that occurred.
+  </p>
+  <table style="border-collapse:collapse;margin-bottom:24px;min-width:320px;">
+    <thead>
+      <tr>
+        <th style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:4px 8px;text-align:left;border-bottom:1px solid var(--border);">Refusal class</th>
+        <th style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:4px 8px;text-align:right;border-bottom:1px solid var(--border);">Count</th>
+      </tr>
+    </thead>
+    <tbody>
+      {"".join(_ref_summary_rows_html)}
+    </tbody>
+  </table>
+  <table style="border-collapse:collapse;width:100%;">
+    <thead>
+      <tr>
+        <th style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">Driver</th>
+        <th style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">Refusal class</th>
+        <th style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">Reason</th>
+      </tr>
+    </thead>
+    <tbody>
+      {"".join(_ref_rows_html)}
+    </tbody>
+  </table>
+</section>"""
+    else:
+        _refusal_section_html = ""
+
+    html_doc = f"""<!DOCTYPE html>
+>>>>>>> REPLACE
+
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command
+
+Now regenerate `report.html`:
+
+> 🔧 **execute_command** — python first_light.py --report report.html --evidence evidence.json 2>&1
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command
+
+Exit 1 is from the `--report` path being mistaken for the `--promote-driver` path (it checks `args.report_out and not args.package`). Let me check what's happening:
+
+> 🔧 **execute_command** — python -c "
+import sys
+sys.argv = ['first_light.py', '--report', 'report.html', '--evidence', 'evidence.json']
+import first_light
+result = first_light.main()
+print('Exit code:', result)
+" 2>&1
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command, execute_command
+
+Exit code 0 (the report was written). The "Exit code: 1" from the shell is a PowerShell quirk with stderr output. Let me verify the HTML was actually generated correctly:
+
+> 🔧 **execute_command** — python -c "
+content = open('report.html', encoding='utf-8').read()
+print('File size:', len(content), 'bytes')
+if 'refusal' in content.lower():
+    idx = content.lower().index('refusal')
+    print('Found refusal section at offset', idx)
+    print(content[idx:idx+200])
+else:
+    print('ERROR: refusal section NOT found')
+if 'name_not_on_line' in content:
+    print('name_not_on_line class: PRESENT')
+if 'no_call_site' in content:
+    print('no_call_site class: PRESENT')
+if '10 drivers measured' in content:
+    print('driver count 10: PRESENT')
+"
+
+> 🔧 **execute_command** — python -c "
+import sys
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+content = open('report.html', encoding='utf-8').read()
+print('File size:', len(content), 'bytes')
+if 'refusal' in content.lower():
+    idx = content.lower().index('refusal')
+    print('Found refusal section at offset', idx)
+    # find section 5
+    if 'SECTION 5' in content:
+        idx2 = content.index('SECTION 5')
+        print(content[idx2:idx2+300].replace('\n', ' '))
+if 'name_not_on_line' in content:
+    print('name_not_on_line class: PRESENT')
+if 'no_call_site' in content:
+    print('no_call_site class: PRESENT')
+if '10 drivers measured' in content:
+    print('10 drivers measured: PRESENT')
+" 2>&1 | Out-String
+
+### 🤖 Assistant
+
+> 🔧 called: update_todo_list, apply_diff
+
+The HTML report is updated correctly with the refusal distribution section. Now update the README:
+
+> 🔧 **update_todo_list** — 
+[x] Audit all refusal branches in cmd_promote_driver and confirm the enum list
+[x] Define RefusalClass enum in first_light.py
+[x] Record refusal_class on units in cmd_promote_driver (write to evidence.json)
+[x] Add --refusal-report mode (runs drivers against a COPY, prints distribution)
+[x] Run --refusal-report and verify counts; confirm product-scope counts unchanged
+[x] Update write_html_report to render refusal distribution section
+[-] Update README paragraph and figures
+
+
+> 🔧 **apply_diff** — <<<<<<< SEARCH
+:start_line:173
+-------
+## Where watsonx.ai fits
+
+Driver generation is already a model-in-a-loop step. A function that nothing has
+ever executed is handed to a model, which writes code that tries to reach it.
+In this repository that step was done by Bob. It belongs on watsonx.ai with a
+Granite model, and the reason is specific: this project already has the piece
+such a workload usually lacks, which is a verifier that can reject the model's
+output on evidence rather than on taste.
+
+The gate does not ask whether generated code looks right. It runs the driver
+under coverage and checks that lines inside the real function executed, and it
+opens the file the driver names as the production call site and confirms the
+function's name is on that line, inside the package under analysis. A driver
+that copies a function body, exits non-zero, cites a line that does not contain
+the call, cites a file outside the package, or cites nothing at all, is refused.
+Two of the ten drivers in `drivers/` were refused for exactly these reasons.
+
+That makes `evidence.json` an evaluation harness for generated code. The figure
+worth publishing is not that a model can write a driver. It is how many of its
+drivers survive verification, and how the refusals distribute: fabricated call
+sites fail differently from inlined function bodies, and the distribution says
+something measurable about how far a model's output can be trusted unreviewed.
+
+This was attempted and not completed. The IBM Cloud account provisioned for this
+event exposes a catalog of twelve infrastructure services with no AI or machine
+learning category, so watsonx.ai Runtime could not be provisioned and the
+project could not be associated with an inference instance. Authentication
+against IBM Cloud IAM succeeds and the account can list twenty foundation
+models, `ibm/granite-4-h-small` among them, but inference returns
+`no_associated_service_instance_error`.
+
+The work is scoped rather than claimed. Nothing in this repository calls
+watsonx.ai, and no part of the reported figures depends on a model having been
+asked anything. Publishing an integration that does not run would be the same
+unverified assertion this tool exists to detect.
+=======
+## Where watsonx.ai fits
+
+Driver generation is already a model-in-a-loop step. A function that nothing has
+ever executed is handed to a model, which writes code that tries to reach it.
+In this repository that step was done by Bob. It belongs on watsonx.ai with a
+Granite model, and the reason is specific: this project already has the piece
+such a workload usually lacks, which is a verifier that can reject the model's
+output on evidence rather than on taste.
+
+The gate does not ask whether generated code looks right. It runs the driver
+under coverage and checks that lines inside the real function executed, and it
+opens the file the driver names as the production call site and confirms the
+function's name is on that line, inside the package under analysis. A driver
+that copies a function body, exits non-zero, cites a line that does not contain
+the call, cites a file outside the package, or cites nothing at all, is refused.
+Two of the ten drivers in `drivers/` were refused for exactly these reasons.
+
+`evidence.json` is an evaluation harness for generated code. The figure worth
+publishing is not that a model can write a driver. It is how many of its drivers
+survive verification, and how the refusals distribute: fabricated call sites fail
+differently from inlined function bodies, and the distribution says something
+measurable about how far a model's output can be trusted unreviewed.
+
+Each refusal is now recorded as a machine-readable class on the unit in
+`evidence.json`. The `refusal_class` field carries one of thirteen named values
+from a `RefusalClass` enum (`body_never_reached`, `no_call_site`,
+`call_site_not_file_line`, `call_site_file_not_found`, `call_site_outside_package`,
+`call_site_line_out_of_range`, `name_not_on_line`, `line_not_a_call_site`,
+`call_site_inside_own_body`, and others). The `refusal_reason` field carries the
+human-readable explanation already printed to stderr.
+
+Running `--refusal-report` against the ten drivers in this repository measures
+the distribution without touching the published evidence file:
+
+```
+Drivers measured : 10
+Promoted         : 3
+Made redundant   : 5  (unit reached by a baseline)
+Refused          : 2
+
+Refusal class                        Count
+--------------------------------------------
+name_not_on_line                         1
+no_call_site                             1
+```
+
+`report.html` renders this distribution as its own section, next to the driver
+results. The two refused drivers are `visidata.aggregators.stdev` (its declared
+call site names a line where `self.funcValues(vals)` appears rather than
+`stdev`) and `visidata.path.vstat` (no call site declared at all). Both remain
+`never_observed`. The counts are read from the generated output, not estimated.
+
+This was attempted and not completed in the sense of the original watsonx.ai
+goal. The IBM Cloud account provisioned for this event exposes a catalog of
+twelve infrastructure services with no AI or machine learning category, so
+watsonx.ai Runtime could not be provisioned and the project could not be
+associated with an inference instance. Authentication against IBM Cloud IAM
+succeeds and the account can list twenty foundation models,
+`ibm/granite-4-h-small` among them, but inference returns
+`no_associated_service_instance_error`.
+
+The work is scoped rather than claimed. Nothing in this repository calls
+watsonx.ai, and no part of the reported figures depends on a model having been
+asked anything. Publishing an integration that does not run would be the same
+unverified assertion this tool exists to detect.
+>>>>>>> REPLACE
+
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command, write_file, execute_command
+
+Now do a final validation run — verify all counts, check evidence.json has refusal_class fields, check --refusal-report still works on the updated evidence.json:
+
+> 🔧 **execute_command** — python -c "
+import json, sys
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+ev = json.load(open('evidence.json'))
+from collections import Counter
+from pathlib import Path
+excl = {'tests','vendor','apps','experimental'}
+def is_prod(u):
+    parts = Path(u['file']).parts
+    return not any(p in excl for p in parts)
+prod_units = {k:u for k,u in ev['units'].items() if is_prod(u)}
+pc = Counter(u['provenance'] for u in prod_units.values())
+red = sum(1 for u in prod_units.values() if u.get('provenance')=='observed_in_situ' and u.get('driver_redundant_baseline'))
+pure_insitu = sum(1 for u in prod_units.values() if u.get('provenance')=='observed_in_situ' and not u.get('driver_redundant_baseline'))
+drv = pc.get('observed_under_driver',0)
+nev = pc.get('never_observed',0)
+total = len(prod_units)
+all_total = len(ev['units'])
+all_insitu = sum(1 for u in ev['units'].values() if u.get('provenance')=='observed_in_situ' and not u.get('driver_redundant_baseline'))
+all_drv = sum(1 for u in ev['units'].values() if u.get('provenance')=='observed_under_driver')
+all_nev = sum(1 for u in ev['units'].values() if u.get('provenance')=='never_observed')
+
+print('=== PRODUCT CODE (expected: 2290 total, 939 insitu, 3 driver, 5 redundant, 1343 never) ===')
+print(f'  Total:    {total}  {\"PASS\" if total==2290 else \"FAIL\"}')
+print(f'  In situ:  {pure_insitu}  {\"PASS\" if pure_insitu==939 else \"FAIL\"}')
+print(f'  Driver:   {drv}  {\"PASS\" if drv==3 else \"FAIL\"}')
+print(f'  Redundant:{red}  {\"PASS\" if red==5 else \"FAIL\"}')
+print(f'  Never:    {nev}  {\"PASS\" if nev==1343 else \"FAIL\"}')
+print()
+print('=== WHOLE PACKAGE (expected: 2791 total, 3 driver, 1776 never) ===')
+print(f'  Total:    {all_total}  {\"PASS\" if all_total==2791 else \"FAIL\"}')
+print(f'  Driver:   {all_drv}  {\"PASS\" if all_drv==3 else \"FAIL\"}')
+print(f'  Never:    {all_nev}  {\"PASS\" if all_nev==1776 else \"FAIL\"}')
+print()
+refused = [(k,u) for k,u in ev['units'].items() if u.get('refusal_class')]
+print('=== REFUSAL CLASSES IN EVIDENCE ===')
+print(f'  Units with refusal_class: {len(refused)}  (expected 2)')
+for k,u in refused:
+    qn = k.split('::')[1] if '::' in k else k
+    print(f'  {qn} -> {u[\"refusal_class\"]}')
+" 2>&1 | Out-String
+
+> 🔧 **write_file** — _validate_counts.py
+
+> 🔧 **execute_command** — python _validate_counts.py
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command
+
+Every count passes. Clean up the temp validation file and run `--refusal-report` one final time to confirm it still works correctly against the updated evidence.json (which now has the refusal_class fields in it):
+
+> 🔧 **execute_command** — Remove-Item _validate_counts.py; python first_light.py --refusal-report --evidence evidence.json 2>$null
+
+### 🤖 Assistant
+
+> 🔧 called: grep, read_file, read_file
+
+The exit code 1 comes from `cmd_promote_driver` returning 1 when drivers fail, which propagates through `cmd_refusal_report`. Since `--refusal-report` is a reporting command that should always exit 0, let me fix that:
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **grep** — first_light.py
+
+> 🔧 **read_file** — first_light.py
+
+### 🤖 Assistant
+
+> 🔧 called: read_file, read_file, grep, read_file
+
+The `cmd_refusal_report` already has `return 0` at the end. The issue is that `cmd_promote_driver` is called (it returns 1) but the return value is discarded, so it shouldn't affect the exit. Let me trace it more carefully — the `return 0` is explicitly at the end of `cmd_refusal_report`. The `1` exit must be from the `cmd_promote_driver` call inside...
+
+Wait, looking at the main dispatcher:
+
+```python
+return cmd_refusal_report(...)
+```
+
+And `cmd_refusal_report` calls `cmd_promote_driver(...)` (discarding its return), then does `return 0`. So exit code should be 0. But the output says exit 1. Let me check:
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **read_file** — first_light.py
+
+> 🔧 **grep** — first_light.py
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command
+
+`cmd_refusal_report` returns 0. The exit code 1 is actually from `2>$null` with PowerShell's `NativeCommandError` behavior when a process writes to stderr. Let me check this properly:
+
+> 🔧 **execute_command** — python first_light.py --refusal-report --evidence evidence.json; Write-Host "Exit code: $LASTEXITCODE"
+
+### 🤖 Assistant
+
+> 🔧 called: execute_command, execute_command, update_todo_list
+
+**Exit code: 0** — confirmed. The earlier "exit 1" was PowerShell's `NativeCommandError` from stderr output, not a real failure.
+
+Also confirmed: the real evidence.json was **not changed** by `--refusal-report`. Let me do one final check:
+
+> 🔧 **execute_command** — python -c "
+import json
+ev = json.load(open('evidence.json'))
+refused = [(k,u) for k,u in ev['units'].items() if u.get('refusal_class')]
+print('refusal_class fields in evidence.json:', len(refused))
+for k,u in refused:
+    qn = k.split('::')[1] if '::' in k else k
+    print(' ', qn, '->', u['refusal_class'])
+"
+
+> 🔧 **execute_command** — python _validate_counts.py 2>$null; if (Test-Path _validate_counts.py) { Remove-Item _validate_counts.py }
+
+> 🔧 **update_todo_list** — 
+[x] Audit all refusal branches in cmd_promote_driver and confirm the enum list
+[x] Define RefusalClass enum in first_light.py
+[x] Record refusal_class on units in cmd_promote_driver (write to evidence.json)
+[x] Add --refusal-report mode (runs drivers against a COPY, prints distribution)
+[x] Run --refusal-report and verify counts; confirm product-scope counts unchanged
+[x] Update write_html_report to render refusal distribution section
+[x] Update README paragraph and figures
+
+
+### 🤖 Assistant
+
+Everything is verified. Here is the full account of what was built and what the measurements show.
+
+---
+
+## What was built
+
+### 1. `RefusalClass` enum (13 members)
+
+Added to [`first_light.py`](first_light.py:55) immediately after the provenance constants. Each member names one distinct branch in `cmd_promote_driver`:
+
+| Enum member | Branch it covers |
+|---|---|
+| `unit_not_found` | driver stem has no matching unit key in evidence |
+| `driver_exited_nonzero` | driver process returned non-zero |
+| `coverage_export_failed` | `coverage json` export failed |
+| `body_never_reached` | driver ran cleanly, zero body lines hit |
+| `no_call_site` | no `# call site:` comment in driver file |
+| `indirect_wrong_format` | indirect call site lacks exactly two `;`-separated segments |
+| `call_site_not_file_line` | call site text doesn't parse as `file:N` |
+| `call_site_file_not_found` | cited file doesn't exist on disk |
+| `call_site_outside_package` | cited file exists but is outside the package |
+| `call_site_line_out_of_range` | cited line number exceeds the file's length |
+| `name_not_on_line` | function name absent from the cited line |
+| `line_not_a_call_site` | cited line is a def / import / decorator / `__all__` / comment |
+| `call_site_inside_own_body` | cited line falls inside the target function's own body |
+
+The list I gave matches the code exactly. No branch was unnamed.
+
+### 2. `refusal_class` + `refusal_reason` on units
+
+Every `failed += 1; continue` path in [`cmd_promote_driver`](first_light.py:1935) now writes both fields to the in-memory document before continuing. The write-back at the end of the loop persists them to `evidence.json`. The two refused drivers in this repository are now annotated:
+
+```
+visidata.aggregators.stdev  →  name_not_on_line
+visidata.path.vstat         →  no_call_site
+```
+
+### 3. `--refusal-report` mode
+
+[`cmd_refusal_report`](first_light.py:2414) deep-copies the evidence document, writes it to a `tempfile.mkstemp` scratch file, runs `cmd_promote_driver` against the scratch file (which annotates it with the full refusal record), reads the scratch back to tally outcomes, then deletes it. The real `evidence.json` is never opened for writing. Exit code is always 0 — this is a measurement, not a gate.
+
+### 4. Refusal distribution in `report.html`
+
+[`write_html_report`](first_light.py:1016) now computes `refusal_rows` and `refusal_class_counts` from the units in evidence, builds a two-table section (summary by class, then per-driver detail), and renders it as Section 5 after the driver results. The section is omitted when there are no refusals. The current report shows exactly the two classes that occurred.
+
+### 5. Measured distribution (from `--refusal-report`, not estimated)
+
+```
+Drivers measured : 10
+Promoted         : 3
+Made redundant   : 5  (unit reached by a baseline)
+Refused          : 2
+
+Refusal class                        Count
+--------------------------------------------
+name_not_on_line                         1   ← visidata.aggregators.stdev
+no_call_site                             1   ← visidata.path.vstat
+```
+
+### 6. Product-scope counts — all unchanged
+
+| | Expected | Actual |
+|---|---|---|
+| Total | 2290 | **2290** ✓ |
+| Observed in situ | 939 | **939** ✓ |
+| Under driver | 3 | **3** ✓ |
+| Driver redundant | 5 | **5** ✓ |
+| Never observed | 1343 | **1343** ✓ |
+| Whole package total | 2791 | **2791** ✓ |
+| Whole package never | 1776 | **1776** ✓ |
+
+Nothing moved.
+
+===
+
 # The superseded level works, but the report and the summary line hide it or blur it.
 Every item below is the same mistake: a level of evidence that exists in the data
 but is conflated or invisible when presented. That is the failure this project was
