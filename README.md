@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/first-light-mark-light.png">
+  <img src="assets/first-light-mark-dark.png" alt="First Light" width="96">
+</picture>
+
 # First Light
 
 First Light answers one question: which Python functions in a codebase have ever
@@ -269,3 +274,13 @@ To activate the hook, add the entry documented in `docs/hook-config.md` to
 
 The `FIRST_LIGHT_EVIDENCE` environment variable overrides the evidence file
 location when it is not adjacent to the files being edited.
+
+---
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/daedalus-mark-light.png">
+  <img src="assets/daedalus-mark-dark.png" alt="Daedalus" width="72">
+</picture>
+
+Built by **Daedalus** for the IBM TechXchange 2026 Pre-conference Dev Day
+Hackathon, with IBM Bob.
