@@ -613,7 +613,11 @@ R.classList.add('js-on');
   const el = document.querySelector('.headline__never');
   if (!el || reduce) return;
   const target = el.textContent.trim();
-  const glyphs = '0123456789';
+  /* The scramble must never read as a number. Digits would mean the headline
+     shows a plausible but wrong figure for up to 600ms, and a screenshot or a
+     video frame taken in that window would publish it. Noise that cannot be
+     mistaken for data is the only safe alphabet here. */
+  const glyphs = '/|_-=+*#~';
   const start = performance.now();
   const DURATION = 600;
   function frame(now) {
