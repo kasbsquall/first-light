@@ -68,9 +68,11 @@ function with no execution record exits 2, which stops the write:
 ```
 
 Strict mode blocks on the resolved provenance of the unit being edited, never on
-the text of the advisory. When the payload carries no line number the edit
-cannot be placed in one function, and not knowing which function is being edited
-is not evidence that it is unobserved, so nothing is blocked. An internal error
+the text of the advisory. When the payload carries no line number the edit is
+placed from the text it carries: `old_string` for Edit and MultiEdit, a diff of
+`content` for Write. If that text is ambiguous the edit cannot be placed in one
+function, and not knowing which function is being edited is not evidence that it
+is unobserved, so nothing is blocked. An internal error
 in the hook does not block either.
 
 ## Selftest

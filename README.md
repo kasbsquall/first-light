@@ -384,12 +384,24 @@ python first_light.py --promote-driver --all `
 
 `tools/fl_hook.py` is a Bob pre-edit advisory hook.  Before every file write,
 Bob passes the target file path to the hook via stdin, and a line number when
-the tool provides one.  Edit, Write and MultiEdit do not, so the hook reports
-the file's state and says the edit could not be placed rather than naming a
-function it cannot locate.  The hook
-looks up the function unit that contains that line in `evidence.json` and prints
-one advisory line describing the unit's provenance.  By default it exits 0 and never
-blocks an edit.
+the tool provides one.
+
+Edit, Write and MultiEdit do not send a line number, and those are the three
+matchers this hook is wired to, so that is the ordinary case rather than an edge
+case.  They do send the text.  Edit and MultiEdit send `old_string`, which is
+present verbatim in the file on disk; Write sends the full new `content`, which
+is diffed against what is there now.  Either one places the edit precisely
+enough to name the function, and the advisory says `[located from the edited
+text]` when it was resolved that way.
+
+When the text is ambiguous the hook refuses rather than guesses.  An
+`old_string` that appears twice does not identify a location, and reporting the
+first hit would assert something the payload does not support.  In that case it
+falls back to the file's totals and says the edit could not be placed.
+
+The hook then looks up the function unit containing that range in
+`evidence.json` and prints one advisory line describing the unit's provenance.
+By default it exits 0 and never blocks an edit.
 
 To activate the hook, add the entry documented in `docs/hook-config.md` to
 `~/.claude/hooks/hooks.json`.

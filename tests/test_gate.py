@@ -351,6 +351,62 @@ def test_receiver_rule() -> None:
         check("still accepted: %s" % label, got is None, "-> %r" % got)
 
 
+# ---------------------------------------------------------------------------
+# 9. Placing the edit when the payload carries no line number. The hook is
+#    wired to Edit, Write and MultiEdit, and none of the three sends one, so
+#    until the hook learned to place an edit by the text it carries, its one
+#    interesting branch was dead in every real use: it answered "edit not
+#    located" and reported the file's totals instead of naming the function.
+#
+#    The two functions below are the ones the demo opens on. They sit in the
+#    same file a few lines apart and nothing on screen distinguishes them:
+#    until_get_wch has never been observed, splice was reached by the test
+#    suite. A product that cannot tell those two apart from an Edit payload
+#    does not do the thing the pitch claims it does.
+#
+#    The last case is the one that matters most. An ambiguous anchor must be
+#    refused rather than guessed. A tool that argues coverage asserts more than
+#    it knows cannot take the first of several matches and report it as the
+#    place.
+# ---------------------------------------------------------------------------
+
+def test_hook_places_an_edit_without_a_line_number() -> None:
+    print(chr(10) + "--- the hook places an edit that carries no line number ---")
+    import json as _json, subprocess as _sub
+
+    src = ROOT / "target" / "visidata" / "visidata" / "_input.py"
+    if not src.exists():
+        check("the target file is present", False, "-> skipping")
+        return
+
+    def advise(old_string):
+        payload = _json.dumps({"tool_input": {
+            "file_path": str(src),
+            "old_string": old_string,
+            "new_string": old_string + "  # edited",
+        }})
+        r = _sub.run([sys.executable, str(ROOT / "tools" / "fl_hook.py")],
+                     input=payload, capture_output=True, text=True)
+        return r.stdout.strip()
+
+    a = advise("        except curses.error:" + chr(10) + "            pass")
+    check("an edit inside until_get_wch names it",
+          "until_get_wch" in a and "never observed" in a, "-> " + a[:88])
+    check("and it says how the edit was placed",
+          "located from the edited text" in a)
+
+    b = advise("    return v if i < 0 else v[:i] + s + v[i:]")
+    check("an edit inside splice names splice instead",
+          "splice" in b and "observed in situ" in b, "-> " + b[:88])
+
+    check("the two neighbours are told apart",
+          ("never observed" in a) and ("never observed" not in b))
+
+    c = advise("    return ret")
+    check("an anchor with several matches is refused, not guessed",
+          ("not located" in c) or ("no unit" in c), "-> " + c[:88])
+
+
 def main() -> int:
     print("first_light gate tests")
     test_call_site_rule()
@@ -361,6 +417,7 @@ def main() -> int:
     test_citation_belongs_to_the_function()
     test_hook_is_portable()
     test_receiver_rule()
+    test_hook_places_an_edit_without_a_line_number()
     print("\n%d passed, %d failed" % (PASSED, FAILED))
     return 0 if FAILED == 0 else 1
 

@@ -261,7 +261,11 @@ def _same_file(recorded: str, edited: str) -> bool:
     return n >= 3
 
 
-def provenance_for(file_path: str, start_line: int | None) -> str | None:
+def provenance_for(
+    file_path: str,
+    start_line: int | None,
+    end_line: int | None = None,
+) -> str | None:
     """Return the provenance of the unit an edit lands in, or None.
 
     None means the question could not be answered: the edit could not be placed
@@ -282,7 +286,7 @@ def provenance_for(file_path: str, start_line: int | None) -> str | None:
     units: dict = ev.get("units", {})
     matching = [
         u for _k, u in units.items()
-        if _same_file(u.get("file", ""), abs_path) and _overlaps(u, start_line, None)
+        if _same_file(u.get("file", ""), abs_path) and _overlaps(u, start_line, end_line)
     ]
     if not matching:
         return None
@@ -426,14 +430,130 @@ def query(
 # Main entry point (hook mode)
 # ---------------------------------------------------------------------------
 
-def _parse_stdin() -> tuple[str, int | None]:
-    """Read stdin, parse JSON, return (file_path, line_number) via recursive scan."""
+# ---------------------------------------------------------------------------
+# Locating the edit when the payload carries no line number
+# ---------------------------------------------------------------------------
+#
+# This is the common case, not an edge case.  The hook is wired to Edit, Write
+# and MultiEdit, and none of the three sends a line number, so before this the
+# advisory fell through to "edit not located" on essentially every real edit:
+# the one thing the hook exists to do never ran in normal use.
+#
+# But those tools do send the text.  Edit and MultiEdit send `old_string`,
+# which is present verbatim in the file on disk, and Write sends the full new
+# `content`, which can be diffed against what is there now.  Either one places
+# the edit precisely enough to name the function.
+#
+# The rule when the text is ambiguous is to refuse rather than guess.  An
+# `old_string` that appears twice in the file does not identify a location, and
+# reporting the first hit would assert something the payload does not support.
+# That is the same failure this project exists to detect, so the hook declines
+# it in itself.
+
+_ANCHOR_KEYS = ("old_string", "content", "new_string")
+
+
+def _extract_anchors(obj: object) -> dict:
+    """Collect edited-text anchors from the payload, keyed by field name."""
+    found: dict = {k: [] for k in _ANCHOR_KEYS}
+    queue = [obj]
+    while queue:
+        node = queue.pop(0)
+        if isinstance(node, dict):
+            for key, value in node.items():
+                k = key.lower().replace("-", "_")
+                if k in found and isinstance(value, str) and value:
+                    found[k].append(value)
+                if isinstance(value, (dict, list)):
+                    queue.append(value)
+        elif isinstance(node, list):
+            queue.extend(node)
+    return found
+
+
+def _line_at(text: str, offset: int) -> int:
+    """1-based line number containing *offset*."""
+    return text.count("\n", 0, offset) + 1
+
+
+def _span_of_substring(text: str, needle: str) -> tuple[int, int] | None:
+    """Line span of *needle* in *text*, or None if absent or not unique."""
+    if not needle:
+        return None
+    first = text.find(needle)
+    if first < 0:
+        return None
+    if text.find(needle, first + 1) != -1:
+        return None
+    return _line_at(text, first), _line_at(text, first + len(needle) - 1)
+
+
+def _span_of_rewrite(old_text: str, new_text: str) -> tuple[int, int] | None:
+    """Span of the changed region in the OLD file for a whole-file write."""
+    import difflib
+
+    a = old_text.splitlines()
+    b = new_text.splitlines()
+    lo = hi = None
+    for tag, i1, i2, _j1, _j2 in difflib.SequenceMatcher(None, a, b).get_opcodes():
+        if tag == "equal":
+            continue
+        start, end = i1 + 1, max(i2, i1 + 1)
+        lo = start if lo is None else min(lo, start)
+        hi = end if hi is None else max(hi, end)
+    return (lo, hi) if lo is not None else None
+
+
+def locate_edit(file_path: str, payload: object) -> tuple[int, int] | None:
+    """Resolve the edited line span from the payload's text, or None.
+
+    Returns the union of every anchor that resolved, so a MultiEdit touching
+    two functions reports a span covering both rather than silently picking one.
+    """
+    try:
+        text = Path(file_path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    anchors = _extract_anchors(payload)
+    spans = [sp for needle in anchors["old_string"]
+             if (sp := _span_of_substring(text, needle))]
+    if not spans:
+        spans = [sp for content in anchors["content"]
+                 if (sp := _span_of_rewrite(text, content))]
+    if not spans:
+        return None
+    return min(s for s, _ in spans), max(e for _, e in spans)
+
+
+def resolve_payload(payload: object) -> tuple[str, int | None, int | None, bool]:
+    """Return (file_path, start_line, end_line, located_by_text) for a payload.
+
+    Shared by the hook and its self-test so the test exercises the path that
+    actually runs.  The previous self-test reimplemented this inline, which is
+    why it reported a clean run while the only interesting branch was dead.
+    """
+    file_path, start_line = _extract_fields(payload)
+    if not file_path or start_line is not None:
+        return file_path, start_line, None, False
+    span = locate_edit(file_path, payload)
+    if span:
+        return file_path, span[0], span[1], True
+    return file_path, None, None, False
+
+
+def _parse_stdin() -> tuple[str, int | None, object]:
+    """Read stdin and return (file_path, line_number, payload).
+
+    The payload comes back too because the line number is usually absent and
+    the edited text in the payload is what locates the edit instead.
+    """
     try:
         raw = sys.stdin.read()
         payload = json.loads(raw) if raw.strip() else {}
     except Exception:
         payload = {}
-    return _extract_fields(payload)
+    fp, ln = _extract_fields(payload)
+    return fp, ln, payload
 
 
 def _hook_main() -> None:
@@ -444,14 +564,17 @@ def _hook_main() -> None:
     # org that wants the control should not have to fork the file to get it.
     strict = "--strict" in sys.argv or os.environ.get("FIRST_LIGHT_STRICT") == "1"
 
-    file_path, start_line = _parse_stdin()
+    _fp, _ln, payload = _parse_stdin()
+    file_path, start_line, end_line, located_by_text = resolve_payload(payload)
 
     if not file_path:
         _print("[first_light] no path in payload -- nothing to check")
         sys.exit(0)
 
     try:
-        result = query(file_path, start_line, None)
+        result = query(file_path, start_line, end_line)
+        if located_by_text:
+            result += " [located from the edited text]"
     except Exception as exc:
         # An internal failure must not block work. The tool refusing to assert
         # what it cannot verify applies to itself: it does not know whether this
@@ -462,7 +585,7 @@ def _hook_main() -> None:
     _print(result)
 
     if strict:
-        prov = provenance_for(file_path, start_line)
+        prov = provenance_for(file_path, start_line, end_line)
         if prov == PROVENANCE_NEVER:
             _print(
                 "[first_light] blocked by --strict: this function has no "
@@ -489,10 +612,12 @@ def _run_hook_with_stdin(json_str: str) -> str:
     old_stdin = sys.stdin
     try:
         sys.stdin = _io.StringIO(json_str)
-        file_path, start_line = _parse_stdin()
+        _fp, _ln, payload = _parse_stdin()
+        file_path, start_line, end_line, located = resolve_payload(payload)
         if not file_path:
             return "[first_light] no path in payload -- nothing to check"
-        return query(file_path, start_line, None)
+        out = query(file_path, start_line, end_line)
+        return out + " [located from the edited text]" if located else out
     except Exception as exc:
         return f"[first_light] internal error ({exc}) -- advisory skipped"
     finally:
