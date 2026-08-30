@@ -12,8 +12,8 @@ that a line was touched, not whether anyone watched the function run.
 
 We measured visidata, a widely used Python tool. Of its 2290 product functions,
 1200 have never been observed executing. That holds after running the program in
-batch mode, after its own 256-test suite, and after replaying all 52 session
-logs the project ships. No baseline is a superset of another: the test suite
+batch mode, after its own 256-test suite, and after replaying the 52 session
+logs in its test suite. No baseline is a superset of another: the test suite
 alone reaches 384, the replay alone 144, the batch run alone 1.
 
 ## The solution

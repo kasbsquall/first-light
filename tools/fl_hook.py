@@ -292,6 +292,11 @@ def provenance_for(
         return None
     if start_line is None and len(matching) > 1:
         return None          # the edit was not placed; nothing is known about it
+    # An edit crossing several functions is as unobserved as its least observed
+    # part. Reporting the smallest body would let a rewrite of never-observed
+    # code through because it happened to also touch an observed neighbour.
+    if any(u.get("provenance") == PROVENANCE_NEVER for u in matching):
+        return PROVENANCE_NEVER
     matching.sort(key=lambda u: u["body_end"] - u["body_start"])
     return matching[0].get("provenance")
 
@@ -366,6 +371,32 @@ def query(
             f"[first_light] edit not located within {Path(abs_path).name} "
             f"(no line number in payload) -- {len(matching)} tracked functions "
             f"here, {never} never observed"
+        )
+        if file_state == "changed":
+            msg += " [FILE CHANGED since observation -- re-run first_light.py]"
+        return msg
+
+    # An edit can be precisely located and still cross more than one function.
+    # Naming the smallest would report one provenance for a change that carries
+    # several, and it fails in the direction that reassures: an edit spanning an
+    # observed function and a never-observed one would read as observed. Name
+    # every unit the edit touches instead, worst provenance first.
+    if len(matching) > 1:
+        _order = {PROVENANCE_NEVER: 0, PROVENANCE_DRIVER: 1, PROVENANCE_IN_SITU: 2}
+        ranked = sorted(
+            matching,
+            key=lambda kv: (_order.get(kv[1].get("provenance"), 3),
+                            kv[1]["body_start"]),
+        )
+        never = [kv for kv in ranked if kv[1].get("provenance") == PROVENANCE_NEVER]
+        names = [
+            (k.split("::", 1)[1] if "::" in k else k).rsplit("#", 1)[0]
+            for k, _u in ranked[:3]
+        ]
+        more = f" (+{len(ranked) - 3} more)" if len(ranked) > 3 else ""
+        msg = (
+            f"[first_light] this edit spans {len(ranked)} tracked functions -- "
+            f"{len(never)} never observed: {', '.join(names)}{more}"
         )
         if file_state == "changed":
             msg += " [FILE CHANGED since observation -- re-run first_light.py]"
@@ -450,7 +481,7 @@ def query(
 # That is the same failure this project exists to detect, so the hook declines
 # it in itself.
 
-_ANCHOR_KEYS = ("old_string", "content", "new_string")
+_ANCHOR_KEYS = ("old_string", "content")
 
 
 def _extract_anchors(obj: object) -> dict:
@@ -515,9 +546,15 @@ def locate_edit(file_path: str, payload: object) -> tuple[int, int] | None:
     except OSError:
         return None
     anchors = _extract_anchors(payload)
-    spans = [sp for needle in anchors["old_string"]
-             if (sp := _span_of_substring(text, needle))]
-    if not spans:
+    olds = anchors["old_string"]
+    if olds:
+        spans = [_span_of_substring(text, needle) for needle in olds]
+        # A MultiEdit whose anchors do not all resolve is not partially known,
+        # it is unknown: reporting the edits that did resolve would describe a
+        # different edit from the one being made.
+        if any(sp is None for sp in spans):
+            return None
+    else:
         spans = [sp for content in anchors["content"]
                  if (sp := _span_of_rewrite(text, content))]
     if not spans:

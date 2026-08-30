@@ -406,6 +406,31 @@ def test_hook_places_an_edit_without_a_line_number() -> None:
     check("an anchor with several matches is refused, not guessed",
           ("not located" in c) or ("no unit" in c), "-> " + c[:88])
 
+    # An anchor can be unique and still cross two functions. That is not
+    # ambiguous by the rule above, so it resolves, and the first version of this
+    # feature then named the smallest body: it reported "observed in situ" for
+    # an edit that also rewrote a never-observed neighbour. Under-warning is the
+    # direction that reassures, which is the one this project exists to catch.
+    types = ROOT / "target" / "visidata" / "visidata" / "_types.py"
+    if types.exists():
+        lines = types.read_text(encoding="utf-8").splitlines()
+        crossing = chr(10).join(lines[118:132])
+        payload = _json.dumps({"tool_input": {
+            "file_path": str(types), "old_string": crossing,
+            "new_string": crossing + chr(10)}})
+        r = _sub.run([sys.executable, str(ROOT / "tools" / "fl_hook.py")],
+                     input=payload, capture_output=True, text=True)
+        out = r.stdout.strip()
+        check("an edit crossing two functions names both, not the smallest",
+              "spans 2 tracked functions" in out, "-> " + out[:96])
+        check("and it says one of them was never observed",
+              "1 never observed" in out)
+        rs = _sub.run([sys.executable, str(ROOT / "tools" / "fl_hook.py"), "--strict"],
+                      input=payload, capture_output=True, text=True)
+        check("--strict blocks it, because part of the span is unobserved",
+              rs.returncode == 2, "-> exit %d" % rs.returncode)
+
+
 
 SKIPPED = 0
 

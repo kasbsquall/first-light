@@ -140,7 +140,8 @@ Measured against visidata 3.x, after three independent baselines: the program
 run through its own CLI in batch mode; the project's own pytest suite (256 tests
 collected, 252 passing, the 4 failures POSIX-specific, with the counts and the
 non-zero exit code recorded rather than filtered out); and a replay of the 52 `.vdj`
-command logs it ships, which exercises the program the way a person drove it.
+command logs in its test suite, which exercises the program the way a person
+drove it.
 The project also ships 112 `.vd` and 21 `.vdx` logs; this baseline replays the
 `.vdj` set only, so the 144 functions it reaches alone are a floor, not a
 ceiling.
@@ -402,7 +403,17 @@ text]` when it was resolved that way.
 When the text is ambiguous the hook refuses rather than guesses.  An
 `old_string` that appears twice does not identify a location, and reporting the
 first hit would assert something the payload does not support.  In that case it
-falls back to the file's totals and says the edit could not be placed.
+falls back to the file's totals and says the edit could not be placed.  A
+`MultiEdit` whose anchors do not all resolve is refused whole, because the edits
+that did resolve describe a different edit from the one being made.
+
+An anchor can be unique and still cross more than one function.  That is not
+ambiguous, so it resolves, and the advisory then names every unit the edit
+touches with the least observed one first rather than picking the smallest body.
+The first version of this feature did pick the smallest, which reported
+"observed in situ" for an edit that also rewrote a never-observed neighbour;
+`tests/test_gate.py` now covers the case, and `--strict` blocks a span if any
+part of it is unobserved.
 
 The hook then looks up the function unit containing that range in
 `evidence.json` and prints one advisory line describing the unit's provenance.
