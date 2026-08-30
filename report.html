@@ -383,6 +383,21 @@ body {
   font-variant-numeric: tabular-nums lining-nums;
 }
 
+.ab-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 28px;
+  margin: 22px 0 4px;
+}
+.ab-col { border-top: 1px solid var(--border); padding-top: 16px; }
+.ab-fig {
+  font-size: 76px; line-height: 1; font-weight: 600;
+  letter-spacing: -0.035em; color: var(--amber);
+  font-variant-numeric: tabular-nums lining-nums;
+  margin: 10px 0 8px;
+}
+.ab-fig--flat { color: #75695F; }
+.ab-cap { font-size: 12px; line-height: 1.65; color: var(--muted); max-width: 46ch; }
+@media (max-width: 720px) { .ab-grid { grid-template-columns: 1fr; gap: 22px; } }
+
 .wx-lede, .wx-note {
   font-size: 13px; line-height: 1.6; color: var(--muted);
   max-width: 78ch; margin-bottom: 16px;
@@ -787,6 +802,7 @@ table { display: block; overflow-x: auto; max-width: 100%; }
     <a href="#drivers">Driver results</a>
     <a href="#refusals">Refusals</a>
     <a href="#watsonx">watsonx.ai</a>
+    <a href="#ab">Does it change anything</a>
   </nav>
   <h1 class="headline">
     <span class="headline__never">1200</span>
@@ -3941,6 +3957,49 @@ table { display: block; overflow-x: auto; max-width: 100%; }
   <p class="wx-note"><strong>Not counted.</strong> The two accepted drivers are not folded into the published evidence. They were drafted hours before submission and no human has reviewed the fixtures they build. Promoting them would move never_observed from 1200 to 1198 on an unreviewed model draft, which is the shape of claim this project argues against.
   The two accepted drafts ship in <code>drivers-candidates/</code> as candidates,
   and every figure elsewhere on this page excludes them.</p>
+</section>
+
+
+<hr class="sep">
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 7 -- DOES THE CONTROL CHANGE THE OUTCOME
+     ═══════════════════════════════════════════════════════ -->
+<section class="rise" style="--i:2">
+  <h2 class="section-heading" id="ab">Does the control change the outcome:
+    37 of 79 edits stopped, all of them unobserved</h2>
+  <p class="wx-lede">
+    Everything above measures a codebase. This measures the tool. Each of
+    79 rows is a real edit payload, carrying no line number, built from a
+    function in this evidence file and run against the shipped hook as a
+    subprocess. Reproduce it with
+    <code>tools/ab_gate.py --seed 11</code>.
+  </p>
+  <div class="ab-grid">
+    <div class="ab-col">
+      <div class="label">Without the hook</div>
+      <div class="ab-fig ab-fig--flat">0</div>
+      <div class="ab-cap">edits questioned. All 79 proceed and nothing is
+        said about any of them, including the 37
+        that rewrite code with no execution record.</div>
+    </div>
+    <div class="ab-col">
+      <div class="label">With the hook</div>
+      <div class="ab-fig">79</div>
+      <div class="ab-cap">edits placed and named by function, from the edited text
+        alone. Under <code>--strict</code>,
+        37 were stopped:
+        every one had never been observed, and
+        0 observed functions were stopped
+        by mistake.</div>
+    </div>
+  </div>
+  <p class="wx-note"><strong>What this is not.</strong> These are scripted edits,
+  not a live agent. Nothing here shows a model changing its mind. It shows that
+  the control fires on every edit it is given, places each one without a line
+  number, and separates the code with no execution record from the rest without
+  a single false stop. Whether an agent then behaves differently is a claim this
+  run does not make.</p>
 </section>
 
 

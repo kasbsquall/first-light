@@ -1115,6 +1115,21 @@ body {
   font-variant-numeric: tabular-nums lining-nums;
 }
 
+.ab-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 28px;
+  margin: 22px 0 4px;
+}
+.ab-col { border-top: 1px solid var(--border); padding-top: 16px; }
+.ab-fig {
+  font-size: 76px; line-height: 1; font-weight: 600;
+  letter-spacing: -0.035em; color: var(--amber);
+  font-variant-numeric: tabular-nums lining-nums;
+  margin: 10px 0 8px;
+}
+.ab-fig--flat { color: #75695F; }
+.ab-cap { font-size: 12px; line-height: 1.65; color: var(--muted); max-width: 46ch; }
+@media (max-width: 720px) { .ab-grid { grid-template-columns: 1fr; gap: 22px; } }
+
 .wx-lede, .wx-note {
   font-size: 13px; line-height: 1.6; color: var(--muted);
   max-width: 78ch; margin-bottom: 16px;
@@ -1992,6 +2007,63 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
 </section>
 """
 
+    # ── A/B run, if one was recorded beside the evidence ─────────────────
+    _ab = None
+    try:
+        _ab_path = Path(evidence_path).resolve().parent / "ab-run.json"
+        if _ab_path.is_file():
+            _ab = json.loads(_ab_path.read_text(encoding="utf-8"))
+    except Exception:
+        _ab = None
+
+    _ab_html = ""
+    if _ab and _ab.get("edits"):
+        _w = _ab["with_hook"]
+        _n = _ab["edits"]
+        _ab_html = f"""
+<hr class="sep">
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 7 -- DOES THE CONTROL CHANGE THE OUTCOME
+     ═══════════════════════════════════════════════════════ -->
+<section class="rise" style="--i:2">
+  <h2 class="section-heading" id="ab">Does the control change the outcome:
+    {e(str(_w['stopped_under_strict']))} of {e(str(_n))} edits stopped, all of them unobserved</h2>
+  <p class="wx-lede">
+    Everything above measures a codebase. This measures the tool. Each of
+    {e(str(_n))} rows is a real edit payload, carrying no line number, built from a
+    function in this evidence file and run against the shipped hook as a
+    subprocess. Reproduce it with
+    <code>tools/ab_gate.py --seed {e(str(_ab.get('seed', '')))}</code>.
+  </p>
+  <div class="ab-grid">
+    <div class="ab-col">
+      <div class="label">Without the hook</div>
+      <div class="ab-fig ab-fig--flat">0</div>
+      <div class="ab-cap">edits questioned. All {e(str(_n))} proceed and nothing is
+        said about any of them, including the {e(str(_w['stopped_that_were_never_observed']))}
+        that rewrite code with no execution record.</div>
+    </div>
+    <div class="ab-col">
+      <div class="label">With the hook</div>
+      <div class="ab-fig">{e(str(_w['named_the_function']))}</div>
+      <div class="ab-cap">edits placed and named by function, from the edited text
+        alone. Under <code>--strict</code>,
+        {e(str(_w['stopped_under_strict']))} were stopped:
+        every one had never been observed, and
+        {e(str(_w['stopped_that_were_observed']))} observed functions were stopped
+        by mistake.</div>
+    </div>
+  </div>
+  <p class="wx-note"><strong>What this is not.</strong> These are scripted edits,
+  not a live agent. Nothing here shows a model changing its mind. It shows that
+  the control fires on every edit it is given, places each one without a line
+  number, and separates the code with no execution record from the rest without
+  a single false stop. Whether an agent then behaves differently is a claim this
+  run does not make.</p>
+</section>
+"""
+
     driver_cards_html = []
     for d in confirmed_drivers:
         name_html = e(d["name"])
@@ -2185,6 +2257,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     <a href="#drivers">Driver results</a>
     <a href="#refusals">Refusals</a>
     {'<a href="#watsonx">watsonx.ai</a>' if _wx else ''}
+    {'<a href="#ab">Does it change anything</a>' if _ab else ''}
   </nav>
   <h1 class="headline">
     <span class="headline__never">{e(str(prod_never))}</span>
@@ -2380,6 +2453,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
      ═══════════════════════════════════════════════════════ -->
 {_refusal_section_html}
 {_wx_html}
+{_ab_html}
 
 <footer class="footer">
   <div class="footer__brand">

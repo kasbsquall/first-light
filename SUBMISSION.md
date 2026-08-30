@@ -48,6 +48,15 @@ your application the way it really runs; the three used here are in `runners/`.
 After that, one pass produces the report and the evidence file, and the hook is
 wired once.
 
+## Does it change anything
+
+`tools/ab_gate.py` runs the shipped hook over 79 real edit payloads built from
+the evidence. Without the hook none is questioned, including the 37 that rewrite
+code with no execution record. With it all 79 are placed and named from the
+edited text alone, and `--strict` stops exactly those 37, with no observed
+function stopped by mistake. Scripted edits, not a live agent: the claim is that
+the control discriminates, not that a model changed its mind.
+
 ## Why this is new
 
 Coverage tools count lines and test generators write tests. What neither does

@@ -1,0 +1,574 @@
+{
+  "_comment": "Scripted edits, not a live agent. Each row is a real Edit payload carrying no line number, run against the shipped hook as a subprocess. Reproduce with tools/ab_gate.py --seed 11.",
+  "seed": 11,
+  "sampled": 82,
+  "skipped_no_unique_anchor": 3,
+  "edits": 79,
+  "without_hook": {
+    "advisories": 0,
+    "stopped": 0,
+    "note": "No hook means no output and no gate: every edit proceeds and nothing is said about any of them."
+  },
+  "with_hook": {
+    "located": 79,
+    "named_the_function": 79,
+    "stopped_under_strict": 37,
+    "stopped_that_were_never_observed": 37,
+    "stopped_that_were_observed": 0
+  },
+  "rows": [
+    {
+      "unit": "visidata.loaders.unzip_http.download_file",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.features.ping.makePingStats",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.loaders.fixed_width.getMaxDataWidth",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.sheets.TableSheet.loadSome",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.apps.galcon.galcon.WSIClient.add_deployment",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.apps.vgit.blame.GitBlame.iterload",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.apps.vgit.stash.GitStashes.iterload",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.loaders.unzip_http.RemoteZipInfo.parse_extra",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.loaders.ttf.makePen.GlyphPen.reload",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.color.ColorMaker.setup",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.vendor.appdirs.AppDirs.__init__",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.vendor.appdirs.site_data_dir",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.apps.galcon.galcon-server.Game.GET_player_quit",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.ddwplay.AnimationMgr.maxHeight",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.apps.galcon.galcon-server.Game.predeploy",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.features.term_extras.ansi",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.loaders.f5log.F5LogSheet.iterload",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.canvas.Box.ycenter",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.loaders.imap.openurl_imap",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.statusbar.aside",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.loaders.pandas_freqtbl.makePandasFreqTable",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.experimental.noahs_tapestry.tapestry.NoahsPuzzle.iterload",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.loaders._pandas.DataFrameAdapter.__getitem__",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.features.rename_col_cascade.Renamer.visit_Name",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.loaders.pcap.getService",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.loaders.mbtiles.PbfCanvas.iterpolylines",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.settings.requireOptions",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.loaders.s3.S3DirSheet._iterdir",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.experimental.daw.mpv.MpvProcess.__init__",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.experimental.noahs_tapestry.tapestry.openNoahsText",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.apps.vdsql._ibis.IbisTableSheet.ibis_current_expr",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.features.replay_bulk.replay_end",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.choose.chooseMany.throw_fancy",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.loaders.vds.open_vds",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.features.regex.indexWithEscape",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.type_floatsi.SIFormatter",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.loaders.pcap.Host.hostname",
+      "provenance": "never_observed",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": true
+    },
+    {
+      "unit": "visidata.features.condfmt.test_condfmt_silent_eval_error",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.statusbar.test_addToStatusHistory_snapshot_mutable",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.features.regex.help_regex",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.sheets.TableSheet.adjustColLayout",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.path.Path.name",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.tests.test_cliptext.TestClipText.test_clipstr_wide_truncator",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata._input.InputWidget.draw._calc_display",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.tests.test_cliptext.TestClipText.test_truncate_markup_middle",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.features.normcol.normalize_name",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.selection.unselectRow",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.vdobj.VisiData.resetVisiData",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.statusbar.threadStatus",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.graph.GraphSheet.add_x_axis_label",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.features.describe.isError",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.settings.OptionsObject.getonly",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.statusbar.statuses",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.mouse.onMouse",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.utils.MissingAttrFormatter.get_value",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.vdobj.VisiData.cursesEnabled",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.optionssheet.OptionsSheet.beforeLoad",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.tests.test_csv._load",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.column.Column.fmtstr",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.column.Column.getMaxWidth",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.features.join.openJoin",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.utils.getitemdeep",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.sheets.TableSheet.cursorCol",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.features.condfmt.CondFmtContext.__missing__",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.sheets.async_deepcopy",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.features.setcol_fake.setValuesFromFaker",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.tests.test_path.TestVisidataPath.test_iterdir_yields_visidata_paths",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.memory.MemorySheet.rows",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.metasheets.allColumnsSheet",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.column.Column.make_formatter",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.canvas.Canvas.yScaler",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.pivot.makeErrorKey",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.utils.getitemdef",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.color.ColorMaker.resolve_colors",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.tests.test_fixed_width.TestColumnize.test_single_column",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.freqtbl.HistogramColumn.calcValue",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.statusbar.statusHistorySheet",
+      "provenance": "observed_in_situ",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.aggregators._percentile",
+      "provenance": "observed_under_driver",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    },
+    {
+      "unit": "visidata.modify.changestr",
+      "provenance": "observed_under_driver",
+      "located": true,
+      "named": true,
+      "blocked_under_strict": false
+    }
+  ]
+}

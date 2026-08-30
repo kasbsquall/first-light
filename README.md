@@ -102,6 +102,24 @@ not covered by the runner.
 
 ---
 
+## Does the control change the outcome
+
+Everything else here measures a codebase. `tools/ab_gate.py` measures the tool.
+It takes functions out of the published evidence, builds a real `Edit` payload
+for each carrying no line number, and runs the shipped hook over it twice, once
+as an advisory and once with `--strict`.
+
+On the run in `ab-run.json`: 79 edits. Without the hook, none of them is
+questioned and nothing is said about any of them, including the 37 that rewrite
+code with no execution record. With it, 79 of 79 were placed and named by
+function from the edited text alone, and `--strict` stopped 37: every one of
+them never observed, with no observed function stopped by mistake.
+
+These are scripted edits, not a live agent, and nothing here shows a model
+changing its mind. The claim is the narrower one: the control fires on every
+edit it is given and separates code with no execution record from the rest
+without a false stop. Reproduce with `python tools/ab_gate.py --seed 11`.
+
 ## The body[0].lineno rule
 
 Where the 94%-against-11% figure in the submission came from, and why it is
