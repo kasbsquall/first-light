@@ -253,7 +253,9 @@ directories.  Whole package includes them.
 
 ## How this was built
 
-First Light was built with IBM Bob across twelve tasks.
+First Light was built with IBM Bob across twelve tasks.  `bob_sessions/` holds the
+exported record of every one of them and a task session summary screenshot for
+each, as the hackathon guide asks.
 [`bob_sessions/`](bob_sessions/README.md) holds the exported record of every one of them, as a readable Markdown transcript and as
 JSON, with an index naming each task and what the record shows. That includes
 the parts that do not flatter the process: Bob's first ten drivers copied

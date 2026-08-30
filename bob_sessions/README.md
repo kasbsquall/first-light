@@ -113,3 +113,34 @@ JSON. Bob's narration says a run worked; the output that
 would prove it is in the JSON. For a project whose thesis is that a claim should
 travel with its evidence, that is worth stating plainly rather than leaving a
 reader to find it.
+
+## Task session summary screenshots
+
+The hackathon guide asks for a screenshot of each Bob task's session
+consumption summary, captured from the task header in the Bob IDE. They are
+in this folder, one per task, named by team, task number and a short
+description. Each shows the context length, the task id, the workspace and
+the Bobcoins the task consumed.
+
+Only one team member ran Bob on this project, so these twelve are the
+complete set. Jose Huambachano and James Montes worked on the written
+deliverables and the video and have no Bob sessions to show.
+
+| # | Screenshot | Task |
+|--:|------------|------|
+| 1 | `daedalus_task01_build_the_first_component_summary.png` | Build the first component of a tool called First Light |
+| 2 | `daedalus_task02_next_component_summary.png` | Next component |
+| 3 | `daedalus_task03_build_a_visual_report_summary.png` | Build a visual report |
+| 4 | `daedalus_task04_three_correctness_bugs_found_summary.png` | Three correctness bugs found in an independent audit |
+| 5 | `daedalus_task05_close_the_driver_loop_summary.png` | Close the driver loop |
+| 6 | `daedalus_task06_repository_hygiene_plus_one_summary.png` | Repository hygiene, plus one architectural fix carried over from the previo... |
+| 7 | `daedalus_task07_an_independent_audit_found_summary.png` | An independent audit found seven issues |
+| 8 | `daedalus_task08_the_evidence_currently_rests_summary.png` | The evidence currently rests on a single baseline: one CLI session |
+| 9 | `daedalus_task09_regenerating_the_baselines_silentl_summary.png` | Regenerating the baselines silently destroyed every observed_under_driver r... |
+| 10 | `daedalus_task10_the_superseded_level_works_summary.png` | The superseded level works, but the report and the summary line hide it or... |
+| 11 | `daedalus_task11_the_readme_argues_that_summary.png` | The README argues that evidence.json is an evaluation harness for generated... |
+| 12 | `daedalus_task12_the_headline_rests_on_summary.png` | The headline rests on two baselines, and one of them is carrying almost not... |
+
+The full transcript and the JSON record of the same twelve sessions are the
+two files listed above; the screenshots carry the summary page as Bob
+presents it, which the transcript does not include.
