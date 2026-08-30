@@ -377,6 +377,34 @@ body {
 .map-colhead__label { width: 152px; flex-shrink: 0; }
 .map-colhead__count { width: 128px; flex-shrink: 0; }
 
+.wx-lede, .wx-note {
+  font-size: 13px; line-height: 1.6; color: var(--muted);
+  max-width: 78ch; margin-bottom: 16px;
+}
+.wx-note { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 18px; }
+.wx-note strong { color: var(--text); font-weight: 500; }
+.wx-table { display: flex; flex-direction: column; }
+.wx-row {
+  display: flex; align-items: baseline; gap: 18px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.wx-row__unit {
+  font-family: var(--mono); font-size: 13px; color: var(--text);
+  flex: 0 0 300px; word-break: break-all;
+}
+.wx-row__verdict {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+  text-transform: uppercase; flex: 0 0 92px;
+}
+.wx-row__verdict--ok { color: var(--amber); }
+.wx-row__verdict--no { color: #75695F; }
+.wx-row__detail { font-size: 12px; color: var(--muted); flex: 1 1 auto; }
+.wx-row__site { font-family: var(--mono); font-size: 11px; color: #75695F; }
+@media (max-width: 720px) {
+  .wx-row { flex-direction: column; gap: 4px; }
+  .wx-row__unit { flex: none; }
+}
+
 @media (max-width: 720px) { .map-colhead { display: none; } }
 
 .map-hint {
@@ -752,6 +780,7 @@ table { display: block; overflow-x: auto; max-width: 100%; }
     <a href="#map">Evidence map</a>
     <a href="#drivers">Driver results</a>
     <a href="#refusals">Refusals</a>
+    <a href="#watsonx">watsonx.ai</a>
   </nav>
   <h1 class="headline">
     <span class="headline__never">1200</span>
@@ -3871,6 +3900,33 @@ table { display: block; overflow-x: auto; max-width: 100%; }
     </tbody>
   </table>
 </section>
+
+<hr class="sep">
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 6 -- WATSONX.AI DRIVER GENERATION
+     ═══════════════════════════════════════════════════════ -->
+<section class="rise" style="--i:2">
+  <h2 class="section-heading" id="watsonx">Driver generation on watsonx.ai:
+    2 accepted, 3 refused
+    of 5 drafted</h2>
+  <p class="wx-lede">
+    <code>ibm/granite-4-h-small</code> on watsonx.ai Runtime, called by
+    <code>tools/wx_draft_driver.py</code>, drafted a driver for functions nothing
+    had been seen to execute. The model's output goes through the same gate as
+    our own: the driver must run, coverage must confirm the body executed, and
+    the declared call site is parsed to confirm the function is called there.
+  </p>
+  <div class="wx-table"><div class="wx-row"><span class="wx-row__unit">visidata.color.rgb_to_attr</span><span class="wx-row__verdict wx-row__verdict--no">refused</span><span class="wx-row__detail">driver process exited with non-zero return code</span></div>
+<div class="wx-row"><span class="wx-row__unit">visidata.graph.format_input_value</span><span class="wx-row__verdict wx-row__verdict--ok">accepted</span><span class="wx-row__detail">body lines 371, 374 executed<br><span class="wx-row__site">graph.py:324  suggested = format_input_value(val, xtype)</span></span></div>
+<div class="wx-row"><span class="wx-row__unit">visidata.menu.menudraw</span><span class="wx-row__verdict wx-row__verdict--no">refused</span><span class="wx-row__detail">driver process exited with non-zero return code</span></div>
+<div class="wx-row"><span class="wx-row__unit">visidata.optionssheet.commit</span><span class="wx-row__verdict wx-row__verdict--no">refused</span><span class="wx-row__detail">driver process exited with non-zero return code</span></div>
+<div class="wx-row"><span class="wx-row__unit">visidata.threads.codestr</span><span class="wx-row__verdict wx-row__verdict--ok">accepted</span><span class="wx-row__detail">body lines 500, 501 executed<br><span class="wx-row__site">threads.py:436  Column(&#x27;funcname&#x27;, getter=lambda col,row: codestr(row.code))</span></span></div></div>
+  <p class="wx-note"><strong>Not counted.</strong> The two accepted drivers are not folded into the published evidence. They were drafted hours before submission and no human has reviewed the fixtures they build. Promoting them would move never_observed from 1200 to 1198 on an unreviewed model draft, which is the shape of claim this project argues against.
+  The two accepted drafts ship in <code>drivers-candidates/</code> as candidates,
+  and every figure elsewhere on this page excludes them.</p>
+</section>
+
 
 <footer class="footer">
   <div class="footer__brand">

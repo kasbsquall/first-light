@@ -1,0 +1,40 @@
+{
+  "_comment": "Recorded outcome of the watsonx.ai driver-generation run. The report renders this file when it sits beside evidence.json and renders nothing when it does not, so a clone without it is not missing a claim, it simply has no run to show. Every verdict below is the gate's own output, reproduced in docs/watsonx.md.",
+  "service": "watsonx.ai Runtime",
+  "model": "ibm/granite-4-h-small",
+  "tool": "tools/wx_draft_driver.py",
+  "drafted": 5,
+  "promoted": 2,
+  "refused": 3,
+  "counted_in_evidence": false,
+  "why_not_counted": "The two accepted drivers are not folded into the published evidence. They were drafted hours before submission and no human has reviewed the fixtures they build. Promoting them would move never_observed from 1200 to 1198 on an unreviewed model draft, which is the shape of claim this project argues against.",
+  "candidates": [
+    {
+      "unit": "visidata.color.rgb_to_attr",
+      "verdict": "refused",
+      "detail": "driver process exited with non-zero return code"
+    },
+    {
+      "unit": "visidata.graph.format_input_value",
+      "verdict": "accepted",
+      "detail": "body lines 371, 374 executed",
+      "call_site": "graph.py:324  suggested = format_input_value(val, xtype)"
+    },
+    {
+      "unit": "visidata.menu.menudraw",
+      "verdict": "refused",
+      "detail": "driver process exited with non-zero return code"
+    },
+    {
+      "unit": "visidata.optionssheet.commit",
+      "verdict": "refused",
+      "detail": "driver process exited with non-zero return code"
+    },
+    {
+      "unit": "visidata.threads.codestr",
+      "verdict": "accepted",
+      "detail": "body lines 500, 501 executed",
+      "call_site": "threads.py:436  Column('funcname', getter=lambda col,row: codestr(row.code))"
+    }
+  ]
+}

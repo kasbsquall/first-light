@@ -1109,6 +1109,34 @@ body {
 .map-colhead__label { width: 152px; flex-shrink: 0; }
 .map-colhead__count { width: 128px; flex-shrink: 0; }
 
+.wx-lede, .wx-note {
+  font-size: 13px; line-height: 1.6; color: var(--muted);
+  max-width: 78ch; margin-bottom: 16px;
+}
+.wx-note { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 18px; }
+.wx-note strong { color: var(--text); font-weight: 500; }
+.wx-table { display: flex; flex-direction: column; }
+.wx-row {
+  display: flex; align-items: baseline; gap: 18px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.wx-row__unit {
+  font-family: var(--mono); font-size: 13px; color: var(--text);
+  flex: 0 0 300px; word-break: break-all;
+}
+.wx-row__verdict {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+  text-transform: uppercase; flex: 0 0 92px;
+}
+.wx-row__verdict--ok { color: var(--amber); }
+.wx-row__verdict--no { color: #75695F; }
+.wx-row__detail { font-size: 12px; color: var(--muted); flex: 1 1 auto; }
+.wx-row__site { font-family: var(--mono); font-size: 11px; color: #75695F; }
+@media (max-width: 720px) {
+  .wx-row { flex-direction: column; gap: 4px; }
+  .wx-row__unit { flex: none; }
+}
+
 @media (max-width: 720px) { .map-colhead { display: none; } }
 
 .map-hint {
@@ -1898,6 +1926,58 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     map_html = "\n".join(map_rows_html)
 
     # Driver cards HTML -- built from evidence, not from disk file count
+    # ── watsonx run, if one was recorded beside the evidence ─────────────
+    # Rendered from a file rather than hardcoded so the section states what a
+    # run actually produced. No file, no section: the report does not carry a
+    # claim it cannot show the working for.
+    _wx = None
+    try:
+        _wx_path = Path(evidence_path).resolve().parent / "watsonx-run.json"
+        if _wx_path.is_file():
+            _wx = json.loads(_wx_path.read_text(encoding="utf-8"))
+    except Exception:
+        _wx = None
+
+    _wx_html = ""
+    if _wx and _wx.get("candidates"):
+        _rows = []
+        for _c in _wx["candidates"]:
+            _ok = _c.get("verdict") == "accepted"
+            _cls = "wx-row__verdict--ok" if _ok else "wx-row__verdict--no"
+            _site = _c.get("call_site", "")
+            _rows.append(
+                f'<div class="wx-row">'
+                f'<span class="wx-row__unit">{e(_c.get("unit", ""))}</span>'
+                f'<span class="wx-row__verdict {_cls}">{e(_c.get("verdict", ""))}</span>'
+                f'<span class="wx-row__detail">{e(_c.get("detail", ""))}'
+                + (f'<br><span class="wx-row__site">{e(_site)}</span>' if _site else "")
+                + f'</span></div>'
+            )
+        _rows_html = "\n".join(_rows)
+        _wx_html = f"""
+<hr class="sep">
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 6 -- WATSONX.AI DRIVER GENERATION
+     ═══════════════════════════════════════════════════════ -->
+<section class="rise" style="--i:2">
+  <h2 class="section-heading" id="watsonx">Driver generation on watsonx.ai:
+    {e(str(_wx.get('promoted', 0)))} accepted, {e(str(_wx.get('refused', 0)))} refused
+    of {e(str(_wx.get('drafted', 0)))} drafted</h2>
+  <p class="wx-lede">
+    <code>{e(_wx.get('model', ''))}</code> on {e(_wx.get('service', ''))}, called by
+    <code>{e(_wx.get('tool', ''))}</code>, drafted a driver for functions nothing
+    had been seen to execute. The model's output goes through the same gate as
+    our own: the driver must run, coverage must confirm the body executed, and
+    the declared call site is parsed to confirm the function is called there.
+  </p>
+  <div class="wx-table">{_rows_html}</div>
+  <p class="wx-note"><strong>Not counted.</strong> {e(_wx.get('why_not_counted', ''))}
+  The two accepted drafts ship in <code>drivers-candidates/</code> as candidates,
+  and every figure elsewhere on this page excludes them.</p>
+</section>
+"""
+
     driver_cards_html = []
     for d in confirmed_drivers:
         name_html = e(d["name"])
@@ -2090,6 +2170,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     <a href="#map">Evidence map</a>
     <a href="#drivers">Driver results</a>
     <a href="#refusals">Refusals</a>
+    {'<a href="#watsonx">watsonx.ai</a>' if _wx else ''}
   </nav>
   <h1 class="headline">
     <span class="headline__never">{e(str(prod_never))}</span>
@@ -2274,6 +2355,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
      SECTION 5 -- REFUSAL DISTRIBUTION
      ═══════════════════════════════════════════════════════ -->
 {_refusal_section_html}
+{_wx_html}
 
 <footer class="footer">
   <div class="footer__brand">

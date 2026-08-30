@@ -183,14 +183,19 @@ because it bounds what a promotion actually proves. **The checker resolves a
 name, not a binding.** It confirms that the cited line contains a real call whose
 callee name matches, that the citing file defines or imports the function's
 module, and that an attribute call's receiver could plausibly carry the function.
-It does not perform name resolution. Two consequences follow, and both were
-demonstrated against this tool rather than imagined:
+It does not perform name resolution. Three consequences follow, and all three
+were demonstrated against this tool rather than imagined:
 
 - A bare `name(...)` in the function's own defining file satisfies the citation
   even when that name is bound to a different function imported from elsewhere.
   The import guard accepts the name from anywhere in the package.
 - A `self.name(...)` call in an unrelated class that happens to define its own
   `name` satisfies an attribute citation.
+- An `Edit` with `replace_all` and a non-unique `old_string` gives the hook an
+  ambiguous anchor. It declines to place the edit, which is the intended
+  behaviour, and `--strict` therefore does not block even on a never-observed
+  function. Refusing to guess and refusing to block are the same decision here,
+  and the second one is the cost of the first.
 
 So `observed_under_driver` means: the driver ran, coverage confirmed lines inside
 the real function body executed, and a call to that name exists at the declared

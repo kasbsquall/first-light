@@ -259,13 +259,13 @@ def test_hook_is_portable() -> None:
 
     ev = ROOT / "evidence.json"
     if not ev.exists():
-        check("evidence.json is present", False, "-> skipping")
+        skip("evidence.json is present")
         return
     units = _json.loads(ev.read_text(encoding="utf-8"))["units"]
     never = next((u for u in units.values()
                   if u.get("provenance") == "never_observed"), None)
     if not never or not Path(never["file"]).exists():
-        check("a never-observed unit is available", False)
+        skip("a never-observed unit is available")
         return
 
     root = _tf.mkdtemp(prefix="fl_clone_")
@@ -376,7 +376,7 @@ def test_hook_places_an_edit_without_a_line_number() -> None:
 
     src = ROOT / "target" / "visidata" / "visidata" / "_input.py"
     if not src.exists():
-        check("the target file is present", False, "-> skipping")
+        skip("the target file is present")
         return
 
     def advise(old_string):
@@ -405,6 +405,18 @@ def test_hook_places_an_edit_without_a_line_number() -> None:
     c = advise("    return ret")
     check("an anchor with several matches is refused, not guessed",
           ("not located" in c) or ("no unit" in c), "-> " + c[:88])
+
+
+SKIPPED = 0
+
+
+def skip(label: str) -> None:
+    """Record a case that could not run. A skip is not a failure, and routing
+    it through check() made a clean clone print red on the command the README
+    tells a reader to run first."""
+    global SKIPPED
+    SKIPPED += 1
+    print("  [SKIP] %s -> the target repo is not cloned" % label)
 
 
 def main() -> int:
