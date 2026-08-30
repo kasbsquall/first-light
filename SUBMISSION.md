@@ -1,5 +1,8 @@
 # First Light: problem and solution statement
 
+Demo: https://youtu.be/GWdGS7IGTx0 (2:50)
+Evidence report: https://kasbsquall.github.io/first-light/report.html
+
 ## The problem
 
 Agents write code faster than anyone can read it and treat every function the
