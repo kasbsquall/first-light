@@ -178,6 +178,31 @@ rule as a direct call site, and a registration is not a call, so the case the
 form was built for cannot be expressed in it. No driver uses the indirect form
 today and none is tested. It is unfinished, not load-bearing.
 
+The direct form has a larger limit, and it is the one worth stating plainly
+because it bounds what a promotion actually proves. **The checker resolves a
+name, not a binding.** It confirms that the cited line contains a real call whose
+callee name matches, that the citing file defines or imports the function's
+module, and that an attribute call's receiver could plausibly carry the function.
+It does not perform name resolution. Two consequences follow, and both were
+demonstrated against this tool rather than imagined:
+
+- A bare `name(...)` in the function's own defining file satisfies the citation
+  even when that name is bound to a different function imported from elsewhere.
+  The import guard accepts the name from anywhere in the package.
+- A `self.name(...)` call in an unrelated class that happens to define its own
+  `name` satisfies an attribute citation.
+
+So `observed_under_driver` means: the driver ran, coverage confirmed lines inside
+the real function body executed, and a call to that name exists at the declared
+site. It does not mean the declared site provably reaches this function. That is
+a weaker guarantee than "verified call site" and the evidence should be read as
+the weaker claim. Closing it requires binding resolution across the package,
+which is a larger piece of work than a weekend allows.
+
+We state this because the alternative is worse. A tool that argues coverage
+overstates what it knows, and then overstates what its own gate knows, has only
+moved the problem.
+
 One declared a call site the checker could not confirm: the
 line it named is an indirect dispatch where the function's name never appears.
 The other declared no call site at all.  A driver that declares nothing has
