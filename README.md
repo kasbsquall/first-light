@@ -408,12 +408,20 @@ falls back to the file's totals and says the edit could not be placed.  A
 that did resolve describe a different edit from the one being made.
 
 An anchor can be unique and still cross more than one function.  That is not
-ambiguous, so it resolves, and the advisory then names every unit the edit
-touches with the least observed one first rather than picking the smallest body.
-The first version of this feature did pick the smallest, which reported
-"observed in situ" for an edit that also rewrote a never-observed neighbour;
+ambiguous, so it resolves, and the advisory then reports how many units the edit
+spans and how many of them were never observed, naming the first three with the
+least observed one first rather than picking the smallest body.  The count is
+exact; the list is capped so one advisory line stays one line.  The first
+version of this feature named only the smallest, which reported "observed in
+situ" for an edit that also rewrote a never-observed neighbour;
 `tests/test_gate.py` now covers the case, and `--strict` blocks a span if any
 part of it is unobserved.
+
+One conservative edge in that span.  A `MultiEdit` is reduced to the range from
+its first anchor to its last, so a function sitting between two edited regions
+is counted as spanned even when neither edit touches it.  That over-reports the
+breadth of an edit rather than under-reporting it, which is the direction to err
+in, but it is over-reporting and worth knowing.
 
 The hook then looks up the function unit containing that range in
 `evidence.json` and prints one advisory line describing the unit's provenance.
