@@ -76,10 +76,35 @@ def main() -> int:
 
     # Sample from each tier so the run is not dominated by whichever is largest.
     # The seed is fixed and printed, so the sample is the same on a re-run.
+    def resolve(recorded: str) -> Path | None:
+        """Find the recorded file in this checkout.
+
+        evidence.json stores absolute paths from the machine that produced it.
+        Testing them with is_file() means this harness measures zero edits on
+        anyone else's clone, prints every headline as 0, satisfies its own
+        "must be 0" check and exits 0: it reports as if it had run. The hook
+        solved this with tail matching and its docstring says why. So does this.
+        """
+        p = Path(recorded)
+        if p.is_file():
+            return p
+        parts = p.parts
+        for n in range(len(parts) - 1, 2, -1):
+            cand = ROOT / Path(*parts[-n:])
+            if cand.is_file():
+                return cand
+        return None
+
     by_tier: dict[str, list] = {NEVER: [], IN_SITU: [], DRIVER: []}
+    unresolved = 0
     for key, u in units.items():
-        if u.get("provenance") in by_tier and Path(u["file"]).is_file():
-            by_tier[u["provenance"]].append((key, u))
+        if u.get("provenance") not in by_tier:
+            continue
+        found = resolve(u["file"])
+        if found is None:
+            unresolved += 1
+            continue
+        by_tier[u["provenance"]].append((key, dict(u, file=str(found))))
     rng = random.Random(args.seed)
     chosen = []
     for tier, pool in by_tier.items():
@@ -126,7 +151,15 @@ def main() -> int:
         "seed": args.seed,
         "sampled": len(chosen),
         "skipped_no_unique_anchor": skipped,
+        "units_unresolved_in_this_checkout": unresolved,
         "edits": n,
+        "denominator_note": (
+            "%d functions were sampled and %d were dropped for having no line "
+            "unique within their file. That is not a neutral exclusion: an "
+            "ambiguous anchor is exactly the case the hook refuses, so the "
+            "%d measured here are the locatable subset, not a random one."
+            % (len(chosen), skipped, n)
+        ),
         "without_hook": {
             "advisories": 0,
             "stopped": 0,
@@ -153,6 +186,13 @@ def main() -> int:
     print("  of those, never observed: %d" % blocked_never)
     print("  of those, observed      : %d  <- must be 0" % wrongly_blocked)
     print("written to                : %s" % args.out)
+    if n == 0:
+        print(file=sys.stderr)
+        print("No edits were measured. The evidence file records paths from "
+              "another machine and none resolved here, so this run proves "
+              "nothing. Clone the target before reading any of the above.",
+              file=sys.stderr)
+        return 2
     return 0 if wrongly_blocked == 0 else 1
 
 

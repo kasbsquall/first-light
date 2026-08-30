@@ -2028,13 +2028,21 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
      ═══════════════════════════════════════════════════════ -->
 <section class="rise" style="--i:2">
   <h2 class="section-heading" id="ab">Does the control change the outcome:
-    {e(str(_w['stopped_under_strict']))} of {e(str(_n))} edits stopped, all of them unobserved</h2>
+    {e(str(_w['named_the_function']))} of {e(str(_n))} edits placed and named with no line
+    number, {e(str(_w['stopped_under_strict']))} stopped</h2>
   <p class="wx-lede">
     Everything above measures a codebase. This measures the tool. Each of
     {e(str(_n))} rows is a real edit payload, carrying no line number, built from a
     function in this evidence file and run against the shipped hook as a
     subprocess. Reproduce it with
     <code>tools/ab_gate.py --seed {e(str(_ab.get('seed', '')))}</code>.
+  </p>
+  <p class="wx-lede">
+    <strong>The denominator.</strong> {e(str(_ab.get('sampled', '')))} functions were
+    sampled and {e(str(_ab.get('skipped_no_unique_anchor', 0)))} were dropped for having
+    no line unique within their file. That exclusion is not neutral: an ambiguous
+    anchor is exactly the case the hook refuses, so the {e(str(_n))} below are the
+    locatable subset rather than a random one. Read the rates against that.
   </p>
   <div class="ab-grid">
     <div class="ab-col">
@@ -2061,6 +2069,12 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
   number, and separates the code with no execution record from the rest without
   a single false stop. Whether an agent then behaves differently is a claim this
   run does not make.</p>
+  <p class="wx-note"><strong>And what it lets through.</strong> When an edit cannot
+  be placed at all, <code>--strict</code> exits 0 and the edit proceeds. Not
+  knowing which function is being edited is not evidence that it is unobserved,
+  so the gate fails open by design. That is the first way past it, it is not
+  hypothetical, and it belongs on this page next to the stop count rather than in
+  a source comment.</p>
 </section>
 """
 

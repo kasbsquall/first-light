@@ -50,12 +50,15 @@ wired once.
 
 ## Does it change anything
 
-`tools/ab_gate.py` runs the shipped hook over 79 real edit payloads built from
-the evidence. Without the hook none is questioned, including the 37 that rewrite
-code with no execution record. With it all 79 are placed and named from the
-edited text alone, and `--strict` stops exactly those 37, with no observed
-function stopped by mistake. Scripted edits, not a live agent: the claim is that
-the control discriminates, not that a model changed its mind.
+`tools/ab_gate.py` runs the shipped hook over real edit payloads built from the
+evidence: 82 sampled, 3 dropped for having no unique anchor, 79 measured, and
+that exclusion is the hook's own refusal case rather than a neutral one. Without
+the hook none of the 79 is questioned, including the 37 that rewrite code with no
+execution record. With it all 79 are placed and named from the edited text alone,
+and `--strict` stops exactly those 37, with no observed function stopped by
+mistake. It fails open on an edit it cannot place. Scripted edits, not a live
+agent: the claim is that the control discriminates, not that a model changed its
+mind.
 
 ## Why this is new
 

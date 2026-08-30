@@ -3,7 +3,9 @@
   "seed": 11,
   "sampled": 82,
   "skipped_no_unique_anchor": 3,
+  "units_unresolved_in_this_checkout": 0,
   "edits": 79,
+  "denominator_note": "82 functions were sampled and 3 were dropped for having no line unique within their file. That is not a neutral exclusion: an ambiguous anchor is exactly the case the hook refuses, so the 79 measured here are the locatable subset, not a random one.",
   "without_hook": {
     "advisories": 0,
     "stopped": 0,

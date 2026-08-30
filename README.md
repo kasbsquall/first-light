@@ -109,11 +109,16 @@ It takes functions out of the published evidence, builds a real `Edit` payload
 for each carrying no line number, and runs the shipped hook over it twice, once
 as an advisory and once with `--strict`.
 
-On the run in `ab-run.json`: 79 edits. Without the hook, none of them is
-questioned and nothing is said about any of them, including the 37 that rewrite
-code with no execution record. With it, 79 of 79 were placed and named by
-function from the edited text alone, and `--strict` stopped 37: every one of
-them never observed, with no observed function stopped by mistake.
+On the run in `ab-run.json`: 82 functions sampled, 3 dropped for having no line
+unique within their file, 79 measured. That exclusion is not neutral, since an
+ambiguous anchor is the case the hook refuses, so read the rates as covering the
+locatable subset. Without the hook, none of the 79 is questioned and nothing is
+said about any of them, including the 37 that rewrite code with no execution
+record. With it, 79 of 79 were placed and named by function from the edited text
+alone, and `--strict` stopped 37: every one of them never observed, with no
+observed function stopped by mistake. When an edit cannot be placed at all,
+`--strict` exits 0 and it proceeds: the gate fails open, which is the first way
+past it.
 
 These are scripted edits, not a live agent, and nothing here shows a model
 changing its mind. The claim is the narrower one: the control fires on every
