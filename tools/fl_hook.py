@@ -157,6 +157,19 @@ def _file_integrity(abs_path: str, integrity: dict) -> str:
     return "unchanged" if _sha256(abs_path) == recorded else "changed"
 
 
+# Provenance ordered by how little is known. An edit that crosses several units
+# is as unobserved as its least observed part, and "least" has three levels, not
+# two: the middle one is the distinction this whole project rests on, so
+# collapsing it here would undo the argument in the one place it gets used.
+_SEVERITY = {PROVENANCE_NEVER: 0, PROVENANCE_DRIVER: 1, PROVENANCE_IN_SITU: 2}
+
+
+def _worst(units) -> str | None:
+    """Provenance of the least observed unit in *units*."""
+    known = [u.get("provenance") for u in units if u.get("provenance") in _SEVERITY]
+    return min(known, key=lambda p: _SEVERITY[p]) if known else None
+
+
 def _overlaps(unit: dict, start_line: int | None, end_line: int | None) -> bool:
     """Return True if [start_line, end_line] overlaps the unit's body range.
 
@@ -294,9 +307,11 @@ def provenance_for(
         return None          # the edit was not placed; nothing is known about it
     # An edit crossing several functions is as unobserved as its least observed
     # part. Reporting the smallest body would let a rewrite of never-observed
-    # code through because it happened to also touch an observed neighbour.
-    if any(u.get("provenance") == PROVENANCE_NEVER for u in matching):
-        return PROVENANCE_NEVER
+    # code through because it happened to also touch an observed neighbour, and
+    # reporting only the never_observed case would do the same to a function
+    # that ran solely under a driver.
+    if len(matching) > 1:
+        return _worst(matching)
     matching.sort(key=lambda u: u["body_end"] - u["body_start"])
     return matching[0].get("provenance")
 
@@ -382,21 +397,24 @@ def query(
     # observed function and a never-observed one would read as observed. Name
     # every unit the edit touches instead, worst provenance first.
     if len(matching) > 1:
-        _order = {PROVENANCE_NEVER: 0, PROVENANCE_DRIVER: 1, PROVENANCE_IN_SITU: 2}
         ranked = sorted(
             matching,
-            key=lambda kv: (_order.get(kv[1].get("provenance"), 3),
+            key=lambda kv: (_SEVERITY.get(kv[1].get("provenance"), 3),
                             kv[1]["body_start"]),
         )
-        never = [kv for kv in ranked if kv[1].get("provenance") == PROVENANCE_NEVER]
+        never = sum(1 for _k, u in ranked if u.get("provenance") == PROVENANCE_NEVER)
+        driver = sum(1 for _k, u in ranked if u.get("provenance") == PROVENANCE_DRIVER)
+        counts = f"{never} never observed"
+        if driver:
+            counts += f", {driver} observed only under a driver"
         names = [
             (k.split("::", 1)[1] if "::" in k else k).rsplit("#", 1)[0]
             for k, _u in ranked[:3]
         ]
-        more = f" (+{len(ranked) - 3} more)" if len(ranked) > 3 else ""
+        more = f" and {len(ranked) - 3} more" if len(ranked) > 3 else ""
         msg = (
             f"[first_light] this edit spans {len(ranked)} tracked functions -- "
-            f"{len(never)} never observed: {', '.join(names)}{more}"
+            f"{counts}. Least observed first: {', '.join(names)}{more}"
         )
         if file_state == "changed":
             msg += " [FILE CHANGED since observation -- re-run first_light.py]"
@@ -625,9 +643,9 @@ def _hook_main() -> None:
         prov = provenance_for(file_path, start_line, end_line)
         if prov == PROVENANCE_NEVER:
             _print(
-                "[first_light] blocked by --strict: this function has no "
-                "execution record. Run it, add a driver that declares a "
-                "verifiable call site, or edit with --strict off and accept "
+                "[first_light] blocked by --strict: this edit reaches code "
+                "with no execution record. Run it, add a driver that declares "
+                "a verifiable call site, or edit with --strict off and accept "
                 "that nothing observed it."
             )
             sys.exit(2)

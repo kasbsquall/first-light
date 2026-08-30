@@ -104,6 +104,9 @@ not covered by the runner.
 
 ## The body[0].lineno rule
 
+Where the 94%-against-11% figure in the submission came from, and why it is
+not reproducible from what ships here, is in [docs/def-line-rule.md](docs/def-line-rule.md).
+
 Coverage.py records which source lines were executed.  Every `def` statement
 executes at module import time, because Python runs the `def` line to bind the
 function object to the name.  Starting the observation range at `node.lineno`
@@ -142,9 +145,11 @@ collected, 252 passing, the 4 failures POSIX-specific, with the counts and the
 non-zero exit code recorded rather than filtered out); and a replay of the 52 `.vdj`
 command logs in its test suite, which exercises the program the way a person
 drove it.
-The project also ships 112 `.vd` and 21 `.vdx` logs; this baseline replays the
-`.vdj` set only, so the 144 functions it reaches alone are a floor, not a
-ceiling.
+Its test suite also holds 112 `.vd` and 21 `.vdx` logs, counted the same way as
+the 52 above; across the whole tree the three formats come to 65, 114 and 29.
+This baseline replays the `.vdj` set only, so the 144 functions it reaches alone
+are a floor, not a ceiling, and the distance to the ceiling is larger than the
+first number suggests.
 
 | Scope | Total | Observed in situ | Under driver | Driver redundant | Never observed |
 |-------|------:|------------------:|-------------:|-----------------:|---------------:|

@@ -33,14 +33,20 @@ names a line that is not a call, is refused, and the evidence keeps both facts:
 the driver reached the function, and its claim could not be checked.
 
 The evidence file is machine-readable, and a Bob `PreToolUse` hook reads it
-before every edit. With a line number it names that function's provenance;
-without one it reports the file's tracked state and says the edit could not be
-placed. Built with IBM Bob across twelve tasks; `bob_sessions/` holds the record.
+before every edit. Edit, Write and MultiEdit send no line number, so the hook
+places the edit from the text they do send: `old_string`, present verbatim in
+the file, or a diff of the new content. It then names the function and its
+provenance. An edit crossing several functions reports all of them, least
+observed first, and an ambiguous anchor is refused rather than guessed. Built
+with IBM Bob across twelve tasks; `bob_sessions/` holds the record.
 
 ## Who uses it
 
-Teams pointing coding agents at code nobody has verified. One pass produces the
-report and the evidence file. The hook is wired once.
+Teams pointing coding agents at code nobody has verified. Adopting it means
+writing one small runner script per baseline, which is the script that starts
+your application the way it really runs; the three used here are in `runners/`.
+After that, one pass produces the report and the evidence file, and the hook is
+wired once.
 
 ## Why this is new
 

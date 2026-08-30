@@ -1,0 +1,7 @@
+{
+  "_comment": "What was measured. The report puts this in its header so the artifact says which revision of which repository the figures came from, instead of leaving a reader to find it in the README. Verified with git rev-parse in target/visidata at the time of the run.",
+  "repository": "https://github.com/saulpw/visidata",
+  "commit": "1d8a6fcd7f031a140c5662943af868e9108343ed",
+  "short": "1d8a6fc",
+  "subject": "[apps] loader stubs auto-import their app  #3126"
+}

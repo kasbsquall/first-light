@@ -430,6 +430,28 @@ def test_hook_places_an_edit_without_a_line_number() -> None:
         check("--strict blocks it, because part of the span is unobserved",
               rs.returncode == 2, "-> exit %d" % rs.returncode)
 
+    # A span is as unobserved as its least observed part, and "least" has three
+    # levels. The first version of this fix only special-cased never_observed,
+    # so widening an edit from a driver-only function until it touched an
+    # observed neighbour turned the warning into reassurance. The middle tier is
+    # the distinction this project rests on; collapsing it here would undo the
+    # argument in the one place a user meets it.
+    aggr = ROOT / "target" / "visidata" / "visidata" / "aggregators.py"
+    if aggr.exists():
+        lines = aggr.read_text(encoding="utf-8").splitlines()
+        span = chr(10).join(lines[168:196])
+        payload = _json.dumps({"tool_input": {
+            "file_path": str(aggr), "old_string": span,
+            "new_string": span + chr(10)}})
+        r = _sub.run([sys.executable, str(ROOT / "tools" / "fl_hook.py")],
+                     input=payload, capture_output=True, text=True)
+        out = r.stdout.strip()
+        check("a span over a driver-only function still reports the driver tier",
+              "under a driver" in out, "-> " + out[:104])
+        check("and it does not report the span as observed in situ",
+              "observed in situ" not in out)
+
+
 
 
 SKIPPED = 0

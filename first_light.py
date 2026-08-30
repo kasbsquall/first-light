@@ -1109,6 +1109,12 @@ body {
 .map-colhead__label { width: 152px; flex-shrink: 0; }
 .map-colhead__count { width: 128px; flex-shrink: 0; }
 
+.headline__bridge {
+  font-size: 12px; line-height: 1.7; color: var(--muted);
+  max-width: 82ch; margin: 14px 0 0;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
 .wx-lede, .wx-note {
   font-size: 13px; line-height: 1.6; color: var(--muted);
   max-width: 78ch; margin-bottom: 16px;
@@ -1930,6 +1936,14 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
     # Rendered from a file rather than hardcoded so the section states what a
     # run actually produced. No file, no section: the report does not carry a
     # claim it cannot show the working for.
+    _tgt = None
+    try:
+        _t_path = Path(evidence_path).resolve().parent / "target.json"
+        if _t_path.is_file():
+            _tgt = json.loads(_t_path.read_text(encoding="utf-8"))
+    except Exception:
+        _tgt = None
+
     _wx = None
     try:
         _wx_path = Path(evidence_path).resolve().parent / "watsonx-run.json"
@@ -2178,10 +2192,20 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
       {e(pkg_label)} have never been observed executing</span>
   </h1>
 
+  <p class="headline__bridge">
+    {e(str(prod_observed))} observed = {e(str(prod_insitu_count))} in situ
+    + {e(str(prod_driver_count))} under driver
+    + {e(str(prod_redundant_count))} driver redundant.
+    The {e(str(prod_driver_count))} under driver were never observed until an agent
+    built a way to reach them, so the unobserved count moved from
+    {e(str(prod_never + prod_driver_count))} to {e(str(prod_never))}.
+    {(''.join(["Measured on ", _tgt["repository"].rsplit("/", 1)[-1], " at commit ", _tgt["short"]]) if _tgt else "")}
+  </p>
+
   <div class="headline__context">
     <div class="ctx-item ctx-item__amber">
       <span class="ctx-item__num">{e(str(prod_observed))}</span>
-      <span class="ctx-item__word">observed (product)</span>
+      <span class="ctx-item__word">observed, by any means</span>
     </div>
     <div class="ctx-item">
       <span class="ctx-item__num">{e(str(prod_total))}</span>

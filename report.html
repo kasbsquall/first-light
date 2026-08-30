@@ -377,6 +377,12 @@ body {
 .map-colhead__label { width: 152px; flex-shrink: 0; }
 .map-colhead__count { width: 128px; flex-shrink: 0; }
 
+.headline__bridge {
+  font-size: 12px; line-height: 1.7; color: var(--muted);
+  max-width: 82ch; margin: 14px 0 0;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
 .wx-lede, .wx-note {
   font-size: 13px; line-height: 1.6; color: var(--muted);
   max-width: 78ch; margin-bottom: 16px;
@@ -788,10 +794,20 @@ table { display: block; overflow-x: auto; max-width: 100%; }
        in visidata have never been observed executing</span>
   </h1>
 
+  <p class="headline__bridge">
+    1090 observed = 1082 in situ
+    + 2 under driver
+    + 6 driver redundant.
+    The 2 under driver were never observed until an agent
+    built a way to reach them, so the unobserved count moved from
+    1202 to 1200.
+    Measured on visidata at commit 1d8a6fc
+  </p>
+
   <div class="headline__context">
     <div class="ctx-item ctx-item__amber">
       <span class="ctx-item__num">1090</span>
-      <span class="ctx-item__word">observed (product)</span>
+      <span class="ctx-item__word">observed, by any means</span>
     </div>
     <div class="ctx-item">
       <span class="ctx-item__num">2290</span>
