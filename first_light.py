@@ -611,7 +611,7 @@ def _driver_call_site(driver_path: Path) -> tuple[str, bool]:
 
 _MAP_COLHEAD = """  <div class="map-colhead">
     <span class="map-colhead__label">module</span>
-    <span class="map-colhead__count">never / total</span>
+    <span class="map-colhead__count">never observed / total</span>
     <span class="map-colhead__cells">one square per function, hover for its name</span>
   </div>"""
 
@@ -1044,7 +1044,14 @@ body {
 }
 
 /* The count is the actionable fact in the row. Without it a file that is 75
-   unobserved out of 82 looks the same as a four-function stub. */
+   unobserved out of 82 looks the same as a four-function stub.
+
+   The word "never" is in the row and not only in the column head because the
+   bare fraction inverts: a row reading 45/45 is every convention's shorthand
+   for full coverage, and here it means the exact opposite. Measured on a
+   reader, not guessed: an independent pass over this page reported those files
+   as fully covered modules. A report whose thesis is that a claim must carry
+   its scope cannot ship a number that reads backwards. */
 .map-row__count {
   flex-shrink: 0;
   font-variant-numeric: tabular-nums lining-nums;
@@ -1100,7 +1107,7 @@ body {
 }
 
 .map-colhead__label { width: 152px; flex-shrink: 0; }
-.map-colhead__count { width: 96px; flex-shrink: 0; }
+.map-colhead__count { width: 128px; flex-shrink: 0; }
 
 @media (max-width: 720px) { .map-colhead { display: none; } }
 
@@ -1882,7 +1889,8 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
             f'<span class="map-row__name">{label_html}</span>'
             f'{scope_tag}'
             f'<span class="map-row__count {count_cls}" '
-            f'title="{n_never} of {n_total} never observed">{n_never}/{n_total}</span>'
+            f'title="{n_never} of {n_total} never observed">'
+            f'{n_never} never / {n_total}</span>'
             f'</span>'
             f'<div class="map-row__cells">{cells_html}</div>'
             f'</div>'
@@ -2218,7 +2226,7 @@ def write_html_report(evidence_path: str, out_path: str) -> None:
         with unobserved
       </button>
       <button type="button" class="chip" data-only="clean" role="radio" aria-checked="false">
-        fully observed
+        none unobserved
       </button>
       <button type="button" class="chip" data-only="all" role="radio" aria-checked="true">
         all
